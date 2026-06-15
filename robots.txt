@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Crawl-delay:3
+sitemap:http://oms.at-eases.com/sitemap.xml

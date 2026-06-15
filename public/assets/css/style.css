@@ -1,0 +1,155 @@
+@font-face {
+    font-family: "Gilroy";
+    src: url("../fonts/Gilroy-400.woff2") format("woff2"), url("../fonts/Gilroy-400.woff") format("woff");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+
+@font-face {
+    font-family: "Gilroy";
+    src: url("../fonts/Gilroy-600.woff2") format("woff2"), url("../fonts/Gilroy-600.woff") format("woff");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Gilroy";
+    src: url("../fonts/Gilroy-700.woff2") format("woff2"), url("../fonts/Gilroy-700.woff") format("woff");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+body {
+    font-family: "Gilroy", system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    ;
+}
+
+.no-border {
+    border: unset !important;
+}
+
+.select2-container {
+    width: 100% !important;
+}
+
+.select2-container--default .select2-selection--multiple {
+    color: var(--bs-body-color) !important;
+    background-color: var(--bs-body-bg) !important;
+    border: var(--bs-border-width) solid var(--bs-border-color) !important;
+    border-radius: var(--bs-border-radius) !important;
+}
+
+.app-logo {
+    width: 50px;
+}
+
+.fixed-footer {
+    position: absolute;
+    bottom: 1px;
+    text-align: center;
+}
+
+.order-cbx-col .form-check {
+    display: flex;
+    justify-content: center;
+}
+
+.order-cbx-col .form-check-input,
+.checkall {
+    width: 1.3em;
+    height: 1.3em;
+}
+
+.select2-container--default .select2-selection--single {
+    height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    color: var(--bs-body-color) !important;
+    border: var(--bs-border-width) solid var(--bs-border-color) !important;
+}
+
+.product-option-section {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color) !important;
+}
+
+#productList,
+#product_bag-item {
+    height: 400px;
+    padding: 10px;
+    overflow-y: scroll;
+}
+
+.box-bg-1 {
+    color: #fff;
+    background: linear-gradient(45deg, #ff5252, #b11919);
+}
+
+.box-bg-2 {
+    color: #fff;
+    background: linear-gradient(45deg, #448aff, #0d47a1);
+}
+
+.box-bg-3 {
+    color: #fff;
+    background: linear-gradient(45deg, #ff5252, #b11919);
+}
+
+.box-bg-4 {
+    color: #fff;
+    background: linear-gradient(45deg, #11c15b, #1b5e20);
+}
+
+.box-bg-5 {
+    color: #fff;
+    background: linear-gradient(45deg, #ff9100, #e65100);
+}
+
+.box-bg-6 {
+    color: #fff;
+    background: linear-gradient(45deg, #448aff, #0d47a1);
+}
+
+.text-decoration-none {
+    text-decoration: none;
+}
+
+.white-space-nowrap {
+    white-space: nowrap;
+}
+
+.pagination {
+    margin: 0;
+    justify-content: end;
+}
+
+
+.order-summary {
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.order-summary h5 {
+    margin-bottom: 20px;
+}
+
+.order-summary ul {
+    list-style: none;
+    padding: 0;
+}
+
+.order-summary li {
+    margin-bottom: 10px;
+}
+
+a {
+    text-decoration: none;
+}

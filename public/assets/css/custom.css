@@ -1,0 +1,132 @@
+.added-in-cart {
+    background-color: lightblue;
+}
+
+.original-price {
+    text-decoration: line-through;
+    color: #dc3545;
+}
+
+.discounted-price {
+    font-size: 1.5em;
+}
+
+.badge-success {
+    background-color: #198754;
+    color: #fff;
+}
+
+.card-img-top {
+    height: 250px;
+    object-fit: cover;
+    background: #e8e8e8;
+}
+
+/* cart */
+
+.cart-container .quantity-input {
+    width: 50px;
+    height: 37.6px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.cart-container .quantity-controls {
+    display: flex;
+    align-items: center;
+}
+
+.cart-container .quantity-controls button {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    font-size: 1.2em;
+    cursor: pointer;
+    margin: 0 5px;
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+}
+
+.cart-container .quantity-controls .increase-quantity {
+    color: #ccc;
+}
+
+.cart-container .quantity-controls .decrease-quantity {
+    color: #ccc;
+}
+
+.navbar-toggler-cart {
+    display:none;
+    font-size: 17px;
+    padding: unset;
+    border: unset !important;
+    background-color: transparent !important;
+    color: #ed1b24 !important;
+}
+
+.navbar-toggler-cart span {
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 50%;
+    margin-left: 3px;
+    background: #ed1b24;
+}
+
+@media (max-width: 992px) {
+    .navbar-toggler-cart {
+        display: inline-block;
+        margin-right: 8px;
+    }
+}
+
+#add-to-cart .btn-group .btn-minus,
+#add-to-cart .btn-group .btn-plus {
+    width: 70px;
+}
+
+@media (max-width: 575.98px) { /* Adjust the max-width according to your breakpoints */
+    .full-width-on-mobile {
+        flex-direction: column !important; /* Stack items vertically */
+    }
+    .full-width-on-mobile > * {
+        width: 100% !important; /* Make each child element take full width */
+    }
+}
+
+/* Custom breakpoint for a screen size of 16cm x 7.8cm */
+@media (max-width: 780px) and (min-width: 160mm) {
+    .col-custom-2 {
+        flex: 0 0 50%;
+        max-width: 50%;
+        padding-right: calc(var(--bs-gutter-x)* .2);
+        padding-left: calc(var(--bs-gutter-x)* .2);
+    }
+
+    .col-custom-2 .card-body {
+        padding: 0.7rem;
+    }
+
+    .col-custom-2 .card-body .card-img-top {
+        height: 163.03px;
+    }
+}
+
+/* For other small screens, fallback to the default Bootstrap grid */
+@media (max-width: 575.98px) {
+    .col-custom-2 {
+        flex: 0 0 100%;
+        max-width: 50%;
+        padding-right: calc(var(--bs-gutter-x)* .2);
+        padding-left: calc(var(--bs-gutter-x)* .2);
+
+    }
+
+    .col-custom-2 .card-body {
+        padding: 0.7rem;
+    }
+
+    .col-custom-2 .card-body .card-img-top {
+        height: 163.03px;
+    }
+}
