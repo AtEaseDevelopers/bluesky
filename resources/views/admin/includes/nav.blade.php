@@ -56,6 +56,18 @@
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button"
                         data-bs-toggle="dropdown" aria-expanded="false">
+                        Inventory
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ route('admin.inventory.index') }}">Stock Balance</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.inventory.stock-in.create') }}">Stock In</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.inventory.stock-out.create') }}">Stock Out</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.inventory.movements') }}">Movement Log</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button"
+                        data-bs-toggle="dropdown" aria-expanded="false">
                         Reports
                     </a>
                     <ul class="dropdown-menu">

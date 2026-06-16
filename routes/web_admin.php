@@ -89,6 +89,19 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                     }
                 );
 
+                Route::controller('InventoryController')->group(
+                    function () {
+                        Route::get('/inventory', 'index')->name('inventory.index');
+                        Route::get('/inventory/stock-in', 'stockInCreate')->name('inventory.stock-in.create');
+                        Route::post('/inventory/stock-in', 'stockInStore')->name('inventory.stock-in.store');
+                        Route::get('/inventory/stock-out', 'stockOutCreate')->name('inventory.stock-out.create');
+                        Route::post('/inventory/stock-out', 'stockOutStore')->name('inventory.stock-out.store');
+                        Route::get('/inventory/movements', 'movements')->name('inventory.movements');
+                        Route::post('/fetch-stock-balances', 'fetch_balances');
+                        Route::post('/fetch-stock-movements', 'fetch_movements');
+                    }
+                );
+
                 Route::resource('product-categories', ProductCategoriesController::class);
                 Route::controller(ProductCategoriesController::class)->group(
                     function () {

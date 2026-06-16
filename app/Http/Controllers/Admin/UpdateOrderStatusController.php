@@ -9,8 +9,10 @@ use App\Http\Controllers\Controller;
 use App\Order;
 use App\OrderProduct;
 use App\PdfHelper;
+use App\Services\StockService;
 use App\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -36,6 +38,13 @@ class UpdateOrderStatusController extends Controller
             ]
         );
         $success = true;
+
+        app(StockService::class)->handleOrderStatusChange(
+            $order->fresh(),
+            $prev_status,
+            $status,
+            Auth::guard('web_admin')->id()
+        );
 
         if ($status == Order::$status['processing']) {
             // generate invoice and DO
@@ -73,6 +82,13 @@ class UpdateOrderStatusController extends Controller
                 ]
             );
             $success = true;
+
+            app(StockService::class)->handleOrderStatusChange(
+                $order->fresh(),
+                $prev_status,
+                $status,
+                Auth::guard('web_admin')->id()
+            );
     
             if ($status == Order::$status['processing']) {
                 // generate invoice and DO

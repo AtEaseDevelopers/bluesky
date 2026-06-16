@@ -15,7 +15,9 @@ use App\System;
 use App\Helper;
 use ZipArchive;
 use App\Order;
+use App\Services\StockService;
 use App\User;
+use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
@@ -168,11 +170,19 @@ class OrderController extends Controller
         if ($ids) {
             foreach ($ids as $id) {
                 if ($request->status != 'delivering' || ($request->status == 'delivering' && !DB::table('order_products')->where('weight', null)->where('order_id', $id)->first())) {
-                    DB::table('orders')->where('id', $id)->update(
-                        [
-                            // 'order_weight' => $request->order_weight,
-                            'status' => $request->status,
-                        ]
+                    $order = Order::find($id);
+                    if (!$order) {
+                        continue;
+                    }
+
+                    $prevStatus = $order->status;
+                    $order->update(['status' => $request->status]);
+
+                    app(StockService::class)->handleOrderStatusChange(
+                        $order->fresh(),
+                        $prevStatus,
+                        $request->status,
+                        Auth::guard('web_admin')->id()
                     );
                 }
             }
