@@ -168,7 +168,7 @@ class StockService
 
     public function handleOrderStatusChange(Order $order, string $previousStatus, string $newStatus, ?int $adminId = null): void
     {
-        if ($newStatus === Order::$status['delivering'] && $previousStatus !== Order::$status['delivering']) {
+        if ($newStatus === Order::$status['in_route'] && $previousStatus !== Order::$status['in_route']) {
             $this->deductForOrder($order, $adminId);
         }
 
@@ -183,6 +183,49 @@ class StockService
             ['product_id' => $productId],
             ['quantity' => 0, 'weight' => 0]
         );
+    }
+
+    public function adjustBalance(
+        int $productId,
+        float $newQuantity,
+        ?float $newWeight,
+        ?string $remarks,
+        ?int $adminId
+    ): ?StockMovement {
+        return DB::transaction(function () use ($productId, $newQuantity, $newWeight, $remarks, $adminId) {
+            $product = Product::findOrFail($productId);
+            $stock = $this->getOrCreateStock($productId);
+            $quantityBefore = (float) $stock->quantity;
+            $weightBefore = $stock->weight !== null ? (float) $stock->weight : 0.0;
+            $newWeightValue = $newWeight !== null ? (float) $newWeight : $weightBefore;
+
+            $quantityChange = $newQuantity - $quantityBefore;
+            $quantityChanged = abs($quantityChange) >= 0.0005;
+            $weightChanged = $newWeight !== null && abs($newWeightValue - $weightBefore) >= 0.0005;
+
+            if (!$quantityChanged && !$weightChanged) {
+                return null;
+            }
+
+            $stock->quantity = $newQuantity;
+            if ($newWeight !== null) {
+                $stock->weight = $newWeightValue;
+            }
+            $stock->save();
+
+            return StockMovement::create([
+                'product_id' => $productId,
+                'movement_type' => 'manual_adjustment',
+                'quantity_before' => $quantityBefore,
+                'quantity_change' => $quantityChange,
+                'quantity_after' => $stock->quantity,
+                'weight' => $newWeight !== null ? $newWeightValue : null,
+                'uom_id' => $product->uom_id,
+                'admin_id' => $adminId,
+                'remarks' => $remarks ?? 'Manual stock balance adjustment',
+                'movement_date' => now()->toDateString(),
+            ]);
+        });
     }
 
     private function orderAlreadyDeducted(int $orderId): bool

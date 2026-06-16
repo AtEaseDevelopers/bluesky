@@ -10,7 +10,7 @@
         </form>
     </div>
     <div class="row mb-5">
-        @foreach ($products as $product)
+        @forelse ($products as $product)
             <div class="col-12 col-custom-2 col-sm-6 col-md-3 mb-4">
                 <div class="card no-border shadow {{ $product->added_to_cart ? 'added-in-cart' : '' }}">
                     <div class="card-body">
@@ -18,19 +18,28 @@
                             <img src="{{ $product->image_url }}" onError="this.onerror=null;this.src='{{ asset('assets/images/product-default.jpg') }}';" class="card-img-top" alt="{{ $product->name }}">
                         </a>
                         <h5 class="card-title my-4">{{ $product->name }}</h5>
+                        <p class="mb-3">
+                            <span class="badge {{ (float) $product->stock_quantity > 0 ? 'bg-success' : 'bg-secondary' }}">
+                                {{ $product->stock_label }}
+                            </span>
+                        </p>
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 full-width-on-mobile">
                             <div>
                                 @if ($user->price_permission)
                                     @if ($product->original_price > $product->price)
                                         <span class="original-price">RM {{ $product->original_price ?: '0.00' }}</span><br>
                                     @endif
-                                    <b>RM {{ $product->price }}</b>
+                                    <b>{{ $product->price_label }}</b>
                                 @endif
                             </div>
                             <div class="full-width-on-mobile">
+                                @if ((float) $product->stock_quantity > 0)
                                 <button type="button" class="btn btn-outline-primary btn-add-to-cart mb-1" data-id="{{ encrypt($product->id) }}" data-action="{{ route('member.add-to-cart', encrypt($product->id)) }}" data-bs-toggle="modal" data-bs-target="#add-to-cart">
                                     Add to cart
                                 </button>
+                                @else
+                                <button type="button" class="btn btn-secondary mb-1" disabled>Out of stock</button>
+                                @endif
                                 @if ($product->added_to_cart)
                                     <button type="button" class="btn btn-primary disabled mb-1">
                                         <i class="fa fa-shopping-cart"></i> {{ $product->added_to_cart->quantity ?? ($product->added_to_cart->weight . ' KG') }}
@@ -41,7 +50,11 @@
                     </div>
                 </div>
             </div>
-        @endforeach
+        @empty
+            <div class="col-12">
+                <div class="alert alert-info mb-0">No products are currently in stock. Please check back later.</div>
+            </div>
+        @endforelse
     </div>
 
     @if ($preferred_products)
@@ -53,6 +66,9 @@
                         <div class="card-body">
                             <img src="{{ $product->image_url }}" onError="this.onerror=null;this.src='{{ asset('assets/images/product-default.jpg') }}';" class="card-img-top" alt="{{ $product->name }}">
                             <h5 class="card-title my-4">{{ $product->name }}</h5>
+                            <p class="mb-3">
+                                <span class="badge bg-success">{{ $product->stock_label }}</span>
+                            </p>
                             <p class="alert alert-info text-center py-2 mb-4 text-muted">You've ordered {{ $product->sold_count }} before</p>
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 full-width-on-mobile">
                                 <div>
@@ -60,7 +76,7 @@
                                         @if ($product->original_price > $product->price)
                                             <span class="original-price">RM {{ $product->original_price ?: '0.00' }}</span><br>
                                         @endif
-                                        <b>RM {{ $product->price }}</b>
+                                        <b>{{ $product->price_label }}</b>
                                     @endif
                                 </div>
                                 <div class="full-width-on-mobile">

@@ -74,6 +74,19 @@
                                     </select>
                                 </div>
                             </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-4">
+                                    <label class="mb-2" for="filterPaymentStatus">Payment Status</label>
+                                    <select class="form-select" name="payment_status" id="filterPaymentStatus">
+                                        <option value="">All</option>
+                                        @foreach($payment_status_options as $paymentStatus)
+                                            <option value="{{ $paymentStatus }}" {{ ($input['payment_status'] ?? '') == $paymentStatus ? 'selected' : '' }}>
+                                                {{ __('order.payment_status.' . $paymentStatus) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                         <div class="row">
                             <div class="col-md-4">
@@ -192,6 +205,8 @@
                                     <th>Shipping Address</th>
                                     <th>Lorry</th>
                                     <th>Status</th>
+                                    <th>Payment</th>
+                                    <th>Payment Due</th>
                                     <th>Last Updated At</th>
                                 </tr>
                             </thead>
@@ -216,12 +231,21 @@
                                                     <li>
                                                         <a class="dropdown-item" href="{{ route('admin.orders.summary', $order->id) }}">Order Summary</a>
                                                     </li>
-                                                    <li>
-                                                        <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.invoice', $order->id) }}">View Invoice</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">View DO</a>
-                                                    </li>
+                                                    @if (Order::canAdjustQuantities($order->status))
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ route('admin.orders.review', $order->id) }}">Adjust Order</a>
+                                                        </li>
+                                                    @endif
+                                                    @if ($order->canShowInvoice())
+                                                        <li>
+                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.invoice', $order->id) }}">View Invoice</a>
+                                                        </li>
+                                                    @endif
+                                                    @if ($order->canShowDeliveryOrder())
+                                                        <li>
+                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">View DO</a>
+                                                        </li>
+                                                    @endif
                                                     <li>
                                                         <a class="dropdown-item btn-change-lorry" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-lorry="{{ $order->driver_id }}" data-bs-toggle="modal" data-bs-target="#change-lorry">Change Lorry</a>
                                                     </li>
@@ -235,9 +259,13 @@
                                         {{-- <td>{{ $order->do_no }}</td> --}}
                                         <td>{{ $order->created_at }}</td>
                                         <td>
-                                            <a href="{{ route('admin.customers.edit', encrypt($customer->id)) }}" class="text-dark" target="_blank">
-                                                {{ $customer->name }}
-                                            </a>
+                                            @if ($customer)
+                                                <a href="{{ route('admin.customers.edit', encrypt($customer->id)) }}" class="text-dark" target="_blank">
+                                                    {{ $customer->name }}
+                                                </a>
+                                            @else
+                                                {{ $order->walk_in_name ?? 'Walk-in / Public' }}
+                                            @endif
                                         </td>
                                         <!--<td>{{ $order->order_weight ?? 0 }}KG</td>-->
                                         <td class="white-space-nowrap">{!! $order->order_products !!}</td>
@@ -255,13 +283,33 @@
                                             @endif
                                         </td>
                                         <td class="text-center">{{ __('order.status.' . $order->status) }}</td>
+                                        <td class="text-center">
+                                            @php
+                                                $paymentBadgeClass = match ($order->payment_status ?? 'unpaid') {
+                                                    'payment_due' => 'bg-danger',
+                                                    'paid' => 'bg-success',
+                                                    'partial' => 'bg-warning text-dark',
+                                                    default => 'bg-secondary',
+                                                };
+                                            @endphp
+                                            <span class="badge {{ $paymentBadgeClass }}">
+                                                {{ __('order.payment_status.' . ($order->payment_status ?? 'unpaid')) }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if ($customer && ($customer->customer_type ?? 'cod') === 'credit')
+                                                {{ $order->payment_due_date ? $order->payment_due_date->format('d-m-Y') : '-' }}
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
                                         <td>{{ $order->updated_at }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="14">
+                                    <td colspan="15">
                                         {{ $orders->appends(request()->query())->links('pagination::bootstrap-4') }}
                                     </td>
                                 </tr>

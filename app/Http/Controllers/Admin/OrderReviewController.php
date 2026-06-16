@@ -1,0 +1,96 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Order;
+use App\OrderProduct;
+use App\Services\OrderService;
+use App\Services\OrderStatusService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class OrderReviewController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware('auth_admin');
+    }
+
+    public function show($id)
+    {
+        $order = Order::with('customer')->findOrFail($id);
+
+        if (!Order::canAdjustQuantities($order->status)) {
+            return redirect(route('admin.orders.summary', $order->id))
+                ->with('warning', 'This order can no longer be adjusted.');
+        }
+
+        $products = OrderProduct::where('order_id', $order->id)
+            ->where('status', OrderProduct::$status['active'])
+            ->get();
+
+        $drivers = DB::table('drivers')->pluck('lorry_number', 'id');
+
+        return view('admin.orders.review', [
+            'order' => $order,
+            'products' => $products,
+            'drivers' => $drivers,
+            'customerName' => app(OrderService::class)->displayCustomerName($order),
+            'canAdjustAmount' => app(OrderService::class)->canAdjustAmount(Auth::guard('web_admin')->user()),
+            'isCreditCustomer' => $order->isCreditCustomer(),
+        ]);
+    }
+
+    public function store(Request $request, $id)
+    {
+        $order = Order::with('customer')->findOrFail($id);
+
+        if (!Order::canAdjustQuantities($order->status)) {
+            return back()->with('error', 'This order can no longer be adjusted.');
+        }
+
+        $request->validate([
+            'delivery_fee' => 'required|numeric|min:0',
+            'amount_adjustment' => 'nullable|numeric',
+            'adjustment_remark' => 'nullable|string|max:500',
+            'payment_due_date' => 'nullable|date',
+            'driver_id' => 'nullable|exists:drivers,id',
+            'line_items' => 'required|array',
+            'line_items.*.quantity' => 'required|numeric|min:0.001',
+            'line_items.*.weight' => 'nullable|numeric|min:0',
+        ]);
+
+        $orderService = app(OrderService::class);
+        $amountAdjustment = $request->input('amount_adjustment', 0);
+
+        if (!$orderService->canAdjustAmount(Auth::guard('web_admin')->user())) {
+            $amountAdjustment = $order->amount_adjustment;
+        }
+
+        $wasPending = $order->status === Order::$status['pending'];
+
+        $orderService->applyReviewAdjustments(
+            $order,
+            $request->input('line_items', []),
+            [
+                'delivery_fee' => $request->input('delivery_fee'),
+                'amount_adjustment' => $amountAdjustment,
+                'adjustment_remark' => $request->input('adjustment_remark'),
+                'payment_due_date' => $request->input('payment_due_date'),
+                'driver_id' => $request->input('driver_id'),
+                'send_to_customer' => $request->input('send_to_customer') === '1',
+            ],
+            Auth::guard('web_admin')->id()
+        );
+
+        $message = $request->boolean('send_to_customer')
+            ? ($wasPending
+                ? 'Order reviewed and sent to customer for confirmation.'
+                : 'Adjustments saved and customer invoice updated.')
+            : 'Order adjustments saved successfully.';
+
+        return redirect(route('admin.orders.summary', $order->id))->with('success', $message);
+    }
+}

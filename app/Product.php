@@ -4,6 +4,8 @@ namespace App;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
@@ -32,34 +34,58 @@ class Product extends Model
         'removed' => 'removed',
     ];
 
-    public static function get_today_price($id, User $user){
+    public static function get_today_price($id, User $user)
+    {
+        return self::resolvePrice($id, $user->category);
+    }
+
+    public static function resolvePrice($id, ?string $userCategory = null): float
+    {
         $product = Product::find($id);
+        if (!$product) {
+            return 0;
+        }
+
         $date = Carbon::now()->format('Y-m-d');
 
-        // Fetch the specific category price
-        $product_daily_price = ProductDailyPrice::where('date', $date)
-            ->where('product_id', $product->id)
-            ->where('status', ProductDailyPrice::$status['active'])
-            ->where('user_category', $user->category)
-            ->first();
+        if ($userCategory) {
+            $dailyPrice = ProductDailyPrice::where('date', $date)
+                ->where('product_id', $product->id)
+                ->where('status', ProductDailyPrice::$status['active'])
+                ->where('user_category', $userCategory)
+                ->first();
 
-        if ($product_daily_price) {
-            return $product_daily_price->price;
+            if ($dailyPrice) {
+                return (float) $dailyPrice->price;
+            }
         }
 
-        // If no specific category price found, fetch the general price
-        $product_daily_price = ProductDailyPrice::where('date', $date)
+        $dailyPrice = ProductDailyPrice::where('date', $date)
             ->where('product_id', $product->id)
             ->where('status', ProductDailyPrice::$status['active'])
-            ->whereNull('user_category') // For all categories (null)
+            ->whereNull('user_category')
             ->first();
 
-        if ($product_daily_price) {
-            return $product_daily_price->price;
+        if ($dailyPrice) {
+            return (float) $dailyPrice->price;
         }
 
-        // Fallback to the product's default price
-        return $product->price;
+        if ($userCategory) {
+            $categoryPrice = ProductCategoryPrice::where('product_id', $product->id)
+                ->where('category_name', $userCategory)
+                ->first();
+
+            if ($categoryPrice) {
+                return (float) $categoryPrice->price;
+            }
+        }
+
+        return (float) $product->price;
+    }
+
+    public static function formatUnitPrice(float $price, ?string $uomName = null): string
+    {
+        return 'RM ' . number_format($price, 2) . ' / ' . ($uomName ?: 'KG');
     }
 
     public static function getOption($id, $return_array=false){
@@ -93,5 +119,52 @@ class Product extends Model
     public function categoryPrices()
     {
         return $this->hasMany(ProductCategoryPrice::class);
+    }
+
+    public function stock()
+    {
+        return $this->hasOne(ProductStock::class);
+    }
+
+    public function uom()
+    {
+        return $this->belongsTo(Uom::class);
+    }
+
+    public static function formatStockQuantity(float $quantity, ?string $uomName = null): string
+    {
+        $qty = rtrim(rtrim(number_format($quantity, 3, '.', ''), '0'), '.');
+
+        return "Qty: {$qty}";
+    }
+
+    public static function storeUploadedImage(int $productId, UploadedFile $file): string
+    {
+        do {
+            $extension = $file->getClientOriginalExtension();
+            $filename = time() . rand() . '.' . $extension;
+            $path = self::$path . '/' . $productId;
+        } while (Storage::disk('local')->exists($path . '/' . $filename));
+
+        Storage::disk('local')->put($path . '/' . $filename, file_get_contents($file));
+
+        return $filename;
+    }
+
+    public static function resolveImageUrl($product): string
+    {
+        if (!is_object($product) || empty($product->id)) {
+            return asset('assets/images/product-default.jpg');
+        }
+
+        $images = is_string($product->images ?? null)
+            ? json_decode($product->images, true)
+            : ($product->images ?? null);
+
+        if (is_array($images) && !empty($images[0])) {
+            return url('/') . '/' . self::$path . '/' . $product->id . '/' . $images[0];
+        }
+
+        return asset('assets/images/product-default.jpg');
     }
 }

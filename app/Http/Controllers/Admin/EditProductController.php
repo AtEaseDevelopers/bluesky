@@ -10,7 +10,6 @@ use App\ProductOption;
 use App\ProductOptionItem;
 use App\ProductCategoryPrice;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class EditProductController extends Controller
@@ -23,14 +22,11 @@ class EditProductController extends Controller
     public function showForm($id)
     {
         $product = Product::find(decrypt($id));
-        $image = json_decode($product->images, true);
-        if ($image != null) {
-            $product->image_url = url('/') . '/' . Product::$path."/".$product->id."/".$image[0];
-        }
+        $product->image_url = Product::resolveImageUrl($product);
         $product->product_option = Product::getOption($product->id);
         $uoms = DB::table('uoms')->select('id', 'uom_name')->get()->toArray();
         $product_categories = DB::table('product_categories')->select('id', 'category_name')->get()->toArray();
-        $customer_categories = DB::table('users')->select('category')->distinct()->whereNotNull('category')->pluck('category')->toArray();
+        $customer_categories = $this->customerCategories();
         $category_prices = ProductCategoryPrice::where('product_id', $product->id)->get();
 
         return view(
@@ -72,24 +68,9 @@ class EditProductController extends Controller
         )->save();
 
         // process images
-        $images = [];
         if (isset($data['images']) && $data['images']) {
-            do {
-                $extension = $data['images']->getClientOriginalExtension();
-                $filename = time().rand().".".$extension;
-                $path = Product::$path.'/'.$product->id;
-            } while (Storage::disk('local')->exists($path."/".$filename));
-
-            Storage::disk('local')->put($path."/".$filename, file_get_contents($data['images']));
-            $images[] = $filename;
-        }
-
-        if ($images) {
-            $product->fill(
-                [
-                'images' => json_encode($images)
-                ]
-            )->save();
+            $filename = Product::storeUploadedImage($product->id, $data['images']);
+            $product->update(['images' => json_encode([$filename])]);
         }
 
         // Process category pricing
@@ -137,6 +118,17 @@ class EditProductController extends Controller
         }
 
         return redirect(route('admin.products.edit', encrypt($product->id)))->with('success', "$product->name has been updated successfully.");
+    }
+
+    private function customerCategories(): array
+    {
+        $fromTable = DB::table('customer_categories')->pluck('category')->toArray();
+        $fromUsers = DB::table('users')->select('category')->distinct()->whereNotNull('category')->pluck('category')->toArray();
+
+        $categories = array_values(array_unique(array_merge($fromTable, $fromUsers)));
+        sort($categories);
+
+        return $categories;
     }
 
     public function validateEditProduct(Request $request)

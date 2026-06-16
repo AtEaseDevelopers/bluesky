@@ -91,9 +91,6 @@
                 <a href="{{ route('admin.customers.create') }}" class="btn btn-primary">
                     Add New Customer
                 </a>
-                <a href="{{ route('admin.import.customers') }}" class="btn btn-success">
-                    <i class="fa fa-file-excel-o me-2" aria-hidden="true"></i> Import Customers
-                </a>
                 <a href="{{ route('admin.customers.export') }}?{{ $query_params }}" class="btn btn-success">
                     <i class="fa fa-file-excel-o me-2" aria-hidden="true"></i> Export to Excel
                 </a>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DeliverySlot;
 use App\Http\Controllers\Controller;
 
 use Illuminate\Validation\ValidationException;
@@ -17,6 +18,7 @@ use App\System;
 use App\Helper;
 use App\Order;
 use App\User;
+use App\Services\OrderService;
 
 class AddOrderController extends Controller
 {
@@ -38,6 +40,8 @@ class AddOrderController extends Controller
                 'shipping_state_options' => System::$country_state['MY'],
                 'customers_list' => User::all(),
                 'areaList' => Helper::areaList(),
+                'drivers' => DB::table('drivers')->pluck('lorry_number', 'id'),
+                'deliverySlots' => DeliverySlot::availableSlots(),
             ]
         );
     }
@@ -49,28 +53,59 @@ class AddOrderController extends Controller
             return redirect()->back()->withInput()->withErrors($data['field_err']);
         }
 
-        $user = User::find($data['customer_id']);
+        $isWalkIn = $request->boolean('is_walk_in');
+
+        if ($isWalkIn) {
+            $request->validate([
+                'walk_in_name' => 'required|string|max:100',
+                'walk_in_phone' => 'required|string|max:30',
+                'billing_address' => 'required|string|max:200',
+                'shipping_address' => 'nullable|string|max:200',
+            ]);
+            $user = null;
+            $data['customer_id'] = null;
+        } else {
+            $user = User::find($data['customer_id']);
+        }
+
         $total = 0;
-        $order = Order::create(
-            [
-                "user_id" => $user->id,
-                "total_price" => $total,
-                "attn_name" => $data['attn_name'],
-                "attn_contact" => $data['attn_contact'],
-                "payment_method" => $data['payment_method'] ?? null,
-                "area" => $request['area'],
-                "billing_address" => $data['billing_address'],
-                "billing_city" => $request['billing_city'] ?? null,
-                "shipping_city" => $request['shipping_city'],
-                "billing_postcode" => $data['billing_postcode'] ?? null,
-                "billing_state" => $data['billing_state'] ?? null,
-                "shipping_address" => $data['shipping_address'],
-                "shipping_postcode" => $data['shipping_postcode'] ?? null,
-                "shipping_state" => $data['shipping_state'] ?? null,
-                "status" => Order::$status['processing'],
-                "driver_id" => $user->default_driver_id,
-            ]
-        );
+
+        $orderData = [
+            "order_type" => $isWalkIn ? Order::$order_types['walk_in'] : Order::$order_types['registered'],
+            "user_id" => $isWalkIn ? null : $user->id,
+            "walk_in_name" => $isWalkIn ? $request->input('walk_in_name') : null,
+            "walk_in_phone" => $isWalkIn ? $request->input('walk_in_phone') : null,
+            "total_price" => $total,
+            "subtotal" => $total,
+            "delivery_fee" => 0,
+            "attn_name" => $data['attn_name'],
+            "attn_contact" => $data['attn_contact'],
+            "payment_method" => $data['payment_method'] ?? null,
+            "area" => $request['area'],
+            "billing_address" => $data['billing_address'],
+            "billing_city" => $request['billing_city'] ?? null,
+            "shipping_city" => $request['shipping_city'],
+            "billing_postcode" => $data['billing_postcode'] ?? null,
+            "billing_state" => $data['billing_state'] ?? null,
+            "shipping_address" => $data['shipping_address'],
+            "shipping_postcode" => $data['shipping_postcode'] ?? null,
+            "shipping_state" => $data['shipping_state'] ?? null,
+            "status" => Order::$status['pending'],
+            "payment_status" => Order::$payment_status['unpaid'],
+            "driver_id" => $request->input('driver_id') ?: ($isWalkIn ? null : $user->default_driver_id),
+            "is_estimated" => true,
+        ];
+
+        if ($request->filled('delivery_slot_id')) {
+            $slot = DeliverySlot::find($request->input('delivery_slot_id'));
+            if ($slot) {
+                $orderData['delivery_slot_id'] = $slot->id;
+                $orderData['delivery_date'] = $slot->slot_date;
+                $orderData['delivery_time_slot'] = $slot->time_label;
+            }
+        }
+
+        $order = Order::create($orderData);
 
         $image = null;
         if (isset($data['transfer_slip']) && $data['transfer_slip']) {
@@ -96,20 +131,22 @@ class AddOrderController extends Controller
         // process order product
         foreach ($data['product_id'] as $key => $product_id) {
             $product = Product::find($product_id);
-            
+
+            $quantity = null;
+            $weight = null;
             $qtyWeight = 0;
-            
-            if($product->sell_in == "qty")
-            {
-                 $quantity = $data['quantity'][$key];
-                 $qtyWeight = $quantity;
+            $lineWeight = 0;
+
+            if ($product->sell_in === 'qty') {
+                $quantity = $data['quantity'][$key];
+                $qtyWeight = $quantity;
+                $lineWeight = ($product->weight ?: 0) * $quantity;
+            } else {
+                $weight = $data['quantity'][$key];
+                $qtyWeight = $weight;
+                $lineWeight = $weight;
             }
-            else
-            {
-                 $weight = $data['quantity'][$key];
-                 $qtyWeight = $weight;
-            }
-           
+
             $unit_price = Product::get_today_price($product->id, $user);
             $price = $unit_price * $qtyWeight;
             $order_product = OrderProduct::create(
@@ -117,8 +154,9 @@ class AddOrderController extends Controller
                     "order_id" => $order->id,
                     "product_id" => $product_id,
                     "product_name" => $product->name,
-                    "quantity" => $quantity ?? null,
-                    "weight" => $weight ?? null, //$product->weight == '' ? 0 : $product->weight * $quantity,
+                    "quantity" => $quantity,
+                    "weight" => $weight,
+                    "product_weight" => $weight,
                     "unit_price" => $unit_price,
                     "price" => $price,
                     "remark" => $data['remark'][$key],
@@ -126,7 +164,7 @@ class AddOrderController extends Controller
                     "status" => OrderProduct::$status['active'],
                 ]
             );
-            $order_weight += ($product->weight == '' ? 0 : $product->weight * $quantity);
+            $order_weight += $lineWeight;
             
             if (isset($data['product_options'][$key]) && $data['product_options'][$key]) {
                 foreach ($data['product_options'][$key] as $opt => $opt_itm) {
@@ -147,12 +185,13 @@ class AddOrderController extends Controller
 
         $order->fill(
             [
+                'subtotal' => $total,
                 'total_price' => $total,
                 'order_weight' => $order_weight
             ]
         )->save();
 
-        $this->generateDoNumber($order);
+        app(OrderService::class)->assignDoNumber($order);
 
         return redirect(route('admin.orders.summary', $order->id))->with('success', "Order has been created!");
     }
@@ -160,7 +199,9 @@ class AddOrderController extends Controller
     public function validateAddOrder(Request $request)
     {
         $rules = [
-            "customer_id" => ['required'],
+            "customer_id" => [$request->boolean('is_walk_in') ? 'nullable' : 'required'],
+            "walk_in_name" => ['nullable', 'string', 'max:100'],
+            "walk_in_phone" => ['nullable', 'string', 'max:30'],
             "attn_name" => array_merge(Order::$attribute_rules['attn_name'], []),
             "attn_contact" => array_merge(Order::$attribute_rules['attn_contact'], []),
             // "payment_method" => array_merge(Order::$attribute_rules['payment_method'], []),

@@ -30,61 +30,37 @@ class ProductController extends Controller
         $id = $user->id;
 
         $keyword = $request->keyword;
-    
-        // Fetch all product IDs for the user
-        $productIds = DB::table('product_visibilities')
-            ->where('user_id', $user->id)
-            ->pluck('product_id')
-            ->toArray();
-    
-        // Fetch all active products with the necessary details in a single query
-        $products = Product::where('status', Product::$status['active'])
+
+        $products = Product::query()
+            ->select('products.*', 'product_stocks.quantity as stock_quantity', 'uoms.uom_name')
+            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
+            ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id')
+            ->where('products.status', Product::$status['active'])
+            ->where('product_stocks.quantity', '>', 0)
             ->when($keyword, function ($q) use ($keyword) {
-                return $q->where('products.name', 'LIKE', '%' . $keyword . '%')
-                    ->orWhere('products.sku', 'LIKE', $keyword . '%')
-                    ->orWhere('products.price', 'LIKE', $keyword . '%')
-                    ->orWhere('products.weight', 'LIKE', $keyword . '%')
-                    ->orWhere('products.status', 'LIKE', $keyword . '%');
+                return $q->where(function ($query) use ($keyword) {
+                    $query->where('products.name', 'LIKE', '%' . $keyword . '%')
+                        ->orWhere('products.sku', 'LIKE', $keyword . '%');
+                });
             })
-            ->whereIn('id', $productIds)
+            ->orderBy('products.name')
             ->get()
-            ->map(
-                function ($product) use ($user) {
-                    $image = json_decode($product->images, true);
-                    $product->original_price = $product->price;
-                    $product->price = Product::get_today_price($product->id, $user);
-                    if (isset($image[0])) {
-                        $product->image_url = url('/') . '/' . Product::$path . "/" . $product->id . "/" . $image[0];
-                    } else {
-                        $product->image_url = asset('assets/images/product-default.jpg');
-                    }
-                    return $product;
-                }
-            );
+            ->map(function ($product) use ($user) {
+                return $this->formatProductForMember($product, $user);
+            });
     
         $products_output = [];
-        foreach ($products as $key => $value) {
-            $image = json_decode($value->images, true);
-            $products[$key]->original_price = $value->price;
-            $products[$key]->price = Product::get_today_price($value->id, $user);
-            if (isset($image[0])) {
-                $products[$key]->image_url = url('/') . '/' . Product::$path."/".$value->id."/".$image[0];
-            } else {
-                $products[$key]->image_url = asset('assets/images/product-default.jpg');
-            }
-                
-            // check if in cart
-            $products[$key]->added_to_cart = DB::table('cart_products')
+        foreach ($products as $product) {
+            $product->added_to_cart = DB::table('cart_products')
                 ->select('cart_products.quantity', 'cart_products.weight')
                 ->leftJoin('carts', 'carts.id', '=', 'cart_products.cart_id')
-                ->leftJoin('products', 'products.id', '=', 'cart_products.product_id')
                 ->where('cart_products.status', CartProduct::$status['active'])
-                ->where('cart_products.product_id', $value->id)
+                ->where('cart_products.product_id', $product->id)
                 ->where('carts.user_id', $user->id)
                 ->where('carts.status', Cart::$status['pending'])
                 ->first();
-    
-            $products_output[$value->id] = $products[$key];
+
+            $products_output[$product->id] = $product;
         }
     
             // get the preferred product
@@ -139,25 +115,17 @@ class ProductController extends Controller
 
     public function view($id)
     {
-        $product = Product::find(decrypt($id));
-        if ($product->status != Product::$status['active']) {
-            abort(404);
-        }
+        $product = Product::query()
+            ->select('products.*', 'product_stocks.quantity as stock_quantity', 'uoms.uom_name')
+            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
+            ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id')
+            ->where('products.id', decrypt($id))
+            ->where('products.status', Product::$status['active'])
+            ->where('product_stocks.quantity', '>', 0)
+            ->firstOrFail();
 
         $user = Auth::guard('web')->user();
-
-        // user payment method
-        $payment_method = json_decode($user->payment_method, true);
-
-        $image = json_decode($product->images, true);
-        $product->original_price = $product->price;
-        $product->price = Product::get_today_price($product->id, $user);
-        if (isset($image[0])) {
-            $product->image_url = url('/') . '/' . Product::$path."/".$product->id."/".$image[0];
-        } else {
-            $product->image_url = asset('assets/images/product-default.jpg');
-        }
-        
+        $product = $this->formatProductForMember($product, $user);
         $product->product_option = Product::getOption($product->id, true);
 
         $product->cart_product_option = DB::table('cart_product_options')
@@ -179,15 +147,38 @@ class ProductController extends Controller
 
         return view(
             'member.view-product', [
-                'payment_method' => $payment_method,
+                'payment_method' => json_decode($user->payment_method, true),
                 'product' => $product,
             ]
         );
     }
 
+    private function formatProductForMember(Product $product, $user): Product
+    {
+        $product->original_price = $product->price;
+        $product->price = Product::get_today_price($product->id, $user);
+        $product->image_url = Product::resolveImageUrl($product);
+        $uomName = $product->uom_name ?? optional($product->uom)->uom_name;
+        $product->stock_label = Product::formatStockQuantity(
+            (float) $product->stock_quantity,
+            $uomName
+        );
+        $product->price_label = Product::formatUnitPrice((float) $product->price, $uomName);
+        $product->original_price_label = Product::formatUnitPrice((float) $product->original_price, $uomName);
+
+        return $product;
+    }
+
     public function add_to_cart_product_info(Request $request)
     {
-        $data['product'] = Product::where('id', decrypt($request['id']))->first();
+        $product = Product::query()
+            ->select('products.*', 'product_stocks.quantity as stock_quantity', 'uoms.uom_name')
+            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
+            ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id')
+            ->where('products.id', decrypt($request['id']))
+            ->firstOrFail();
+
+        $data['product'] = $this->formatProductForMember($product, Auth::guard('web')->user());
         $data['product_option'] = Product::getOption(decrypt($request['id']), true);
         $data['cart_product_option'] = DB::table('cart_product_options')
             ->leftJoin('cart_products', 'cart_products.id', '=', 'cart_product_options.cart_product_id')

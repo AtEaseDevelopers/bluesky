@@ -1,6 +1,9 @@
 @php
     $user = Auth::guard('web')->user();
     $currentRoute = Route::currentRouteName();
+    $pendingReviewCount = \App\Order::where('user_id', $user->id)
+        ->where('status', \App\Order::$status['customer_reviewing'])
+        ->count();
 @endphp
 <nav class="navbar sticky-top navbar-expand-lg bg-body-tertiary">
     <div class="container">
@@ -19,10 +22,15 @@
         <div class="collapse navbar-collapse" id="navbarScroll">
             <ul class="navbar-nav me-auto my-2 my-lg-0 navbar-nav-scroll">
                 <li class="nav-item">
-                    <a class="nav-link {{ in_array($currentRoute, ['member.products']) ? 'active' : '' }}" href="{{ route('member.products') }}">Products</a>
+                    <a class="nav-link {{ in_array($currentRoute, ['member.products']) ? 'active' : '' }}" href="{{ route('member.products') }}">Order Menu</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ in_array($currentRoute, ['member.orders']) ? 'active' : '' }}" href="{{ route('member.orders') }}">My Orders</a>
+                    <a class="nav-link {{ in_array($currentRoute, ['member.orders', 'member.orders.summary', 'member.orders.review']) ? 'active' : '' }}" href="{{ route('member.orders') }}">
+                        My Orders
+                        @if ($pendingReviewCount > 0)
+                            <span class="badge bg-warning text-dark">{{ $pendingReviewCount }}</span>
+                        @endif
+                    </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ in_array($currentRoute, ['member.cart']) ? 'active' : '' }}" href="{{ route('member.cart') }}">

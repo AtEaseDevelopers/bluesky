@@ -13,6 +13,44 @@
 
                         <div class="row">
                             <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" name="is_walk_in" id="is_walk_in" value="1">
+                                    <label class="form-check-label" for="is_walk_in">Walk-in customer (no account)</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="walk_in_fields" class="row d-none mb-3">
+                            <div class="col-md-6">
+                                <label class="mb-2">Walk-in Name <span class="text-danger">*</span></label>
+                                <input type="text" name="walk_in_name" id="walk_in_name" class="form-control" value="{{ old('walk_in_name') }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="mb-2">Walk-in Phone <span class="text-danger">*</span></label>
+                                <input type="text" name="walk_in_phone" id="walk_in_phone" class="form-control" value="{{ old('walk_in_phone') }}">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="mb-2">Delivery Slot</label>
+                                <select name="delivery_slot_id" class="form-select">
+                                    <option value="">None</option>
+                                    @foreach ($deliverySlots as $slot)
+                                        <option value="{{ $slot->id }}">{{ $slot->slot_date->format('d-m-Y') }} — {{ $slot->time_label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="mb-2">Assign Driver</label>
+                                <select name="driver_id" class="form-select">
+                                    <option value="">None</option>
+                                    @foreach ($drivers as $id => $lorry)
+                                        <option value="{{ $id }}">{{ $lorry }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row" id="order_customer_row">
+                            <div class="col-md-6">
                                 <div class="form-group mb-4">
                                     <label class="mb-2" for="order_customer">Customer</label>
                                     <span class="text-danger"> *</span>
@@ -219,8 +257,56 @@
                 } else {
                     $('#transferSlipGroup').css('display', 'none')
                 }
-            })
+            });
+
+            $('#is_walk_in').on('change', function () {
+                if ($(this).is(':checked')) {
+                    enableWalkInMode();
+                } else {
+                    disableWalkInMode();
+                }
+            });
+
+            $('#walk_in_name').on('input', function () {
+                $('#attn_name').val($(this).val());
+            });
+            $('#walk_in_phone').on('input', function () {
+                $('#attn_contact').val($(this).val());
+            });
+
+            @if (old('is_walk_in'))
+                $('#is_walk_in').prop('checked', true).trigger('change');
+            @endif
         });
+
+        function enableWalkInMode() {
+            $('#walk_in_fields').removeClass('d-none');
+            $('#order_customer_row').addClass('d-none');
+            $('#order_customer').prop('disabled', true).val('').trigger('change.select2');
+            $('#id').val('');
+
+            var paymentMethod = document.getElementById('payment_method');
+            paymentMethod.innerHTML = '<option value="cod" selected>COD</option>';
+
+            $('#customer_info').removeClass('d-none');
+            $('form button.next').removeClass('d-none');
+
+            $('#productList').html('');
+            selected_products = [];
+            $('#product_bag-item').html('');
+            $('#total-price').text('0.00');
+        }
+
+        function disableWalkInMode() {
+            $('#walk_in_fields').addClass('d-none');
+            $('#order_customer_row').removeClass('d-none');
+            $('#order_customer').prop('disabled', false);
+            $('#customer_info').addClass('d-none');
+            $('form button.next').addClass('d-none');
+            $('form button.back').addClass('d-none');
+            $('#add-product-info').addClass('d-none');
+            step = 'customer_info';
+        }
     </script>
 
 @endsection

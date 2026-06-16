@@ -106,7 +106,7 @@ class InventoryController extends Controller
 
     public function fetch_balances(Request $request)
     {
-        $columns = ['products.id', 'options', 'products.name', 'products.sku', 'uom_name', 'quantity', 'weight', 'updated_at'];
+        $columns = ['products.id', 'options', 'products.name', 'products.sku', 'uom_name', 'price', 'quantity', 'weight', 'updated_at'];
         $query = DB::table('products')
             ->leftJoin('product_stocks', 'products.id', '=', 'product_stocks.product_id')
             ->leftJoin('uoms', 'products.uom_id', '=', 'uoms.id')
@@ -115,6 +115,8 @@ class InventoryController extends Controller
                 'products.id',
                 'products.name',
                 'products.sku',
+                'products.price',
+                'products.images',
                 'uoms.uom_name',
                 DB::raw('COALESCE(product_stocks.quantity, 0) as quantity'),
                 DB::raw('COALESCE(product_stocks.weight, 0) as weight'),
@@ -151,15 +153,34 @@ class InventoryController extends Controller
 
         $data = [];
         foreach ($records as $record) {
+            $quantity = (float) $record->quantity;
+            $weight = (float) $record->weight;
+            $price = (float) $record->price;
+            $uomName = $record->uom_name ?: 'KG';
+            $imageUrl = Product::resolveImageUrl($record);
+
             $data[] = [
                 'id' => $record->id,
                 'options' => '<a href="' . route('admin.inventory.stock-in.create') . '?product_id=' . $record->id . '" class="btn btn-sm btn-success me-1" title="Stock In"><i class="fa fa-plus"></i></a>'
-                    . '<a href="' . route('admin.inventory.stock-out.create') . '?product_id=' . $record->id . '" class="btn btn-sm btn-warning" title="Stock Out"><i class="fa fa-minus"></i></a>',
-                'name' => $record->name,
+                    . '<a href="' . route('admin.inventory.stock-out.create') . '?product_id=' . $record->id . '" class="btn btn-sm btn-warning me-1" title="Stock Out"><i class="fa fa-minus"></i></a>'
+                    . '<button type="button" class="btn btn-sm btn-primary btn-edit-stock" title="Edit stock details"'
+                    . ' data-product-id="' . $record->id . '"'
+                    . ' data-name="' . e($record->name) . '"'
+                    . ' data-sku="' . e($record->sku ?: '-') . '"'
+                    . ' data-price="' . number_format($price, 2, '.', '') . '"'
+                    . ' data-quantity="' . number_format($quantity, 3, '.', '') . '"'
+                    . ' data-weight="' . number_format($weight, 3, '.', '') . '"'
+                    . ' data-uom="' . e($uomName) . '"'
+                    . ' data-image-url="' . e($imageUrl) . '">'
+                    . '<i class="fa fa-edit"></i></button>',
+                'name' => '<div class="d-flex align-items-center gap-2">'
+                    . '<img src="' . e($imageUrl) . '" alt="" class="rounded" style="width:40px;height:40px;object-fit:cover" onerror="this.src=\'' . asset('assets/images/product-default.jpg') . '\'">'
+                    . '<span>' . e($record->name) . '</span></div>',
                 'sku' => $record->sku ?: '-',
-                'uom_name' => $record->uom_name ?: '-',
-                'quantity' => number_format((float) $record->quantity, 3),
-                'weight' => number_format((float) $record->weight, 3) . ' kg',
+                'uom_name' => $uomName,
+                'price' => Product::formatUnitPrice($price, $uomName),
+                'quantity' => number_format($quantity, 3),
+                'weight' => number_format($weight, 3) . ' kg',
                 'updated_at' => $record->updated_at ? date('d-m-Y H:i', strtotime($record->updated_at)) : '-',
             ];
         }
@@ -169,6 +190,48 @@ class InventoryController extends Controller
             'recordsTotal' => intval($totalRecords),
             'recordsFiltered' => intval($totalFiltered),
             'data' => $data,
+        ]);
+    }
+
+    public function updateStock(Request $request)
+    {
+        $data = $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'price' => 'required|numeric|min:0',
+            'quantity' => 'required|numeric|min:0',
+            'weight' => 'nullable|numeric|min:0',
+            'images' => array_merge(Product::$attribute_rules['images'], []),
+        ]);
+
+        $product = Product::with('uom')->findOrFail($data['product_id']);
+        $product->update(['price' => $data['price']]);
+
+        if ($request->hasFile('images')) {
+            $filename = Product::storeUploadedImage($product->id, $request->file('images'));
+            $product->update(['images' => json_encode([$filename])]);
+        }
+
+        $this->stockService->adjustBalance(
+            (int) $data['product_id'],
+            (float) $data['quantity'],
+            array_key_exists('weight', $data) && $data['weight'] !== null && $data['weight'] !== ''
+                ? (float) $data['weight']
+                : null,
+            'Updated from stock balance',
+            Auth::guard('web_admin')->id()
+        );
+
+        $stock = $this->stockService->getOrCreateStock((int) $data['product_id']);
+        $uomName = optional($product->uom)->uom_name ?: 'KG';
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Stock details updated successfully.',
+            'price' => Product::formatUnitPrice((float) $product->price, $uomName),
+            'quantity' => number_format((float) $stock->quantity, 3),
+            'weight' => number_format((float) ($stock->weight ?? 0), 3) . ' kg',
+            'updated_at' => $stock->updated_at ? date('d-m-Y H:i', strtotime($stock->updated_at)) : now()->format('d-m-Y H:i'),
+            'image_url' => Product::resolveImageUrl($product->fresh()),
         ]);
     }
 

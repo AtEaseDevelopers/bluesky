@@ -120,20 +120,10 @@ class OrdersExport implements FromCollection, WithHeadings, WithEvents, WithColu
                 'orders.payment_method',
                 'orders.area',
                 DB::raw(
-                    "CONCAT(
-                        orders.billing_address, ' ', 
-                        orders.billing_city, ' ', 
-                        orders.billing_postcode, ' ', 
-                        orders.billing_state
-                    ) AS billing_address"
+                    "CONCAT_WS(' ', orders.billing_address, orders.billing_city, orders.billing_postcode, orders.billing_state) AS billing_address"
                 ),
                 DB::raw(
-                    "CONCAT(
-                    orders.shipping_address, ' ', 
-                    orders.shipping_city, ' ', 
-                    orders.shipping_postcode, ' ', 
-                    orders.shipping_state
-                ) AS shipping_address"
+                    "CONCAT_WS(' ', orders.shipping_address, orders.shipping_city, orders.shipping_postcode, orders.shipping_state) AS shipping_address"
                 ),
                 'orders.updated_at'
             )

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Member;
 
 use App\Cart;
 use App\CartProduct;
+use App\DeliverySlot;
 use App\Helper;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -13,6 +14,7 @@ use App\OrderProductOption;
 use App\PdfHelper;
 use App\Product;
 use App\System;
+use App\Services\OrderService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -80,7 +82,7 @@ class CheckoutController extends Controller
                 'total' => number_format($total, 2, '.', ''),
                 'shipping_state_options' => System::$country_state['MY'],
                 'customer' => $user,
-                // 'areaList' => Helper::areaList(),
+                'deliverySlots' => DeliverySlot::availableSlots(),
             ]
         );
     }
@@ -127,6 +129,11 @@ class CheckoutController extends Controller
             $total += $cart_products[$key]->unit_price * $value->quantity;
         }
 
+        $deliverySlot = DeliverySlot::findOrFail($data['delivery_slot_id']);
+        if (!$deliverySlot->isAvailable()) {
+            return redirect()->back()->withInput()->with('error', 'Selected delivery slot is no longer available.');
+        }
+
         $cart = Cart::find($cart_products[0]->cart_id);
         $cart->update(
             [
@@ -137,22 +144,22 @@ class CheckoutController extends Controller
         $order = Order::create(
             [
                 "user_id" => $user->id,
+                "order_type" => Order::$order_types['registered'],
                 "cart_id" => $cart->id,
+                "subtotal" => $total,
                 "total_price" => $total,
+                "delivery_fee" => 0,
                 "attn_name" => $data['attn_name'],
                 "attn_contact" => $data['attn_contact'],
-                // "payment_method" => $data['payment_method'],
-                // "area" => $request['area'],
                 "billing_address" => $data['billing_address'],
-                // "billing_city" => $request['billing_city'],
-                // "shipping_city" => $request['shipping_city'],
-                // "billing_postcode" => $data['billing_postcode'],
-                // "billing_state" => $data['billing_state'],
                 "shipping_address" => $data['shipping_address'] ?? "",
-                // "shipping_postcode" => $data['shipping_postcode'] ?? "",
-                // "shipping_state" => $data['shipping_state'] ?? "",
-                "status" => Order::$status['processing'],
+                "status" => Order::$status['pending'],
+                "payment_status" => Order::$payment_status['unpaid'],
                 "driver_id" => $user->default_driver_id,
+                "delivery_slot_id" => $deliverySlot->id,
+                "delivery_date" => $deliverySlot->slot_date,
+                "delivery_time_slot" => $deliverySlot->time_label,
+                "is_estimated" => true,
             ]
         );
 
@@ -218,13 +225,10 @@ class CheckoutController extends Controller
                 'order_weight' => $order_weight
             ]
         );
-        
-        // generate invoice and DO
-        PdfHelper::GenerateOrderInvoice($order);
-        PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
-        // PdfHelper::GenerateDeliveryOrder($order);
 
-        return redirect()->to('/order/summary/' . encrypt($order->id))->with('success', "Thank for placing order with us! Your order is now being processing!");
+        app(OrderService::class)->assignDoNumber($order);
+
+        return redirect()->to('/order/summary/' . encrypt($order->id))->with('success', "Thank you! Your order has been submitted and is pending review.");
     }
 
     public function validateCheckout(Request $request)
@@ -245,6 +249,7 @@ class CheckoutController extends Controller
             // "shipping_state" => array_merge(Order::$attribute_rules['shipping_state'], []),
             'shipping_state' => ['nullable'],
             "transfer_slip" => array_merge(Order::$attribute_rules['transfer_slip'], []),
+            'delivery_slot_id' => ['required', 'exists:delivery_slots,id'],
         ];
 
         try {

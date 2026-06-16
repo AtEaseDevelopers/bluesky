@@ -74,12 +74,12 @@ class PdfHelper extends Model
     {
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
         $data = [
-            'invoice_number' => 'INV-' . $order->id,
+            'invoice_number' => $order->invoice_number ?: ('INV-' . $order->id),
             'date' => now()->format('d/m/Y'),
             'order' => $order,
             'order_items' => $order_products,
             'void' => $void,
-            'user' => $order->customer,
+            'user' => $order->pdfCustomer(),
             'type' => 'order',
         ];
 
@@ -95,13 +95,13 @@ class PdfHelper extends Model
     {
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
         $data = [
-            'invoice_number' => 'INV-' . $order->id,
+            'invoice_number' => $order->invoice_number ?: ('INV-' . $order->id),
             'date' => now()->format('d/m/Y'),
             'order' => $order,
             'order_items' => $order_products,
             // 'total' => $total,
             'void' => $void,
-            'user' => $order->customer,
+            'user' => $order->pdfCustomer(),
             'type' => 'order',
         ];
 
@@ -117,7 +117,7 @@ class PdfHelper extends Model
     {
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
         $data = [
-            'invoice_number' => 'INV-' . $order->id,
+            'invoice_number' => $order->invoice_number ?: ('INV-' . $order->id),
             'date' => $order->created_at,
             'order' => $order,
             'order_items' => $order_products,

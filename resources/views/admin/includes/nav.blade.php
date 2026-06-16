@@ -19,24 +19,11 @@
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button"
                         data-bs-toggle="dropdown" aria-expanded="false">
-                        Products
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ route('admin.products') }}">Manage Products</a></li>
-                        <li><a class="dropdown-item" href="{{ route('admin.products.create') }}">Add New Product</a>
-                        </li>
-                    </ul>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button"
-                        data-bs-toggle="dropdown" aria-expanded="false">
                         Customers
                     </a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{{ route('admin.customers') }}">Manage Customers</a></li>
                         <li><a class="dropdown-item" href="{{ route('admin.customers.create') }}">Add New Customer</a>
-                        </li>
-                        <li><a class="dropdown-item" href="{{ route('admin.import.customers') }}">Import Customers</a>
                         </li>
                     </ul>
                 </li>
@@ -48,8 +35,9 @@
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{{ route('admin.orders') }}">Manage Orders</a></li>
                         @if (Auth::guard('web_admin')->user()->role == 'superadmin')
-                            <li><a class="dropdown-item" href="{{ route('admin.orders.create') }}">Add New Order</a>
-                            </li>
+                            <li><a class="dropdown-item" href="{{ route('admin.orders.create') }}">Add New Order</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.delivery-slots.index') }}">Delivery Slots</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.public-order-links.index') }}">Public Order Links</a></li>
                         @endif
                     </ul>
                 </li>
@@ -71,15 +59,8 @@
                         Reports
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ route('admin.daily-sales-report') }}">Daily Sales
-                                Report</a></li>
-                        <li><a class="dropdown-item" href="{{ route('admin.daily-summary-report') }}">Daily Summary
-                                Report</a></li>
-                        <li><a class="dropdown-item" href="{{ route('admin.daily-summary-stock-report') }}">Daily
-                                Summary Stock Report</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.daily-sales-report') }}">Daily Sales Report</a></li>
                         <li><a class="dropdown-item" href="{{ route('admin.do-report') }}">DO Report</a></li>
-                        <li><a class="dropdown-item" href="{{ route('admin.sql-do-export-report') }}">SQL DO Export
-                                Report</a></li>
                     </ul>
                 </li>
                 <li class="nav-item dropdown">
@@ -89,13 +70,9 @@
                     </a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{{ route('admin.admins.index') }}">Admin Settings</a></li>
-                        <li><a class="dropdown-item" href="{{ route('admin.areas.index') }}">Areas Settings</a></li>
-                        <li><a class="dropdown-item" href="{{ route('admin.product-categories.index') }}">Categories
-                                Settings</a></li>
-                        <li><a class="dropdown-item" href="{{ route('admin.customer-categories.index') }}">
-                                Customer Categories Settings</a></li>
-                        <li><a class="dropdown-item" href="{{ route('admin.lorry.index') }}">Lorry Settings</a></li>
-                        <li><a class="dropdown-item" href="{{ route('admin.uom.index') }}">UOM Settings</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.areas.index') }}">Areas</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.lorry.index') }}">Drivers / Lorry</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.uom.index') }}">UOM</a></li>
                     </ul>
                 </li>
             </ul>

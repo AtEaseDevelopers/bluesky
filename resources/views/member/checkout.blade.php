@@ -74,6 +74,32 @@
                             </div>
                         </div>
 
+                        <h6 class="card-subtitle my-3 text-body-secondary">Delivery Slot</h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                @if ($deliverySlots->isEmpty())
+                                    <div class="alert alert-warning">
+                                        No delivery slots are currently available. Please contact us to place your order.
+                                    </div>
+                                @else
+                                <div class="form-group mb-4">
+                                    <label class="mb-2" for="delivery_slot_id">Select Delivery Date & Time <span class="text-danger">*</span></label>
+                                    <select name="delivery_slot_id" id="delivery_slot_id" class="form-select" required>
+                                        <option value="">Choose a slot...</option>
+                                        @foreach ($deliverySlots as $slot)
+                                            <option value="{{ $slot->id }}" {{ old('delivery_slot_id') == $slot->id ? 'selected' : '' }}>
+                                                {{ $slot->slot_date->format('d M Y') }} — {{ $slot->time_label }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('delivery_slot_id')
+                                        <span class="text-danger"><strong>{{ $message }}</strong></span>
+                                    @enderror
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+
                         <h6 class="card-subtitle my-3 text-body-secondary">Shipping Info</h6>
                         <div class="row">
                             <div class="col-md-12">
@@ -117,7 +143,7 @@
                             <div class="col-md-12">
                                 <div class="d-flex justify-content-end">
                                     <a href="{{ route('member.cart') }}" class="btn btn-outline-primary me-3 mb-1 px-3">My Cart</a>
-                                    <button type="submit" class="btn btn-primary mb-1 px-3">
+                                    <button type="submit" class="btn btn-primary mb-1 px-3" {{ $deliverySlots->isEmpty() ? 'disabled' : '' }}>
                                         Place Order
                                         <div class="spinner-border spinner-border-sm d-none" role="status">
                                             <span class="visually-hidden">Loading...</span>

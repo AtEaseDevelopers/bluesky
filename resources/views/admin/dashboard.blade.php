@@ -108,76 +108,6 @@
         </div>
     </div>
 
-    {{-- Power BI Analytics --}}
-    <div class="row mb-5">
-        <div class="col-12 col-md-6">
-            <div class="card shadow no-border mb-4">
-                <div class="card-body">
-                    <h5 class="mb-3">Area(s)</h5>
-                    <div class="powerbi-container">
-                        <iframe title="demo_Area(s)"
-                            src="https://app.powerbi.com/view?r=eyJrIjoiMmMwOGExOGItMGEyNi00ZjEwLWJmM2YtYmU1MzQ1Nzg5N2UzIiwidCI6IjljYmQ5ZDgwLWYyMmItNDcxMi1hMTcyLWRkN2ZlOTJiMWM5YiJ9"
-                            allowFullScreen="true"></iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6">
-            <div class="card shadow no-border mb-4">
-                <div class="card-body">
-                    <h5 class="mb-3">Area vs Order Count</h5>
-                    <div class="powerbi-container">
-                        <iframe title="demo_Area-vs-order-count"
-                            src="https://app.powerbi.com/view?r=eyJrIjoiMzc2ODA3ZTEtOTYzNi00NDJkLTg4ZTMtMDQxMmQ5OGQ1ZDE2IiwidCI6IjljYmQ5ZDgwLWYyMmItNDcxMi1hMTcyLWRkN2ZlOTJiMWM5YiJ9"
-                            allowFullScreen="true"></iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-5">
-        <div class="col-12 col-md-6">
-            <div class="card shadow no-border mb-4">
-                <div class="card-body">
-                    <h5 class="mb-3">Customer(s)</h5>
-                    <div class="powerbi-container">
-                        <iframe title="demo_customer(s)"
-                            src="https://app.powerbi.com/view?r=eyJrIjoiNGFmNWMwODUtOThkOS00MzMwLWFlNTgtNDdmNDExMmRjMmY4IiwidCI6IjljYmQ5ZDgwLWYyMmItNDcxMi1hMTcyLWRkN2ZlOTJiMWM5YiJ9"
-                            allowFullScreen="true"></iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6">
-            <div class="card shadow no-border mb-4">
-                <div class="card-body">
-                    <h5 class="mb-3">Product & Price</h5>
-                    <div class="powerbi-container">
-                        <iframe title="demo_product&price"
-                            src="https://app.powerbi.com/view?r=eyJrIjoiMDgzM2E4ZGYtNjhjNC00MTVhLTg3OWEtMWQ5NTAwY2M4OWQxIiwidCI6IjljYmQ5ZDgwLWYyMmItNDcxMi1hMTcyLWRkN2ZlOTJiMWM5YiJ9"
-                            allowFullScreen="true"></iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-5">
-        <div class="col-12">
-            <div class="card shadow no-border mb-4">
-                <div class="card-body">
-                    <h5 class="mb-3">Revenue Over Time</h5>
-                    <div class="powerbi-container">
-                        <iframe title="demo_revenue-over-time"
-                            src="https://app.powerbi.com/view?r=eyJrIjoiMTY3ZmQxZGEtZTg4Mi00OWYzLWI3NDktMmUyYzAwZmU4YjhiIiwidCI6IjljYmQ5ZDgwLWYyMmItNDcxMi1hMTcyLWRkN2ZlOTJiMWM5YiJ9"
-                            allowFullScreen="true"></iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="row mb-5">
         <div class="col-12 col-md-7">
             <div class="card shadow no-border mb-4">
@@ -187,23 +117,23 @@
                         <div class="status-filter">
                             <button class="btn btn-sm btn-primary status-filter-button mb-1 active"
                                 data-status="">All</button>
-                            {{-- <button class="btn btn-sm btn-primary status-filter-button mb-1" data-status="{{ __('order.status.pending') }}">{{ __('order.status.pending') }}</button> --}}
                             <button class="btn btn-sm btn-primary status-filter-button mb-1"
-                                data-status="{{ __('order.status.processing') }}">{{ __('order.status.processing') }}</button>
-                            {{-- <button class="btn btn-sm btn-primary status-filter-button mb-1" data-status="{{ __('order.status.delivering') }}">{{ __('order.status.delivering') }}</button> --}}
+                                data-status="{{ __('order.status.pending') }}">{{ __('order.status.pending') }}</button>
                             <button class="btn btn-sm btn-primary status-filter-button mb-1"
-                                data-status="{{ __('order.status.completed') }}">{{ __('order.status.completed') }}</button>
+                                data-status="{{ __('order.status.in_route') }}">{{ __('order.status.in_route') }}</button>
+                            <button class="btn btn-sm btn-primary status-filter-button mb-1"
+                                data-status="{{ __('order.status.paid_completed') }}">{{ __('order.status.paid_completed') }}</button>
                             <button class="btn btn-sm btn-primary status-filter-button mb-1"
                                 data-status="{{ __('order.status.cancelled') }}">{{ __('order.status.cancelled') }}</button>
-                            <button class="btn btn-sm btn-success mb-1 status-action-button" data-to_status="processing"
-                                data-status="{{ __('order.status.processing') }}" style="display: none;">Change Status To
-                                {{ __('order.status.processing') }}</button>
-                            <button class="btn btn-sm btn-success mb-1 status-action-button" data-to_status="completed"
-                                data-status="{{ __('order.status.completed') }}" style="display: none;">Change Status To
-                                {{ __('order.status.completed') }}</button>
+                            <button class="btn btn-sm btn-success mb-1 status-action-button" data-to_status="in_route"
+                                data-status="{{ __('order.status.in_route') }}" style="display: none;">Move to
+                                {{ __('order.status.in_route') }}</button>
+                            <button class="btn btn-sm btn-success mb-1 status-action-button" data-to_status="paid_completed"
+                                data-status="{{ __('order.status.paid_completed') }}" style="display: none;">Move to
+                                {{ __('order.status.paid_completed') }}</button>
                             <button class="btn btn-sm btn-success mb-1 status-action-button download-zip"
-                                title="Download selected Invoice & DO as zip" data-to_status="completed"
-                                data-status="{{ __('order.status.completed') }}" style="display: none;"><i
+                                title="Download selected Invoice & DO as zip" data-to_status="paid_completed"
+                                data-status="{{ __('order.status.paid_completed') }}" style="display: none;"><i
                                     class="fa fa-download"></i></button>
                         </div>
                     </div>
@@ -237,10 +167,14 @@
                                         </td>
                                         <td>{{ Carbon::parse($order->created_at)->format('h:i a') }}</td>
                                         <td>
-                                            <a class="text-dark" target="_blank"
-                                                href="{{ route('admin.customers.edit', encrypt($customer->id)) }}">
-                                                {{ $customer->name }}
-                                            </a>
+                                            @if ($customer)
+                                                <a class="text-dark" target="_blank"
+                                                    href="{{ route('admin.customers.edit', encrypt($customer->id)) }}">
+                                                    {{ $customer->name }}
+                                                </a>
+                                            @else
+                                                {{ $order->walk_in_name ?? 'Walk-in / Public' }}
+                                            @endif
                                         </td>
                                         <td align="right">{{ $order->total_price }}</td>
                                         <td>{{ $order->payment_method ? __('user.payment_method.' . $order->payment_method) : '' }}
@@ -306,7 +240,7 @@
                 var status = $(this).data('status');
                 orderTable.columns(6).search(status).draw();
 
-                if (status == "{{ __('order.status.processing') }}") {
+                if (status == "{{ __('order.status.pending') }}") {
                     $(".order-cbx-col").show();
                 } else {
                     $(".order-cbx-col").hide();
@@ -318,11 +252,9 @@
                 if ($(".order-cbx-col input[type=checkbox]:checked").length) {
                     var status = $('.status-filter-button.active').data('status');
                     if (status == "{{ __('order.status.pending') }}") {
-                        $(".status-action-button[data-status='" + "{{ __('order.status.processing') }}" +
-                            "']").show()
-                    } else if (status == "{{ __('order.status.processing') }}") {
-                        $(".status-action-button[data-status='" + "{{ __('order.status.completed') }}" +
-                            "']").show()
+                        $(".status-action-button[data-status='" + "{{ __('order.status.in_route') }}" + "']").show();
+                    } else if (status == "{{ __('order.status.in_route') }}") {
+                        $(".status-action-button[data-status='" + "{{ __('order.status.paid_completed') }}" + "']").show();
                     }
                 }
             });
