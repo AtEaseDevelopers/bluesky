@@ -20,8 +20,10 @@ return new class extends Migration
         });
 
         $now = now();
-        foreach (config('permissions.roles') as $role => $roleConfig) {
-            foreach ($roleConfig['permissions'] as $permission => $definition) {
+        $portals = config('permissions.portals', []);
+
+        foreach ($portals as $role => $roleConfig) {
+            foreach ($roleConfig['permissions'] ?? [] as $permission => $definition) {
                 DB::table('role_permissions')->insert([
                     'role' => $role,
                     'permission' => $permission,
