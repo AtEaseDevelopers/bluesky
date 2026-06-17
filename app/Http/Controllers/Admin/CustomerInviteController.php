@@ -63,6 +63,8 @@ class CustomerInviteController extends Controller
             'area' => $data['area_id'] ?? null,
             'default_driver_id' => $data['default_driver_id'] ?? null,
             'billing_address' => 'Pending registration',
+            'billing_postcode' => '',
+            'billing_state' => '',
             'shipping_address' => '',
             'status' => User::$user_status['locked'],
             'remark' => $data['remark'] ?? null,

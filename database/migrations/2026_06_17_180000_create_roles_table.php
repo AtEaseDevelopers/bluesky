@@ -9,19 +9,25 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('roles', function (Blueprint $table) {
-            $table->id();
-            $table->string('name', 100);
-            $table->string('slug', 60)->unique();
-            $table->string('portal', 20);
-            $table->string('description', 500)->nullable();
-            $table->boolean('is_system')->default(false);
-            $table->boolean('is_superadmin')->default(false);
-            $table->timestamps();
-        });
+        if (! Schema::hasTable('roles')) {
+            Schema::create('roles', function (Blueprint $table) {
+                $table->id();
+                $table->string('name', 100);
+                $table->string('slug', 60)->unique();
+                $table->string('portal', 20);
+                $table->string('description', 500)->nullable();
+                $table->boolean('is_system')->default(false);
+                $table->boolean('is_superadmin')->default(false);
+                $table->timestamps();
+            });
+        }
 
         if (Schema::hasColumn('role_permissions', 'role')) {
             DB::statement('ALTER TABLE role_permissions MODIFY role VARCHAR(60) NOT NULL');
+        }
+
+        if (DB::table('roles')->count() > 0) {
+            return;
         }
 
         $now = now();

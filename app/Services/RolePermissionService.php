@@ -6,6 +6,7 @@ use App\Role;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class RolePermissionService
@@ -37,6 +38,10 @@ class RolePermissionService
 
     public function findRole(string $slug): ?Role
     {
+        if (! Schema::hasTable('roles')) {
+            return null;
+        }
+
         return Cache::remember("role.record.{$slug}", 300, function () use ($slug) {
             return Role::where('slug', $slug)->first();
         });
@@ -65,9 +70,11 @@ class RolePermissionService
 
         return Cache::remember("role_permissions.map.{$roleSlug}", 300, function () use ($role, $roleSlug) {
             $definitions = $this->definitionsForRole($role);
-            $stored = DB::table('role_permissions')
-                ->where('role', $roleSlug)
-                ->pluck('allowed', 'permission');
+            $stored = Schema::hasTable('role_permissions')
+                ? DB::table('role_permissions')
+                    ->where('role', $roleSlug)
+                    ->pluck('allowed', 'permission')
+                : collect();
 
             $map = [];
             foreach ($definitions as $key => $definition) {
