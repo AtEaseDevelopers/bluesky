@@ -15,7 +15,11 @@ use App\System;
 use App\Helper;
 use ZipArchive;
 use App\Order;
+use App\OrderPayment;
+use App\Services\OrderService;
+use App\Services\OrderStatusService;
 use App\User;
+use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
@@ -26,10 +30,7 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        // if no any filter, default filtered with processing order
-        // if (!$request->query()) {
-        //     return redirect(route('admin.orders') . '?status=processing');
-        // }
+        app(OrderService::class)->syncOverduePaymentStatuses();
 
         $orders = Order::select(
             "*",
@@ -87,6 +88,10 @@ class OrderController extends Controller
             $orders->where('status', $filter_status);
         }
 
+        if ($filter_payment_status = $request->input('payment_status')) {
+            $orders->where('payment_status', $filter_payment_status);
+        }
+
         if ($filter_status = $request->input('orderby') === 'asc' || $request->input('orderby') === 'desc') {
             $orders->orderby('created_at', $request->input('orderby'));
         } else if ($filter_status = $request->input('orderby') === 'do_no_asc' || $request->input('orderby') == 'do_no_desc') {
@@ -134,13 +139,9 @@ class OrderController extends Controller
             $orders[$key]->order_qtys = $ord_qty;
         }
 
-        $statuses = [
-            // 'pending' => 'Pending',
-            'cancelled' => 'Cancelled',
-            'processing' => 'Processing',
-            'delivering' => 'Delivering',
-            'completed' => 'Completed',
-        ];
+        $statuses = collect(Order::$status)->mapWithKeys(function ($value, $key) {
+            return [$key => __('order.status.' . $key)];
+        })->toArray();
 
         $drivers_arr = [];
         $drivers = DB::table('drivers')->select('id', 'lorry_number')->get()->toArray();
@@ -156,6 +157,7 @@ class OrderController extends Controller
                 'query_params' => Helper::query_params($request->input()),
                 'shipping_state_options' => System::$country_state['MY'],
                 'status_options' => Order::$status,
+                'payment_status_options' => Order::$payment_status,
                 'areaList' => Helper::areaList(),
                 'customers_list' => DB::table('users')->select('id', 'name')->get()->toArray(),
             ]
@@ -167,13 +169,21 @@ class OrderController extends Controller
         $ids = explode(',', $request->orders_id);
         if ($ids) {
             foreach ($ids as $id) {
-                if ($request->status != 'delivering' || ($request->status == 'delivering' && !DB::table('order_products')->where('weight', null)->where('order_id', $id)->first())) {
-                    DB::table('orders')->where('id', $id)->update(
-                        [
-                            // 'order_weight' => $request->order_weight,
-                            'status' => $request->status,
-                        ]
-                    );
+                if ($request->status != 'in_route' || ($request->status == 'in_route' && !DB::table('order_products')->where('weight', null)->where('order_id', $id)->first())) {
+                    $order = Order::find($id);
+                    if (!$order) {
+                        continue;
+                    }
+
+                    try {
+                        app(OrderStatusService::class)->transition(
+                            $order,
+                            $request->status,
+                            Auth::guard('web_admin')->id()
+                        );
+                    } catch (\InvalidArgumentException $e) {
+                        return back()->with('error', $e->getMessage());
+                    }
                 }
             }
         }
@@ -284,6 +294,14 @@ class OrderController extends Controller
             ),
         )->where('id', $id)->first();
 
+        if (!$order) {
+            abort(404);
+        }
+
+        app(OrderService::class)->refreshPaymentStatus($order);
+        $order = $order->fresh();
+        $order->load('customer');
+
         $order_products = DB::table('order_products')
             ->select(
                 'order_products.id as order_product_id', 
@@ -329,9 +347,39 @@ class OrderController extends Controller
                 'delivery_order_download_url' => url('download/').Order::$path.'/'.$order->id.'/delivery-order-' . $order->id . '.pdf',
                 'products' => $order_products,
                 'total' => number_format($total, 2, '.', ''),
-                'customer' => $order->customer
+                'customer' => $order->customer,
+                'customerName' => app(OrderService::class)->displayCustomerName($order),
+                'payments' => $order->payments()->with('recorder')->orderByDesc('id')->get(),
+                'paymentMethods' => OrderPayment::$payment_methods,
+                'nextStatuses' => app(OrderStatusService::class)->nextStatuses($order->status),
+                'isCreditCustomer' => $order->isCreditCustomer(),
+                'drivers' => DB::table('drivers')->pluck('lorry_number', 'id'),
             ]
         );
+    }
+
+    public function updatePaymentDueDate(Request $request, $id)
+    {
+        $order = Order::with('customer')->findOrFail($id);
+
+        if (!$order->isCreditCustomer()) {
+            return back()->with('error', 'Payment due date applies to credit customers only.');
+        }
+
+        $request->validate([
+            'payment_due_date' => 'nullable|date',
+        ]);
+
+        try {
+            app(OrderService::class)->updatePaymentDueDate(
+                $order,
+                $request->input('payment_due_date')
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Payment due date updated successfully.');
     }
 
     public function export(Request $request)
@@ -409,19 +457,23 @@ class OrderController extends Controller
             $orders = Order::whereIn('id', $request->order_ids);
     
             foreach ($orders->get() as $order) {
-                $orderFile = storage_path('app/orders/' . $order->id . '/delivery-order-' . $order->id . '.pdf');
-                if (file_exists($orderFile)) {
-                    $zip->addFile($orderFile, 'do/delivery-order-' . $order->id . '.pdf');
+                if ($order->canShowDeliveryOrder()) {
+                    $orderFile = storage_path('app/orders/' . $order->id . '/delivery-order-' . $order->id . '.pdf');
+                    if (file_exists($orderFile)) {
+                        $zip->addFile($orderFile, 'do/delivery-order-' . $order->id . '.pdf');
+                    }
                 }
-                
-                $orderFile = storage_path('app/orders/' . $order->id . '/invoice-' . $order->id . '.pdf');
-                if (file_exists($orderFile)) {
-                    $zip->addFile($orderFile, 'invoice/invoice-' . $order->id . '.pdf');
-                }
-                
-                $orderFile = storage_path('app/orders/' . $order->id . '/invoice2-' . $order->id . '.pdf');
-                if (file_exists($orderFile)) {
-                    $zip->addFile($orderFile, 'invoice/invoicewoprice-' . $order->id . '.pdf');
+
+                if ($order->canShowInvoice()) {
+                    $orderFile = storage_path('app/orders/' . $order->id . '/invoice-' . $order->id . '.pdf');
+                    if (file_exists($orderFile)) {
+                        $zip->addFile($orderFile, 'invoice/invoice-' . $order->id . '.pdf');
+                    }
+
+                    $orderFile = storage_path('app/orders/' . $order->id . '/invoice2-' . $order->id . '.pdf');
+                    if (file_exists($orderFile)) {
+                        $zip->addFile($orderFile, 'invoice/invoicewoprice-' . $order->id . '.pdf');
+                    }
                 }
             }
     
@@ -429,7 +481,7 @@ class OrderController extends Controller
 
             $orders->update(
                 [
-                'status' => Order::$status['completed']
+                'status' => Order::$status['paid_completed']
                 ]
             );
     
@@ -483,7 +535,12 @@ class OrderController extends Controller
             ->get()
             ->toArray();
     
-            foreach ($orders as $order) {
+            foreach ($orders as $orderRow) {
+                $order = Order::find($orderRow->id);
+                if (!$order || !$order->canShowDeliveryOrder()) {
+                    continue;
+                }
+
                 $orderFile = storage_path('app/orders/' . $order->id . '/delivery-order-' . $order->id . '.pdf');
                 if (file_exists($orderFile)) {
                     $zip->addFile($orderFile, 'do/delivery-order-' . $order->id . '.pdf');

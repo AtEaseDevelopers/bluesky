@@ -36,7 +36,7 @@
                     <tr>
                         <td style="width: 50%; vertical-align: text-top;">
                             <span style="font-size: 14px; font-weight: 700;">BILLING ADDRESS :</span><br><br>
-                            <span style="font-size: 14px; font-weight: 700;">{{ $order->customer->name }}</span><br>
+                            <span style="font-size: 14px; font-weight: 700;">{{ $order->pdfCustomer()->name }}</span><br>
                             <span style="font-size: 14px;">
                                 {{ $order->billing_address }}<br />
                             </span>

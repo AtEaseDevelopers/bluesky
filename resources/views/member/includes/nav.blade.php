@@ -7,6 +7,11 @@
         'cart_url' => route('member.cart'),
         'orders_url' => route('member.orders'),
     ];
+    $pendingReviewCount = (!$isGuest && $user)
+        ? \App\Order::where('user_id', $user->id)
+            ->where('status', \App\Order::$status['customer_reviewing'])
+            ->count()
+        : 0;
 @endphp
 <nav class="navbar sticky-top navbar-expand-lg bg-body-tertiary">
     <div class="container">
@@ -25,15 +30,20 @@
         <div class="collapse navbar-collapse" id="navbarScroll">
             <ul class="navbar-nav me-auto my-2 my-lg-0 navbar-nav-scroll">
                 <li class="nav-item">
-                    <a class="nav-link {{ in_array($currentRoute, ['member.products', 'public.order.index']) ? 'active' : '' }}" href="{{ $portal['products_url'] }}">Products</a>
+                    <a class="nav-link {{ in_array($currentRoute, ['member.products', 'public.guest.index']) ? 'active' : '' }}" href="{{ $portal['products_url'] }}">Order Menu</a>
                 </li>
                 @if (!$isGuest && ($portal['orders_url'] ?? null))
                     <li class="nav-item">
-                        <a class="nav-link {{ in_array($currentRoute, ['member.orders']) ? 'active' : '' }}" href="{{ $portal['orders_url'] }}">My Orders</a>
+                        <a class="nav-link {{ in_array($currentRoute, ['member.orders', 'member.orders.summary', 'member.orders.review']) ? 'active' : '' }}" href="{{ $portal['orders_url'] }}">
+                            My Orders
+                            @if ($pendingReviewCount > 0)
+                                <span class="badge bg-warning text-dark">{{ $pendingReviewCount }}</span>
+                            @endif
+                        </a>
                     </li>
                 @endif
                 <li class="nav-item">
-                    <a class="nav-link {{ in_array($currentRoute, ['member.cart', 'public.order.cart']) ? 'active' : '' }}" href="{{ $portal['cart_url'] }}">
+                    <a class="nav-link {{ in_array($currentRoute, ['member.cart', 'public.guest.cart']) ? 'active' : '' }}" href="{{ $portal['cart_url'] }}">
                         Cart <span class="badge badge-success">{{ $cartCount ?? 0 }}</span>
                     </a>
                 </li>

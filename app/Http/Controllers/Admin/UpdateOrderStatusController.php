@@ -9,86 +9,82 @@ use App\Http\Controllers\Controller;
 use App\Order;
 use App\OrderProduct;
 use App\PdfHelper;
+use App\Services\OrderStatusService;
 use App\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class UpdateOrderStatusController extends Controller
 {
-    public function __construct()
+    protected OrderStatusService $orderStatusService;
+
+    public function __construct(OrderStatusService $orderStatusService)
     {
         $this->middleware('auth_admin');
+        $this->orderStatusService = $orderStatusService;
     }
 
     public function index(Request $request, Order $order)
     {
-        $success = false;
         $status = $request->status;
         if (!in_array($status, Order::$status)) {
-            $success = false;
-        }
-        
-        $prev_status = $order->status;
-        $order->update(
-            [
-            'status' => $status,
-            ]
-        );
-        $success = true;
-
-        if ($status == Order::$status['processing']) {
-            // generate invoice and DO
-            PdfHelper::GenerateOrderInvoice($order);
-            PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
-            // PdfHelper::GenerateDeliveryOrder($order);
+            return response()->json(['success' => false, 'message' => 'Invalid status']);
         }
 
-        if ($status == Order::$status['cancelled']) {
-            // void invoice
-            PdfHelper::GenerateOrderInvoice($order);
-            PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
-            // PdfHelper::GenerateDeliveryOrder($order);
+        try {
+            if ($status === Order::$status['in_route']) {
+                $request->validate([
+                    'driver_id' => 'required|exists:drivers,id',
+                ]);
+
+                $order->update(['driver_id' => $request->input('driver_id')]);
+                $order = $order->fresh();
+            }
+
+            $this->orderStatusService->transition(
+                $order,
+                $status,
+                Auth::guard('web_admin')->id()
+            );
+
+            return response()->json(['success' => true]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->validator->errors()->first(),
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
         }
-        
-        return json_encode(['success' => $success]);
     }
 
     public function batchUpdate(Request $request, Order $order)
     {
-        $success = false;
-
         $status = $request->status;
         if (!in_array($status, Order::$status)) {
-            $success = false;
+            return json_encode(['success' => false]);
         }
-        
-        foreach ($request->order_ids as $key => $order_id) {
-            $order = Order::find($order_id);
 
-            $prev_status = $order->status;
-            $order->update(
-                [
-                'status' => $status,
-                ]
-            );
-            $success = true;
-    
-            if ($status == Order::$status['processing']) {
-                // generate invoice and DO
-                PdfHelper::GenerateOrderInvoice($order);
-                PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
-                // PdfHelper::GenerateDeliveryOrder($order);
+        $success = true;
+        foreach ($request->order_ids as $order_id) {
+            $order = Order::find($order_id);
+            if (!$order) {
+                continue;
             }
-    
-            if ($status == Order::$status['cancelled']) {
-                // void invoice
-                PdfHelper::GenerateOrderInvoice($order);
-                PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
-                // PdfHelper::GenerateDeliveryOrder($order);
+
+            try {
+                $this->orderStatusService->transition(
+                    $order,
+                    $status,
+                    Auth::guard('web_admin')->id()
+                );
+            } catch (\InvalidArgumentException $e) {
+                $success = false;
             }
         }
-        
+
         return json_encode(['success' => $success]);
     }
 }

@@ -202,7 +202,8 @@ class DriverPortalTest extends TestCase
                 'paid_amount' => 150.00,
             ])->assertSessionHasErrors('payment_proof');
 
-        $this->assertNull($order->fresh()->paid_amount);
+        // paid_amount stays at its unpaid default (0) since validation blocked the update.
+        $this->assertEquals(0.0, (float) $order->fresh()->paid_amount);
     }
 
     /** @test */

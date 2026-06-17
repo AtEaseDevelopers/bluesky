@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use App\ProductOptionItem;
 use App\ProductOption;
@@ -24,7 +23,7 @@ class AddProductController extends Controller
     {
         $data['uoms'] = DB::table('uoms')->select('id', 'uom_name')->get()->toArray();
         $data['product_categories'] = DB::table('product_categories')->select('id', 'category_name')->get()->toArray();
-        $data['customer_categories'] = DB::table('users')->select('category')->distinct()->whereNotNull('category')->pluck('category')->toArray();
+        $data['customer_categories'] = $this->customerCategories();
 
         return view('admin.products.create', $data);
     }
@@ -55,24 +54,9 @@ class AddProductController extends Controller
         );
 
         // process images
-        $images = [];
         if (isset($data['images']) && $data['images']) {
-            do {
-                $extension = $data['images']->getClientOriginalExtension();
-                $filename = time().rand().".".$extension;
-                $path = Product::$path.'/'.$product->id;
-            } while (Storage::disk('local')->exists($path."/".$filename));
-
-            Storage::disk('local')->put($path."/".$filename, file_get_contents($data['images']));
-            $images[] = $filename;
-        }
-
-        if ($images) {
-            $product->fill(
-                [
-                    'images' => json_encode($images)
-                ]
-            )->save();
+            $filename = Product::storeUploadedImage($product->id, $data['images']);
+            $product->update(['images' => json_encode([$filename])]);
         }
 
         // Process category pricing
@@ -147,5 +131,16 @@ class AddProductController extends Controller
         }
 
         return $data;
+    }
+
+    private function customerCategories(): array
+    {
+        $fromTable = DB::table('customer_categories')->pluck('category')->toArray();
+        $fromUsers = DB::table('users')->select('category')->distinct()->whereNotNull('category')->pluck('category')->toArray();
+
+        $categories = array_values(array_unique(array_merge($fromTable, $fromUsers)));
+        sort($categories);
+
+        return $categories;
     }
 }

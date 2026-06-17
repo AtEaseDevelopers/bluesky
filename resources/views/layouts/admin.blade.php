@@ -30,7 +30,7 @@
 
     <script src="{{ asset('assets/js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ asset('assets/js/script.js') }}?v=1.7"></script>
+    <script src="{{ asset('assets/js/script.js') }}?v=1.8"></script>
     <script src="{{ asset('assets/js/select2.min.js') }}?v="></script>
     @yield('script')
 </body>

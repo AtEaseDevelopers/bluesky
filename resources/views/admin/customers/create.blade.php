@@ -175,6 +175,16 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
+                                    <label class="mb-2" for="customer_type">Customer Type</label>
+                                    <select name="customer_type" id="customer_type" class="form-select">
+                                        <option value="cod" {{ old('customer_type', 'cod') === 'cod' ? 'selected' : '' }}>COD</option>
+                                        <option value="credit" {{ old('customer_type') === 'credit' ? 'selected' : '' }}>Credit</option>
+                                    </select>
+                                    <small class="text-muted">Credit customers can be assigned payment due dates on orders.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-4">
                                     <label class="mb-2" for="customerCategory">Category</label>
                                     <input list="categoryOptions"
                                         class="form-control @error('category') is-invalid @enderror" name="category"

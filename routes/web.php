@@ -13,7 +13,7 @@ $adminUrl = config('app.admin_url');
 
     // General Customer (public) ordering link - no account required, COD only.
     // Registered before the Member catch-all file route below.
-    Route::namespace('Public')->prefix('order')->middleware(['web', 'public_bootstrap'])->name('public.order.')->group(
+    Route::namespace('Public')->prefix('order')->middleware(['web', 'public_bootstrap'])->name('public.guest.')->group(
         function () {
             Route::get('/', 'PublicOrderController@index')->name('index');
             Route::post('/add-to-cart/{id}', 'PublicOrderController@addToCart')->name('add-to-cart');
@@ -33,6 +33,13 @@ $adminUrl = config('app.admin_url');
             Route::get('/login', 'LoginController@getForm')->name('login');
             Route::post('/login', 'LoginController@login')->name('login.submit');
             Route::get('/logout', 'LoginController@logout')->name('logout');
+
+            Route::get('/order/public/{token}', 'PublicOrderController@products')->name('public.order');
+            Route::post('/order/public/{token}/cart/add/{product}', 'PublicOrderController@addToCart')->name('public.order.cart.add');
+            Route::get('/order/public/{token}/cart', 'PublicOrderController@cart')->name('public.order.cart');
+            Route::post('/order/public/{token}/cart/remove/{product}', 'PublicOrderController@removeFromCart')->name('public.order.cart.remove');
+            Route::get('/order/public/{token}/checkout', 'PublicOrderController@checkoutForm')->name('public.order.checkout');
+            Route::post('/order/public/{token}/checkout', 'PublicOrderController@store')->name('public.order.store');
 
             Route::group(
                 ['middleware' => ['web'], 'as' => 'member.'], function () {
@@ -57,7 +64,10 @@ $adminUrl = config('app.admin_url');
                     // order
                     Route::get('/orders', 'OrderController@index')->name('orders');
                     Route::get('/orders/export', 'OrderController@export');
-                    Route::get('/order/summary/{order}', 'OrderController@viewSummary');
+                    Route::get('/order/summary/{order}', 'OrderController@viewSummary')->name('orders.summary');
+                    Route::get('/order/review/{order}', 'OrderReviewController@show')->name('orders.review');
+                    Route::post('/order/review/{order}/approve', 'OrderReviewController@approve')->name('orders.review.approve');
+                    Route::post('/order/review/{order}/reject', 'OrderReviewController@reject')->name('orders.review.reject');
 
                     // Buy again
                     Route::get('/order/buy-again/{order}', 'BuyAgainController@index');

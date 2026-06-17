@@ -20,6 +20,7 @@ class User extends Authenticatable
         'email', 
         'password', 
         'category', 
+        'customer_type',
         'attn_name', 
         'attn_contact', 
         'area', 

@@ -97,9 +97,10 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="productPrice">Price</label>
+                                    <label class="mb-2" for="productPrice">Default Price (RM)</label>
                                     <span class="text-danger"> *</span>
-                                    <input type="number" step="0.01" class="form-control" name="price" id="productPrice" value="{{ old('price') }}" placeholder="Enter product price" required>
+                                    <input type="number" step="0.01" class="form-control" name="price" id="productPrice" value="{{ old('price') }}" placeholder="Enter default price per UOM" required>
+                                    <small class="text-muted">Price per unit of measure. Used when no category or daily price is set.</small>
                                     @if ($errors->has('price'))
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $errors->first('price') }}</strong>
@@ -198,15 +199,16 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="mb-4">
-                                    <h5 class="mb-3">Category Pricing</h5>
+                                    <h5 class="mb-1">Category Pricing</h5>
+                                    <p class="text-muted small mb-3">Optional price overrides per customer category. Daily prices take priority on order day.</p>
                                     <div class="table-responsive">
                                         <table class="table bottom-bordered">
                                             <thead>
                                                 <tr >
                                                     <th width="50">No</th>
                                                     <th>Customer Category</th>
-                                                    <th>Price</th>
-                                                </t>
+                                                    <th>Price (RM per UOM)</th>
+                                                </tr>
                                             </thead>
                                             <tbody>
                                                 @foreach ($customer_categories as $category)

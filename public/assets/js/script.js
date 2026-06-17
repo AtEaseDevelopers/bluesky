@@ -51,11 +51,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const productListElement = document.getElementById("productList");
             if (productListElement.innerHTML.trim() == '') {
                 const form = new FormData();
-                if (document.getElementById('order_customer')) {
-                    form.append('id', document.getElementById('order_customer').value);
-                } else {
-                    form.append('id', 'products_visibility');
-                }
+                form.append('id', getOrderCustomerId());
         
                 fetch(appUrl + `/get-products-list`, {
                         method: 'POST',
@@ -157,7 +153,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         document.getElementById("customer_info").classList.toggle('d-none');
                         document.getElementById("add-product-info").classList.toggle('d-none');
                         document.querySelector("button.back").classList.toggle('d-none');
-                        document.getElementById("order_customer").disabled = false;
+                        if (!isWalkInOrder()) {
+                            document.getElementById("order_customer").disabled = false;
+                        }
                         step = 'customer_info';
                     }
                 } 
@@ -183,6 +181,21 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
         
                     if (step === 'customer_info') {
+                        if (isWalkInOrder()) {
+                            var walkInName = document.getElementById('walk_in_name');
+                            var walkInPhone = document.getElementById('walk_in_phone');
+                            if (!walkInName.value.trim() || !walkInPhone.value.trim()) {
+                                Swal.fire({
+                                    title: 'Warning',
+                                    text: 'Please enter walk-in customer name and phone.',
+                                    icon: 'warning',
+                                });
+                                return false;
+                            }
+                            document.getElementById('attn_name').value = walkInName.value.trim();
+                            document.getElementById('attn_contact').value = walkInPhone.value.trim();
+                        }
+
                         document.getElementById("customer_info").classList.toggle('d-none');
                         document.getElementById("add-product-info").classList.toggle('d-none');
                         document.querySelector("button.back").classList.toggle('d-none');
@@ -346,7 +359,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     modalBody.innerHTML = data.view;
                 })
                 .catch(error => {
-                    Swal.fire('Error', 'An error occurred.', 'error');
+                    modalBody.innerHTML = '<div class="alert alert-danger mb-0">Unable to load product details. Please try again.</div>';
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire('Error', 'An error occurred.', 'error');
+                    }
                 });
             });
         });
@@ -505,6 +521,23 @@ document.addEventListener('click', function(event) {
         }
     }
 });
+
+function isWalkInOrder() {
+    var walkInCheckbox = document.getElementById('is_walk_in');
+    return walkInCheckbox && walkInCheckbox.checked;
+}
+
+function getOrderCustomerId() {
+    if (isWalkInOrder()) {
+        return 'products_visibility';
+    }
+
+    if (document.getElementById('order_customer') && document.getElementById('order_customer').value) {
+        return document.getElementById('order_customer').value;
+    }
+
+    return 'products_visibility';
+}
 
 function init_customer_details() {
     var order_customer = document.getElementById('order_customer');

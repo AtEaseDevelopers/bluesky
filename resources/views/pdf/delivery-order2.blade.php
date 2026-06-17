@@ -36,7 +36,7 @@
                     <tr>
                         <td style="width: 50%; vertical-align: text-top;">
                             <span style="font-size: 14px; font-weight: 700;">BILLING ADDRESS :</span><br><br>
-                            <span style="font-size: 14px; font-weight: 700;">{{ $order->customer->name }}</span><br>
+                            <span style="font-size: 14px; font-weight: 700;">{{ $order->pdfCustomer()->name }}</span><br>
                             <span style="font-size: 14px;">
                                 {{ $order->billing_address }}
                             </span>
@@ -114,17 +114,17 @@
     <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; margin: 10px 0 0 0;">
         <tr>
             <td style="width: 30%;">
-                <span style="font-size: 14px; font-weight: 700;">A/C NO : <span style="font-weight: 100;">{{ $order->customer->sql_customer_code ?? '-' }}</span></span><br>
+                <span style="font-size: 14px; font-weight: 700;">A/C NO : <span style="font-weight: 100;">{{ $order->pdfCustomer()->sql_customer_code ?? '-' }}</span></span><br>
             </td>
             <td style="width: 70%;">
-                <span style="font-size: 14px; font-weight: 700;">TEL : <span style="font-weight: 100;">{{ $order->customer->attn_contact }}</span></span><br>
+                <span style="font-size: 14px; font-weight: 700;">TEL : <span style="font-weight: 100;">{{ $order->pdfCustomer()->attn_contact ?? '-' }}</span></span><br>
             </td>
         </tr>
         <tr>
             <td style="width: 30%;">
             </td>
             <td style="width: 70%;">
-                <span style="font-size: 14px; font-weight: 700;">FAX : <span style="font-weight: 100;">{{ $order->customer->fax_no }}</span></span><br>
+                <span style="font-size: 14px; font-weight: 700;">FAX : <span style="font-weight: 100;">{{ $order->pdfCustomer()->fax_no ?? '-' }}</span></span><br>
             </td>
         </tr>
     </table>
@@ -144,7 +144,7 @@
             <tr>
                 <td style="font-size: 14px; text-align: left; padding: 5px 0;">{{ $key + 1 }}</td>
                 <td style="font-size: 14px; text-align: left;">{{ $prod->name }}</td>
-                <td style="font-size: 14px; text-align: left;">{{ $prod->show_qty == true ? ($prod->quantity ?? 0) : '' }}</td>
+                <td style="font-size: 14px; text-align: left;">{{ $prod->quantity ?? '' }}</td>
                 <td style="font-size: 14px; text-align: left;">{{ $prod->remark }}</td>
                 <td style="font-size: 14px; text-align: center;">{{ $prod->show_weight == true ? (($prod->quantity != null && $prod->product_weight != null ? $prod->product_weight * $prod->quantity : $prod->weight) . ' KG') : '' }}</td>
             </tr>

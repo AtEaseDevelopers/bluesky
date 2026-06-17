@@ -32,14 +32,14 @@ class PublicOrderTest extends TestCase
     protected function addToCart(Product $product, array $payload)
     {
         return $this->carrySession(
-            $this->post(route('public.order.add-to-cart', $product->id), $payload)
+            $this->post(route('public.guest.add-to-cart', $product->id), $payload)
         );
     }
 
     protected function makeProduct(array $attrs = []): Product
     {
         // forceCreate to satisfy NOT NULL columns regardless of $fillable.
-        return Product::forceCreate(array_merge([
+        $product = Product::forceCreate(array_merge([
             'uom_id' => 1,
             'product_category_id' => 1,
             'name' => 'Tiger Prawn',
@@ -53,6 +53,14 @@ class PublicOrderTest extends TestCase
             'show_weight' => 1,
             'show_qty' => 0,
         ], $attrs));
+
+        // Storefront (member + guest) only lists products that carry stock.
+        \App\ProductStock::forceCreate([
+            'product_id' => $product->id,
+            'quantity' => 100,
+        ]);
+
+        return $product;
     }
 
     /** @test */
@@ -61,7 +69,7 @@ class PublicOrderTest extends TestCase
         $this->makeProduct(['name' => 'PUBLIC-PRAWN']);
         $this->makeProduct(['name' => 'HIDDEN-FISH', 'status' => Product::$status['inactive']]);
 
-        $this->get(route('public.order.index'))
+        $this->get(route('public.guest.index'))
             ->assertOk()
             ->assertSee('PUBLIC-PRAWN')
             ->assertDontSee('HIDDEN-FISH');
@@ -92,7 +100,7 @@ class PublicOrderTest extends TestCase
 
         $this->addToCart($product, ['weight' => 3]);
 
-        $this->get(route('public.order.cart'))
+        $this->get(route('public.guest.cart'))
             ->assertOk()
             ->assertSee('CART-PRAWN');
     }
@@ -103,7 +111,7 @@ class PublicOrderTest extends TestCase
         $product = $this->makeProduct();
         $this->addToCart($product, ['weight' => 1]);
 
-        $this->post(route('public.order.checkout.submit'), [])
+        $this->post(route('public.guest.checkout.submit'), [])
             ->assertSessionHasErrors(['attn_name', 'attn_contact', 'billing_address']);
 
         $this->assertSame(0, Order::count());
@@ -115,7 +123,7 @@ class PublicOrderTest extends TestCase
         $product = $this->makeProduct(['price' => 40.00]);
         $this->addToCart($product, ['weight' => 2.5]);
 
-        $this->post(route('public.order.checkout.submit'), [
+        $this->post(route('public.guest.checkout.submit'), [
             'attn_name' => 'Walk In Wong',
             'attn_contact' => '0191234567',
             'billing_address' => '88 Pasar Road, KL',
@@ -125,7 +133,7 @@ class PublicOrderTest extends TestCase
         $this->assertNotNull($order);
         $this->assertNull($order->user_id);
         $this->assertEquals(1, (int) $order->is_general);
-        $this->assertSame('processing', $order->status);
+        $this->assertSame('pending', $order->status);
         $this->assertSame('cod', $order->payment_method);
         $this->assertSame('Walk In Wong', $order->attn_name);
         $this->assertSame('0191234567', $order->attn_contact);
@@ -149,7 +157,7 @@ class PublicOrderTest extends TestCase
         $product = $this->makeProduct();
         $this->addToCart($product, ['weight' => 1]);
 
-        $this->post(route('public.order.checkout.submit'), [
+        $this->post(route('public.guest.checkout.submit'), [
             'attn_name' => 'Sneaky Sam',
             'attn_contact' => '0170000000',
             'billing_address' => '1 Term St',
@@ -162,7 +170,7 @@ class PublicOrderTest extends TestCase
     /** @test */
     public function checkout_with_empty_cart_does_not_create_order()
     {
-        $this->post(route('public.order.checkout.submit'), [
+        $this->post(route('public.guest.checkout.submit'), [
             'attn_name' => 'No Cart',
             'attn_contact' => '0170000000',
             'billing_address' => '1 Empty St',
@@ -176,7 +184,7 @@ class PublicOrderTest extends TestCase
     {
         $product = $this->makeProduct();
         $this->addToCart($product, ['weight' => 1]);
-        $this->post(route('public.order.checkout.submit'), [
+        $this->post(route('public.guest.checkout.submit'), [
             'attn_name' => 'ADMIN-VISIBLE-GUEST',
             'attn_contact' => '0181112222',
             'billing_address' => '5 Admin Way',
@@ -201,7 +209,7 @@ class PublicOrderTest extends TestCase
     {
         $product = $this->makeProduct();
         $this->addToCart($product, ['weight' => 1]);
-        $this->post(route('public.order.checkout.submit'), [
+        $this->post(route('public.guest.checkout.submit'), [
             'attn_name' => 'Summary Guest',
             'attn_contact' => '0181113333',
             'billing_address' => '77 Delivery Lane, KL',

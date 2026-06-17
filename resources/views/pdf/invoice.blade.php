@@ -36,7 +36,7 @@
                     <tr>
                         <td style="width: 50%; vertical-align: text-top;">
                             <span style="font-size: 14px; font-weight: 700;">BILLING ADDRESS :</span><br><br>
-                            <span style="font-size: 14px; font-weight: 700;">{{ $order->customer->name }}</span><br>
+                            <span style="font-size: 14px; font-weight: 700;">{{ $order->pdfCustomer()->name }}</span><br>
                             <span style="font-size: 14px;">
                                 {{ $order->billing_address }}<br />
                             </span>
@@ -93,8 +93,15 @@
     <!-- Items -->
     @php
         $total_weight = 0;
-        $sub_total = 0;
-        $total = 0;
+        $lineSubtotal = 0;
+        if (isset($user) && $user->invoice_price_permission) {
+            foreach ($order_items as $prod) {
+                $lineSubtotal += (float) $prod->price;
+            }
+        }
+        $deliveryFee = (float) ($order->delivery_fee ?? 0);
+        $adjustment = (float) ($order->amount_adjustment ?? 0);
+        $grandTotal = $lineSubtotal + $deliveryFee + $adjustment;
     @endphp
     <table style="width: 100%; font-family: sans-serif; border-collapse: collapse; margin: 10px 0 0 0;">
         <tr>
@@ -130,11 +137,7 @@
             </tr>
             @php
                 if ($prod->show_weight == true) {
-                    $total_weight += $prod->weight;
-                }
-                if ($user->invoice_price_permission) {
-                    $sub_total += $prod->price;
-                    $total += $prod->price;
+                    $total_weight = ($total_weight ?? 0) + (float) $prod->weight;
                 }
             @endphp
         @endforeach
@@ -143,12 +146,24 @@
     <table style="width: 100%; font-family: sans-serif; border-collapse: collapse; margin: 50px 0 0 0;">
         <tr>
             <td style="border-top: solid 1px black;" colspan="2"></td>
-            <td style="font-size: 14px; border-top: solid 1px black; font-weight: 700; text-align: right; padding: 5px 0 5px 0;">SUB TOTAL : {{ number_format($sub_total, 2) }}</td>
+            <td style="font-size: 14px; border-top: solid 1px black; font-weight: 700; text-align: right; padding: 5px 0 5px 0;">SUB TOTAL : {{ number_format($lineSubtotal, 2) }}</td>
         </tr>
+        @if ($deliveryFee != 0)
+        <tr>
+            <td colspan="2"></td>
+            <td style="font-size: 14px; font-weight: 700; text-align: right; padding: 5px 0;">DELIVERY FEE : {{ number_format($deliveryFee, 2) }}</td>
+        </tr>
+        @endif
+        @if ($adjustment != 0)
+        <tr>
+            <td colspan="2"></td>
+            <td style="font-size: 14px; font-weight: 700; text-align: right; padding: 5px 0;">ADJUSTMENT : {{ number_format($adjustment, 2) }}</td>
+        </tr>
+        @endif
         <tr>
             <td style="border-top: solid 1px black; border-bottom: solid 1px black;"></td>
-            <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; text-align: right; padding: 5px 0 5px 0;">TOTAL WEIGHT : {{ $total_weight }} KG</td>
-            <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; text-align: right; padding: 5px 0 5px 0;">TOTAL AMOUNT : {{ number_format($total, 2) }}</td>
+            <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; text-align: right; padding: 5px 0 5px 0;">TOTAL WEIGHT : {{ $total_weight ?? 0 }} KG</td>
+            <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; text-align: right; padding: 5px 0 5px 0;">TOTAL AMOUNT : {{ number_format($grandTotal, 2) }}</td>
         </tr>
         <tr>
             <td colspan="3 padding: 5px 0;">

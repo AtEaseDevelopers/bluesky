@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Product;
 use App\ProductOptionItem;
+use App\Services\StockService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -23,10 +24,14 @@ class AddToCartController extends Controller
 
     public function addToCart(Request $request, $id)
     {
-        $product = Product::find(decrypt($id));
-        if ($product->status != Product::$status['active']) {
-            abort(404);
-        }
+        $product = Product::query()
+            ->select('products.*', 'product_stocks.quantity as stock_quantity', 'uoms.uom_name')
+            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
+            ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id')
+            ->where('products.id', decrypt($id))
+            ->where('products.status', Product::$status['active'])
+            ->where('product_stocks.quantity', '>', 0)
+            ->firstOrFail();
 
         $user = Auth::guard('web')->user();
 
@@ -160,6 +165,19 @@ class AddToCartController extends Controller
                 'error' => $err->getMessage(),
                 'field_err' => $err->validator->errors()->getMessages(),
             ];
+        }
+
+        $requested = (float) ($data['quantity'] ?? $data['weight'] ?? 0);
+        $stock = app(StockService::class)->getOrCreateStock($product->id);
+        if ($requested <= 0) {
+            throw ValidationException::withMessages([
+                ($product->sell_in === 'qty' ? 'quantity' : 'weight') => 'Please enter a valid amount.',
+            ]);
+        }
+        if ($requested > (float) $stock->quantity) {
+            throw ValidationException::withMessages([
+                ($product->sell_in === 'qty' ? 'quantity' : 'weight') => 'Only ' . Product::formatStockQuantity((float) $stock->quantity, $product->uom_name ?? 'KG') . ' available.',
+            ]);
         }
 
         return $data;

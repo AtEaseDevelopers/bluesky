@@ -88,14 +88,11 @@
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="d-flex justify-content-end align-items-center flex-wrap gap-3">
-                <button type="button" id="copyGuestLink" class="btn btn-primary" data-link="{{ route('public.order.index') }}">
+                <button type="button" id="copyGuestLink" class="btn btn-primary" data-link="{{ route('public.guest.index') }}">
                     Copy Guest Link
                 </button>
                 <a href="{{ route('admin.customers.create') }}" class="btn btn-primary">
                     Add New Customer
-                </a>
-                <a href="{{ route('admin.import.customers') }}" class="btn btn-success">
-                    <i class="fa fa-file-excel-o me-2" aria-hidden="true"></i> Import Customers
                 </a>
                 <a href="{{ route('admin.customers.export') }}?{{ $query_params }}" class="btn btn-success">
                     <i class="fa fa-file-excel-o me-2" aria-hidden="true"></i> Export to Excel

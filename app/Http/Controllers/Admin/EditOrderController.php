@@ -134,22 +134,19 @@ class EditOrderController extends Controller
 
         foreach ($data['product_id'] as $key => $product_id) {
             $product = Product::find($product_id);
-            
-              
+
+            $quantity = null;
+            $weight = null;
             $qtyWeight = 0;
-            
-            if($product->sell_in == "qty")
-            {
-                 $quantity = $data['quantity'][$key];
-                 $qtyWeight = $quantity;
+
+            if ($product->sell_in === 'qty') {
+                $quantity = $data['quantity'][$key];
+                $qtyWeight = $quantity;
+            } else {
+                $weight = $data['weight'][$key];
+                $qtyWeight = $weight;
             }
-            else
-            {
-                 $weight = $data['weight'][$key];
-                 $qtyWeight = $weight;
-            }
-           
-           
+
             $unit_price = Product::get_today_price($product->id, $user);
             $price = $unit_price * $qtyWeight;
             $order_product = OrderProduct::create(
@@ -157,8 +154,9 @@ class EditOrderController extends Controller
                 "order_id" => $order->id,
                 "product_id" => $product_id,
                 "product_name" => $product->name,
-                "quantity" => $quantity ?? null,
-                "weight" => $weight ?? null,
+                "quantity" => $quantity,
+                "weight" => $weight,
+                "product_weight" => $weight,
                 "unit_price" => $unit_price,
                 "price" => $price,
                 "remark" => $data['remark'][$key],
@@ -204,7 +202,7 @@ class EditOrderController extends Controller
 
     public function validateEditOrder(Request $request, Order $order)
     {
-        if(in_array($order->status, [Order::$status['completed']])) {
+        if(in_array($order->status, [Order::$status['paid_completed']])) {
             return [
                 'error' => "Order cannot be edited.",
                 'field_err' => [],

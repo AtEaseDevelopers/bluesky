@@ -32,13 +32,13 @@ class PublicBootstrap
         View::share('isGuest', true);
         View::share('portal', [
             'is_guest' => true,
-            'products_url' => route('public.order.index'),
-            'cart_url' => route('public.order.cart'),
-            'checkout_url' => route('public.order.checkout'),
+            'products_url' => route('public.guest.index'),
+            'cart_url' => route('public.guest.cart'),
+            'checkout_url' => route('public.guest.checkout'),
             'orders_url' => null,
-            'add_to_cart_name' => 'public.order.add-to-cart',
+            'add_to_cart_name' => 'public.guest.add-to-cart',
             'product_show_name' => null,
-            'update_cart_url' => route('public.order.update-cart-item'),
+            'update_cart_url' => route('public.guest.update-cart-item'),
             'remove_cart_url' => url('/order/remove-cart-item'),
             'product_info_url' => url('/add-to-cart-product-info'),
         ]);

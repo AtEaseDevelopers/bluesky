@@ -14,8 +14,9 @@ class AddDriverPaymentFieldsToOrdersTable extends Migration
     public function up()
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->decimal('paid_amount', 15, 2)->nullable()->after('transfer_slip');
-            $table->string('payment_proof')->nullable()->after('paid_amount');
+            // Driver payment-collection fields. paid_amount is added separately
+            // by the order management module migration (2026_06_15_100000).
+            $table->string('payment_proof')->nullable()->after('transfer_slip');
             $table->timestamp('payment_collected_at')->nullable()->after('payment_proof');
             $table->unsignedBigInteger('payment_collected_by')->nullable()->after('payment_collected_at');
         });
@@ -29,7 +30,7 @@ class AddDriverPaymentFieldsToOrdersTable extends Migration
     public function down()
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn(['paid_amount', 'payment_proof', 'payment_collected_at', 'payment_collected_by']);
+            $table->dropColumn(['payment_proof', 'payment_collected_at', 'payment_collected_by']);
         });
     }
 }

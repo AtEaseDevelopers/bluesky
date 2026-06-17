@@ -22,7 +22,7 @@ class AdminRoleCheck
         if (Auth::guard('web_admin')->check()) {
             // check if admin not superadmin, restrict from some page
             if(Auth::guard('web_admin')->user()->role != 'superadmin'){
-                $allowed_path = ['dashboard', 'order', 'orders'];
+                $allowed_path = ['dashboard', 'order', 'orders', 'inventory'];
                 $currentPath = $request->path();
 
                 // Check if the current path is in the list of restricted paths

@@ -28,11 +28,15 @@ class PublicOrderController extends Controller
     /** Storefront — renders the member product screen with guest pricing. */
     public function index(Request $request)
     {
-        $products = Product::where('status', Product::$status['active'])
+        $products = Product::query()
+            ->select('products.*', 'product_stocks.quantity as stock_quantity')
+            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
+            ->where('products.status', Product::$status['active'])
+            ->where('product_stocks.quantity', '>', 0)
             ->when($request->keyword, function ($q) use ($request) {
-                $q->where('name', 'LIKE', '%' . $request->keyword . '%');
+                $q->where('products.name', 'LIKE', '%' . $request->keyword . '%');
             })
-            ->orderBy('nos')
+            ->orderBy('products.nos')
             ->get()
             ->map(function ($product) {
                 $image = json_decode($product->images, true);
@@ -90,7 +94,7 @@ class PublicOrderController extends Controller
             }
         }
 
-        return redirect()->route('public.order.cart')->with('success', 'Item added to your order.');
+        return redirect()->route('public.guest.cart')->with('success', 'Item added to your order.');
     }
 
     /** Cart — renders the member cart screen. */
@@ -129,7 +133,7 @@ class PublicOrderController extends Controller
             $cart_product->update(['status' => CartProduct::$status['removed']]);
         }
 
-        return redirect()->route('public.order.cart')->with('success', 'Item removed from your order.');
+        return redirect()->route('public.guest.cart')->with('success', 'Item removed from your order.');
     }
 
     /** Checkout form — renders the member checkout screen (COD only). */
@@ -138,7 +142,7 @@ class PublicOrderController extends Controller
         [$products, $total] = $this->cartProducts($request);
 
         if (!count($products)) {
-            return redirect()->route('public.order.index')->with('error', 'Your order is empty.');
+            return redirect()->route('public.guest.index')->with('error', 'Your order is empty.');
         }
 
         return view('member.checkout', [
@@ -159,7 +163,7 @@ class PublicOrderController extends Controller
 
         [$products, $total] = $this->cartProducts($request);
         if (!count($products)) {
-            return redirect()->route('public.order.index')->with('error', 'Your order is empty.');
+            return redirect()->route('public.guest.index')->with('error', 'Your order is empty.');
         }
 
         $cart = $this->currentCart($request);
@@ -170,14 +174,16 @@ class PublicOrderController extends Controller
         $order = Order::create([
             'user_id' => null,
             'is_general' => true,
+            'order_type' => Order::$order_types['public'],
             'cart_id' => $cart->id,
             'total_price' => $total,
+            'subtotal' => $total,
             'attn_name' => $data['attn_name'],
             'attn_contact' => $data['attn_contact'],
             'billing_address' => $data['billing_address'],
             'shipping_address' => $address,
             'payment_method' => 'cod', // public orders are COD only
-            'status' => Order::$status['processing'],
+            'status' => Order::$status['pending'],
         ]);
 
         $order_weight = 0;
@@ -217,7 +223,7 @@ class PublicOrderController extends Controller
 
         $order->update(['order_weight' => $order_weight]);
 
-        return redirect()->route('public.order.index')->with(
+        return redirect()->route('public.guest.index')->with(
             'success',
             "Thank you! Your order #{$order->id} has been received. Please pay cash on delivery."
         );

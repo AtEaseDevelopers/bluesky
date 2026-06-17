@@ -71,6 +71,7 @@ class AddCustomerController extends Controller
                 "name" => $data['name'],
                 "email" => $data['email'] ?? null,
                 "category" => $data['category'],
+                "customer_type" => $request->input('customer_type', 'cod'),
                 "attn_name" => $data['attn_name'],
                 "attn_contact" => $data['attn_contact'],
                 "payment_method" => isset($data['payment_method']) ? json_encode($data['payment_method']) : null,
