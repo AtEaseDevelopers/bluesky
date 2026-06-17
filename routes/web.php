@@ -68,6 +68,8 @@ $adminUrl = config('app.admin_url');
                     Route::get('/bulk-payments', 'BulkPaymentController@index')->name('bulk-payments');
                     Route::post('/bulk-payments', 'BulkPaymentController@store')->name('bulk-payments.store');
 
+                    Route::get('/terms/{page}', 'PolicyController@show')->name('policies.show');
+
                     // Buy again
                     Route::get('/order/buy-again/{order}', 'BuyAgainController@index');
                 }

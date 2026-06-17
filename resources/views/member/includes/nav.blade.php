@@ -52,6 +52,22 @@
                         Cart <span class="badge badge-success">{{ $cartCount ?? 0 }}</span>
                     </a>
                 </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle {{ $currentRoute === 'member.policies.show' ? 'active' : '' }}"
+                        href="javascript:void(0);" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Terms and Policies
+                    </a>
+                    <ul class="dropdown-menu">
+                        @foreach (\App\Http\Controllers\Member\PolicyController::PAGES as $slug => $label)
+                            <li>
+                                <a class="dropdown-item {{ $currentRoute === 'member.policies.show' && request()->route('page') === $slug ? 'active' : '' }}"
+                                    href="{{ route('member.policies.show', $slug) }}">
+                                    {{ $label }}
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </li>
             </ul>
             @if (!$isGuest && $user)
                 <ul class="navbar-nav d-flex">
