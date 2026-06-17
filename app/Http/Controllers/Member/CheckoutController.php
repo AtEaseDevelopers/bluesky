@@ -70,7 +70,7 @@ class CheckoutController extends Controller
             }
             $cart_products[$key]->options = CartProduct::getOption($value->cart_product_id);
             $cart_products[$key]->unit_price = Product::get_today_price($value->product_id, $user);
-            $total += $cart_products[$key]->unit_price * $value->quantity;
+            $total += $cart_products[$key]->unit_price * ($value->quantity ?? $value->weight);
         }
 
         // payment_method
@@ -128,7 +128,7 @@ class CheckoutController extends Controller
         foreach ($cart_products as $key => $value) {
             $cart_products[$key]->options = CartProduct::getOption($value->cart_product_id);
             $cart_products[$key]->unit_price = Product::get_today_price($value->product_id, $user);
-            $total += $cart_products[$key]->unit_price * $value->quantity;
+            $total += $cart_products[$key]->unit_price * ($value->quantity ?? $value->weight);
         }
 
         $deliverySlot = DeliverySlot::findOrFail($data['delivery_slot_id']);
@@ -231,6 +231,20 @@ class CheckoutController extends Controller
         app(OrderService::class)->assignDoNumber($order);
 
         $creditApplied = app(CreditService::class)->applyAvailableCredit($order->fresh());
+        $order = $order->fresh();
+
+        if (($data['payment_timing'] ?? 'pay_later') === 'pay_now' && $user->isCreditCustomer()) {
+            $balanceDue = $order->balanceDue();
+            if ($balanceDue > 0 && isset($data['transfer_slip']) && $data['transfer_slip']) {
+                app(OrderService::class)->submitCheckoutPrepayment(
+                    $order,
+                    $user,
+                    $data['payment_method'] ?? 'bank-transfer',
+                    $balanceDue,
+                    $data['transfer_slip']
+                );
+            }
+        }
 
         $message = "Thank you! Your order has been submitted and is pending review.";
         if ($creditApplied > 0) {
@@ -259,6 +273,7 @@ class CheckoutController extends Controller
             'shipping_state' => ['nullable'],
             "transfer_slip" => array_merge(Order::$attribute_rules['transfer_slip'], []),
             'delivery_slot_id' => ['required', 'exists:delivery_slots,id'],
+            'payment_timing' => ['nullable', 'in:pay_now,pay_later'],
         ];
 
         try {
@@ -268,6 +283,22 @@ class CheckoutController extends Controller
                 'error' => $err->getMessage(),
                 'field_err' => $err->validator->errors()->getMessages(),
             ];
+        }
+
+        $user = $request->user('web');
+        if (($data['payment_timing'] ?? 'pay_later') === 'pay_now' && $user && $user->isCreditCustomer()) {
+            if (!$request->hasFile('transfer_slip')) {
+                return [
+                    'error' => true,
+                    'field_err' => ['transfer_slip' => ['Transfer slip is required when paying now.']],
+                ];
+            }
+            if (empty($data['payment_method'])) {
+                return [
+                    'error' => true,
+                    'field_err' => ['payment_method' => ['Payment method is required when paying now.']],
+                ];
+            }
         }
 
         return $data;

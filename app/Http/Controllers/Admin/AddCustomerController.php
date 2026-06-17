@@ -65,7 +65,7 @@ class AddCustomerController extends Controller
             $exist = User::where('login_code', $login_code)->exists();
         } while ($exist);
 
-        $default_password = "ecommerce123";
+        $default_password = 'ecommerce123';
         $customer = User::create(
             [
                 "name" => $data['name'],
@@ -94,6 +94,7 @@ class AddCustomerController extends Controller
                 "invoice_price_permission" => $request['invoice_price_permission'] ?? 0,
                 "default_driver_id" => $request['default_driver_id'],
                 'sql_customer_code' => $request['sql_customer_code'] ?? null,
+                'registration_completed_at' => now(),
             ]
         );
 
@@ -106,7 +107,10 @@ class AddCustomerController extends Controller
             }
         }
 
-        return redirect(route('admin.customers'))->with('success', "$customer->name has been added successfully. Default login password is $default_password.");
+        return redirect(route('admin.customers'))->with(
+            'success',
+            "$customer->name has been added. Default login password is $default_password."
+        );
 
     }
 

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Cart;
 use App\CartProduct;
+use App\OrderFieldSetting;
 use Closure;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -39,11 +40,18 @@ class MemberBootstrap
             'cart_url' => route('member.cart'),
             'checkout_url' => route('member.checkout'),
             'orders_url' => route('member.orders'),
+            'bulk_payments_url' => route('member.bulk-payments'),
             'add_to_cart_name' => 'member.add-to-cart',
             'product_show_name' => 'member.products.show',
             'update_cart_url' => url('/update-cart-item'),
             'remove_cart_url' => url('/remove-cart-item'),
             'product_info_url' => url('/add-to-cart-product-info'),
+        ]);
+
+        View::share('orderFieldSettings', [
+            'weight_presets' => OrderFieldSetting::weightPresets(),
+            'situation_options' => OrderFieldSetting::situationOptions(),
+            'situation_label' => OrderFieldSetting::situationLabel(),
         ]);
 
         return $next($request);

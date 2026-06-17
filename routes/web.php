@@ -30,6 +30,8 @@ $adminUrl = config('app.admin_url');
         function () {
             Route::get('/', 'HomeController@index');
             Route::get('/fast-login/{login_code}', 'LoginController@fastLogin');
+            Route::get('/register/{token}', 'RegisterController@showForm')->name('register');
+            Route::post('/register/{token}', 'RegisterController@register')->name('register.submit');
             Route::get('/login', 'LoginController@getForm')->name('login');
             Route::post('/login', 'LoginController@login')->name('login.submit');
             Route::get('/logout', 'LoginController@logout')->name('logout');
@@ -63,6 +65,8 @@ $adminUrl = config('app.admin_url');
                     Route::post('/order/review/{order}/reject', 'OrderReviewController@reject')->name('orders.review.reject');
                     Route::post('/order/{order}/payments', 'OrderPaymentController@store')->name('orders.payments.store');
                     Route::get('/order/{order}/payments/{payment}/proof', 'OrderPaymentController@viewProof')->name('orders.payment-proof');
+                    Route::get('/bulk-payments', 'BulkPaymentController@index')->name('bulk-payments');
+                    Route::post('/bulk-payments', 'BulkPaymentController@store')->name('bulk-payments.store');
 
                     // Buy again
                     Route::get('/order/buy-again/{order}', 'BuyAgainController@index');

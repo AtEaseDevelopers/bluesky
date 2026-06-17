@@ -75,6 +75,45 @@
                         </div>
 
                         @unless($isGuest ?? false)
+                        <h6 class="card-subtitle my-3 text-body-secondary">Payment</h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                @if ($user->isCreditCustomer())
+                                    <div class="mb-3">
+                                        <label class="mb-2 d-block">When would you like to pay?</label>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="payment_timing" id="pay_later" value="pay_later" {{ old('payment_timing', 'pay_later') === 'pay_later' ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="pay_later">Pay Later (invoice / credit terms)</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="payment_timing" id="pay_now" value="pay_now" {{ old('payment_timing') === 'pay_now' ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="pay_now">Pay Now (upload transfer slip)</label>
+                                        </div>
+                                    </div>
+                                    <div id="payNowFields" style="{{ old('payment_timing') === 'pay_now' ? '' : 'display:none;' }}">
+                                        <div class="form-group mb-4">
+                                            <label class="mb-2" for="payment_method">Payment Method</label>
+                                            <select name="payment_method" id="payment_method" class="form-select">
+                                                @foreach ($payment_method as $method)
+                                                    @if (in_array($method, ['bank-transfer', 'e-wallet', 'payment-gateway']))
+                                                        <option value="{{ $method }}" {{ old('payment_method') === $method ? 'selected' : '' }}>{{ __('user.payment_method.'.$method) }}</option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                @else
+                                    <input type="hidden" name="payment_timing" value="pay_later">
+                                    <div class="alert alert-info mb-4">
+                                        <i class="fa fa-money" aria-hidden="true"></i>
+                                        <strong>Cash on Delivery.</strong> Pay our driver when your order arrives unless online payment is enabled for your account.
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                        @endunless
+
+                        @unless($isGuest ?? false)
                         <h6 class="card-subtitle my-3 text-body-secondary">Delivery Slot</h6>
                         <div class="row">
                             <div class="col-md-12">
@@ -240,26 +279,20 @@
 
     <script>
         $(document).ready(function() {
-            // Function to show/hide transfer_slip based on payment_method
-            function toggleTransferSlip() {
-                var paymentMethod = $('#payment_method').val();
-                // Show transferSlipGroup only for 'bank-transfer' payment method
-                if (paymentMethod === 'bank-transfer') {
-                    $('#transferSlipGroup').show().attr('required', true);
+            function togglePayNowFields() {
+                if ($('#pay_now').is(':checked')) {
+                    $('#payNowFields').show();
+                    $('#transferSlipGroup').show();
                     $('#transfer_slip').attr('required', true);
                 } else {
-                    $('#transferSlipGroup').hide().removeAttr('required');
+                    $('#payNowFields').hide();
+                    $('#transferSlipGroup').hide();
                     $('#transfer_slip').removeAttr('required');
                 }
             }
 
-            // Call toggleTransferSlip on page load
-            toggleTransferSlip();
-
-            // Bind toggleTransferSlip to payment_method change event
-            $('#payment_method').change(function() {
-                toggleTransferSlip();
-            });
+            $('input[name="payment_timing"]').on('change', togglePayNowFields);
+            togglePayNowFields();
         });
     </script>
 

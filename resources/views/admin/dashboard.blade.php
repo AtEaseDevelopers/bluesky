@@ -122,18 +122,18 @@
                             <button class="btn btn-sm btn-primary status-filter-button mb-1"
                                 data-status="{{ __('order.status.in_route') }}">{{ __('order.status.in_route') }}</button>
                             <button class="btn btn-sm btn-primary status-filter-button mb-1"
-                                data-status="{{ __('order.status.paid_completed') }}">{{ __('order.status.paid_completed') }}</button>
+                                data-status="{{ __('order.status.delivered') }}">{{ __('order.status.delivered') }}</button>
                             <button class="btn btn-sm btn-primary status-filter-button mb-1"
                                 data-status="{{ __('order.status.cancelled') }}">{{ __('order.status.cancelled') }}</button>
                             <button class="btn btn-sm btn-success mb-1 status-action-button" data-to_status="in_route"
                                 data-status="{{ __('order.status.in_route') }}" style="display: none;">Move to
                                 {{ __('order.status.in_route') }}</button>
-                            <button class="btn btn-sm btn-success mb-1 status-action-button" data-to_status="paid_completed"
-                                data-status="{{ __('order.status.paid_completed') }}" style="display: none;">Move to
-                                {{ __('order.status.paid_completed') }}</button>
+                            <button class="btn btn-sm btn-success mb-1 status-action-button" data-to_status="delivered"
+                                data-status="{{ __('order.status.delivered') }}" style="display: none;">Move to
+                                {{ __('order.status.delivered') }}</button>
                             <button class="btn btn-sm btn-success mb-1 status-action-button download-zip"
-                                title="Download selected Invoice & DO as zip" data-to_status="paid_completed"
-                                data-status="{{ __('order.status.paid_completed') }}" style="display: none;"><i
+                                title="Download selected Invoice & DO as zip" data-to_status="delivered"
+                                data-status="{{ __('order.status.delivered') }}" style="display: none;"><i
                                     class="fa fa-download"></i></button>
                         </div>
                     </div>
@@ -254,7 +254,9 @@
                     if (status == "{{ __('order.status.pending') }}") {
                         $(".status-action-button[data-status='" + "{{ __('order.status.in_route') }}" + "']").show();
                     } else if (status == "{{ __('order.status.in_route') }}") {
-                        $(".status-action-button[data-status='" + "{{ __('order.status.paid_completed') }}" + "']").show();
+                        $(".status-action-button[data-status='" + "{{ __('order.status.delivered') }}" + "']").show();
+                    } else if (status == "{{ __('order.status.delivered') }}") {
+                        $(".status-action-button.download-zip").show();
                     }
                 }
             });

@@ -111,6 +111,7 @@ class DemoDataSeeder extends Seeder
         $defaults = [
             'password' => Hash::make('password'),
             'status' => User::$user_status['active'],
+            'registration_completed_at' => now(),
             'billing_address' => '12 Jalan Pasar',
             'billing_postcode' => '50000',
             'billing_state' => 'Kuala Lumpur',
@@ -313,7 +314,7 @@ class DemoDataSeeder extends Seeder
             [
                 'customer' => $customers[3],
                 'driver' => $drivers[2],
-                'status' => Order::$status['paid_completed'],
+                'status' => Order::$status['delivered'],
                 'payment_status' => Order::$payment_status['paid'],
                 'paid_amount' => 236.00,
                 'items' => [

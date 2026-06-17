@@ -19,6 +19,7 @@ class OrderPayment extends Model
         'recorded_by',
         'recorded_by_driver',
         'submitted_by_user_id',
+        'bulk_payment_id',
         'notes',
     ];
 
@@ -167,6 +168,11 @@ class OrderPayment extends Model
     public function submitter()
     {
         return $this->belongsTo(User::class, 'submitted_by_user_id');
+    }
+
+    public function bulkPayment()
+    {
+        return $this->belongsTo(BulkPayment::class);
     }
 
     public function isPending(): bool

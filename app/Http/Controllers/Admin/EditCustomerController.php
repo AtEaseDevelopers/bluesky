@@ -216,4 +216,25 @@ class EditCustomerController extends Controller
 
         return redirect(route('admin.customers'))->with('success', "New login link has been generated for $customer->name.");
     }
+
+    public function generateRegistrationLink(Request $request, User $customer)
+    {
+        if ($customer->hasCompletedRegistration()) {
+            return redirect()->back()->with('error', 'This customer has already completed portal registration.');
+        }
+
+        $customer->generateRegistrationToken();
+
+        $referer = $request->headers->get('referer', '');
+        if (str_contains($referer, 'invite/success')) {
+            return redirect()
+                ->route('admin.customers.invite.success', encrypt($customer->id))
+                ->with('success', 'A new registration link has been generated.');
+        }
+
+        return redirect(route('admin.customers.edit', encrypt($customer->id)))->with(
+            'success',
+            'A new registration link has been generated.'
+        );
+    }
 }

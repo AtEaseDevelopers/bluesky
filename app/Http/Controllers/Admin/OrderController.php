@@ -507,12 +507,6 @@ class OrderController extends Controller
     
             $zip->close();
 
-            $orders->update(
-                [
-                'status' => Order::$status['paid_completed']
-                ]
-            );
-    
             return response()->download($zipFileName)->deleteFileAfterSend(true);
         }
     }

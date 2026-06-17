@@ -23,6 +23,7 @@
                     </a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{{ route('admin.customers') }}">Manage Customers</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.customers.invite') }}">Invite Customer</a></li>
                         <li><a class="dropdown-item" href="{{ route('admin.customers.create') }}">Add New Customer</a>
                         </li>
                     </ul>
@@ -72,6 +73,7 @@
                         <li><a class="dropdown-item" href="{{ route('admin.areas.index') }}">Areas</a></li>
                         <li><a class="dropdown-item" href="{{ route('admin.lorry.index') }}">Drivers / Lorry</a></li>
                         <li><a class="dropdown-item" href="{{ route('admin.uom.index') }}">UOM</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.order-field-settings.edit') }}">Order Field Settings</a></li>
                     </ul>
                 </li>
             </ul>

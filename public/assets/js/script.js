@@ -849,3 +849,30 @@ function init_pre_order_data() {
         });
     }
 }
+
+document.addEventListener('click', function (event) {
+    const weightBtn = event.target.closest('.weight-preset-btn');
+    if (weightBtn) {
+        const target = document.getElementById(weightBtn.dataset.target);
+        if (target) {
+            target.value = weightBtn.dataset.value;
+            target.dispatchEvent(new Event('change'));
+        }
+    }
+
+    const situationBtn = event.target.closest('.situation-preset-btn');
+    if (situationBtn) {
+        const group = situationBtn.closest('.situation-btn-group');
+        if (!group) {
+            return;
+        }
+        group.querySelectorAll('.situation-preset-btn').forEach(function (btn) {
+            btn.classList.remove('active');
+        });
+        situationBtn.classList.add('active');
+        const hiddenInput = document.getElementById(group.dataset.target);
+        if (hiddenInput) {
+            hiddenInput.value = situationBtn.dataset.value;
+        }
+    }
+});

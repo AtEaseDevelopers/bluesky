@@ -139,25 +139,4 @@ class OrderPaymentController extends Controller
 
         return back()->with('success', 'Invoice queued for AutoCount sync.');
     }
-
-    public function complete(Request $request, $id)
-    {
-        $order = Order::findOrFail($id);
-
-        if ($order->balanceDue() > 0) {
-            return back()->with('error', 'Order cannot be completed until full payment is received.');
-        }
-
-        if ($order->status !== Order::$status['delivered']) {
-            return back()->with('error', 'Order must be delivered before completion.');
-        }
-
-        app(OrderStatusService::class)->transition(
-            $order,
-            Order::$status['paid_completed'],
-            Auth::guard('web_admin')->id()
-        );
-
-        return back()->with('success', 'Order marked as paid and completed.');
-    }
 }

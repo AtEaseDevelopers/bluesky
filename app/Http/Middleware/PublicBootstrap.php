@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Cart;
 use App\CartProduct;
+use App\OrderFieldSetting;
 use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
@@ -41,6 +42,12 @@ class PublicBootstrap
             'update_cart_url' => route('public.guest.update-cart-item'),
             'remove_cart_url' => url('/order/remove-cart-item'),
             'product_info_url' => url('/add-to-cart-product-info'),
+        ]);
+
+        View::share('orderFieldSettings', [
+            'weight_presets' => OrderFieldSetting::weightPresets(),
+            'situation_options' => OrderFieldSetting::situationOptions(),
+            'situation_label' => OrderFieldSetting::situationLabel(),
         ]);
 
         return $next($request);

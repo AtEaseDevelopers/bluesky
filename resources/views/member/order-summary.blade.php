@@ -19,8 +19,8 @@
                         <a href="{{ $invoice_url }}" class="btn btn-primary view-pdf mb-1">
                             <i class="fa fa-eye"></i> {{ __('order.file.invoice') }}
                         </a>
-                    @elseif ($customer->invoice_visibility && in_array($order->status, ['customer_reviewing', 'in_route', 'delivered', 'paid_completed']))
-                        <span class="btn btn-outline-secondary mb-1 disabled" title="Available after payment is collected">
+                    @elseif ($customer->invoice_visibility && !$order->isFullyPaid() && $order->status !== \App\Order::$status['cancelled'])
+                        <span class="btn btn-outline-secondary mb-1 disabled" title="Available after the order is fully paid">
                             <i class="fa fa-eye"></i> {{ __('order.file.invoice') }}
                         </span>
                     @endif
@@ -120,8 +120,16 @@
                                         @if ($customer->price_permission)
                                             <td class="text-end">{{ number_format($product->unit_price, 2) }}</td>
                                         @endif
-                                        <td>{{ $product->quantity }}</td>
-                                        <td>{{ $product->product_weight ?? $product->weight ?? '-' }}</td>
+                                        <td>{{ $product->quantity ?? '-' }}</td>
+                                        <td>
+                                            @if ($product->weight)
+                                                {{ $product->weight }}
+                                            @elseif ($product->quantity && $product->product_weight)
+                                                {{ $product->quantity * $product->product_weight }}
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
                                         @if ($customer->price_permission)
                                             <td class="text-end">{{ number_format($product->price, 2) }}</td>
                                         @endif

@@ -6,8 +6,9 @@ return [
         'customer_reviewing' => 'Customer Reviewing',
         'in_route' => 'In Route',
         'delivered' => 'Delivered',
-        'paid_completed' => 'Paid & Completed',
         'cancelled' => 'Cancelled',
+        // Legacy status kept for old records until migrated.
+        'paid_completed' => 'Delivered',
         // Legacy values written before status workflow was unified.
         'processing' => 'Processing',
         'delivering' => 'In Route',

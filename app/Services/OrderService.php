@@ -59,6 +59,18 @@ class OrderService
             'payment_status' => $status,
         ]);
 
+        $order = $order->fresh();
+
+        if ($order->status === Order::$status['delivered'] && $order->isFullyPaid()) {
+            if (!$order->completed_at) {
+                $order->update(['completed_at' => now()]);
+            }
+            if (!$order->invoice_number) {
+                $this->generateInvoiceNumber($order->fresh());
+            }
+            PdfHelper::GenerateOrderInvoice($order->fresh());
+        }
+
         return $order->fresh();
     }
 
@@ -284,6 +296,49 @@ class OrderService
             'payment_proof' => $filename,
             'submitted_by_user_id' => $customer->id,
             'notes' => $notes,
+        ]);
+
+        $this->refreshPaymentStatus($order->fresh());
+
+        return $payment;
+    }
+
+    public function submitCheckoutPrepayment(
+        Order $order,
+        User $customer,
+        string $method,
+        float $amount,
+        UploadedFile $proof,
+        ?string $notes = null
+    ): OrderPayment {
+        if (!$customer->isCreditCustomer()) {
+            throw new \InvalidArgumentException('Checkout prepayment is available for credit customers only.');
+        }
+
+        if ($amount <= 0 || $order->balanceDue() <= 0) {
+            throw new \InvalidArgumentException('No balance due to prepay on this order.');
+        }
+
+        $allowedMethods = OrderPayment::$credit_customer_methods;
+        if (!array_key_exists($method, $allowedMethods)) {
+            throw new \InvalidArgumentException('Invalid payment method.');
+        }
+
+        OrderPayment::assertValidProof($proof, true);
+
+        $extension = $proof->getClientOriginalExtension();
+        $filename = 'checkout_' . time() . rand() . '.' . $extension;
+        $path = Order::$path . '/' . $order->id . '/payments';
+        Storage::disk('local')->put($path . '/' . $filename, file_get_contents($proof));
+
+        $payment = OrderPayment::create([
+            'order_id' => $order->id,
+            'payment_method' => $method,
+            'amount' => min($amount, $order->balanceDue()),
+            'status' => OrderPayment::STATUS_PENDING,
+            'payment_proof' => $filename,
+            'submitted_by_user_id' => $customer->id,
+            'notes' => $notes ?: 'Pay now at checkout',
         ]);
 
         $this->refreshPaymentStatus($order->fresh());

@@ -184,11 +184,13 @@ class ProductController extends Controller
 
         $data['product'] = $this->formatProductForMember($product, Auth::guard('web')->user());
         $data['product_option'] = Product::getOption(decrypt($request['id']), true);
-        $data['cart_product_option'] = DB::table('cart_product_options')
+        $data['cart_product_options'] = DB::table('cart_product_options')
             ->leftJoin('cart_products', 'cart_products.id', '=', 'cart_product_options.cart_product_id')
-            ->select('option_item')
+            ->leftJoin('carts', 'carts.id', '=', 'cart_products.cart_id')
             ->where('cart_products.product_id', decrypt($request['id']))
-            ->first();
+            ->where('carts.user_id', Auth::guard('web')->id())
+            ->where('cart_products.status', CartProduct::$status['active'])
+            ->pluck('option_item', 'option');
 
         $view = view('member.includes.product_info', $data)->render();
         return Response::json(

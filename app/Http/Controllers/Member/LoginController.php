@@ -32,6 +32,11 @@ class LoginController extends Controller
         ];
 
         if (Auth::guard('web')->attempt($login_data)) {
+            $user = Auth::guard('web')->user();
+            if (!$user->hasCompletedRegistration()) {
+                Auth::guard('web')->logout();
+                return back()->with('error', 'Please complete registration using the link sent to you by admin.')->withInput();
+            }
             return redirect(route('member.products'));
         } else {
             // Authentication failed
@@ -69,7 +74,9 @@ class LoginController extends Controller
 
         $user = User::where('login_code', $login_code)->first();  
         if ($user) {
-            // Authentication successful for admin
+            if (!$user->hasCompletedRegistration()) {
+                return redirect()->to('/')->with(['error' => 'Please complete registration using your invitation link first.']);
+            }
             Auth::guard('web')->login($user); 
             return redirect(route('member.products'));
         } else {

@@ -92,10 +92,14 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/customers/export', 'CustomerController@export')->name('customers.export');
                 Route::get('/customer/add', 'AddCustomerController@showForm')->name('customers.create');
                 Route::post('/customer/add', 'AddCustomerController@addCustomer')->name('customers.store');
+                Route::get('/customer/invite', 'CustomerInviteController@create')->name('customers.invite');
+                Route::post('/customer/invite', 'CustomerInviteController@store')->name('customers.invite.store');
+                Route::get('/customer/invite/success/{customer}', 'CustomerInviteController@success')->name('customers.invite.success');
                 Route::get('/customer/edit/{customer}', 'EditCustomerController@showForm')->name('customers.edit');
                 Route::post('/customer/edit/{customer}', 'EditCustomerController@editCustomer')->name('customers.update');
                 Route::post('/customer/update-password', 'EditCustomerController@updatePassword')->name('customer.update-password');
                 Route::get('/customer/generate-new-login-link/{customer}', 'EditCustomerController@generateNewLoginLink')->name('customers.generate-new-login-link');
+                Route::get('/customer/generate-registration-link/{customer}', 'EditCustomerController@generateRegistrationLink')->name('customers.generate-registration-link');
                 Route::post('/delete-customer-visibility-product', 'CustomerController@deleteCustomerProduct');
                 Route::post('/get-products-for-category', 'AddCustomerController@getProductsForCategory');
                 Route::post('/customer/{customer}/credit-adjust', 'CustomerCreditController@adjust')->name('customers.credit.adjust');
@@ -114,7 +118,6 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                     Route::post('/order/{orderId}/payments/{paymentId}/reject', 'reject')->name('orders.payments.reject');
                     Route::get('/orders/{order}/payment-proof/{filename}', 'viewProof')->name('orders.payment-proof');
                     Route::post('/order/{id}/sync-autocount', 'syncAutoCount')->name('orders.sync-autocount');
-                    Route::post('/order/{id}/complete', 'complete')->name('orders.complete');
                 });
 
                 Route::resource('delivery-slots', 'DeliverySlotController');
@@ -152,6 +155,9 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/daily-sales-report', 'ReportsController@daily_sales_report')->name('daily-sales-report');
                 Route::get('/export-daily-sales-report', 'ReportsController@export_daily_sales_report')->name('export-daily-sales-report');
                 Route::get('/do-report', 'ReportsController@do_report')->name('do-report');
+
+                Route::get('/settings/order-fields', 'OrderFieldSettingController@edit')->name('order-field-settings.edit');
+                Route::post('/settings/order-fields', 'OrderFieldSettingController@update')->name('order-field-settings.update');
             }
         );
 

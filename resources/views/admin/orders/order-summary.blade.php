@@ -109,8 +109,16 @@
                                                     @endif
                                                 </td>
                                                 <td>{{ number_format($product->unit_price, 2) }}</td>
-                                                <td>{{ $product->quantity }}</td>
-                                                <td>{{ $product->product_weight ?? $product->weight ?? '-' }}</td>
+                                                <td>{{ $product->quantity ?? '-' }}</td>
+                                                <td>
+                                                    @if ($product->weight)
+                                                        {{ $product->weight }}
+                                                    @elseif ($product->quantity && $product->product_weight)
+                                                        {{ $product->quantity * $product->product_weight }}
+                                                    @else
+                                                        -
+                                                    @endif
+                                                </td>
                                                 <td class="text-end">{{ number_format($product->price, 2) }}</td>
                                             </tr>
                                         @endforeach
@@ -213,18 +221,12 @@
                             @else
                                 <p class="text-muted mb-0">No further status changes available.</p>
                             @endif
-                            @if ($order->status !== Order::$status['cancelled'] && $order->status !== Order::$status['paid_completed'])
+                            @if ($order->status !== Order::$status['cancelled'] && !($order->status === Order::$status['delivered'] && $order->isFullyPaid()))
                                 <button type="button" class="btn btn-outline-danger w-100 mt-2 btn-change-status" data-status="cancelled">
                                     Cancel Order
                                 </button>
                             @endif
-                            @if ($order->status === Order::$status['delivered'] && $order->balanceDue() <= 0)
-                                <form action="{{ route('admin.orders.complete', $order->id) }}" method="POST" class="mt-3">
-                                    @csrf
-                                    <button type="submit" class="btn btn-success w-100">Complete Order</button>
-                                </form>
-                            @endif
-                            @if ($order->status === Order::$status['paid_completed'] && $order->payment_status === Order::$payment_status['paid'])
+                            @if ($order->status === Order::$status['delivered'] && $order->isFullyPaid())
                                 <form action="{{ route('admin.orders.sync-autocount', $order->id) }}" method="POST" class="mt-3">
                                     @csrf
                                     <button type="submit" class="btn btn-outline-secondary w-100">Sync to AutoCount</button>

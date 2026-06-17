@@ -489,6 +489,38 @@
                 </div>
             </div>
             @endif
+            @if (!$customer->hasCompletedRegistration())
+            <div class="card shadow no-border mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Customer Registration Link</h5>
+                    <p class="text-muted">This customer has not registered yet. Send the link below so they can create their portal account.</p>
+                    @php $registrationUrl = $customer->registrationUrl(); @endphp
+                    @if ($registrationUrl)
+                        <div class="mb-2">
+                            <span class="badge bg-{{ $customer->customer_type === 'credit' ? 'info' : 'secondary' }} text-dark me-2">{{ strtoupper($customer->customer_type) }}</span>
+                            <span class="badge bg-light text-dark border">{{ $customer->category }}</span>
+                        </div>
+                        <input type="text" class="form-control mb-2" id="registrationLink" value="{{ $registrationUrl }}" readonly>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText(document.getElementById('registrationLink').value)">Copy Link</button>
+                            <a href="{{ route('admin.customers.generate-registration-link', $customer->id) }}" class="btn btn-sm btn-primary">Generate New Link</a>
+                        </div>
+                        @if ($customer->registration_token_expires_at)
+                            <small class="text-muted d-block mt-2">Expires {{ $customer->registration_token_expires_at->format('d M Y') }}</small>
+                        @endif
+                    @else
+                        <a href="{{ route('admin.customers.generate-registration-link', $customer->id) }}" class="btn btn-sm btn-primary">Generate Registration Link</a>
+                    @endif
+                </div>
+            </div>
+            @else
+            <div class="card shadow no-border mb-4">
+                <div class="card-body">
+                    <div class="alert alert-success mb-0">Portal registration completed on {{ $customer->registration_completed_at->format('d M Y') }}.</div>
+                </div>
+            </div>
+            @endif
+            @if ($customer->hasCompletedRegistration())
             <div class="card shadow no-border">
                 <div class="card-body">
                     <div class="mb-4">
@@ -518,6 +550,7 @@
                     </form>
                 </div>
             </div>
+            @endif
         </div>
     </div>
 

@@ -34,14 +34,14 @@
                                         <tr class="review-line" data-unit-price="{{ $product->unit_price }}">
                                             <td>{{ $product->product_name }}</td>
                                             <td>{{ number_format($product->unit_price, 2) }}</td>
-                                            <td>{{ $product->quantity }}</td>
+                                            <td>{{ $product->quantity ?? '-' }}</td>
                                             <td>
                                                 <input type="number" step="0.001" min="0.001" class="form-control line-qty"
-                                                    name="line_items[{{ $product->id }}][quantity]" value="{{ $product->quantity }}" required>
+                                                    name="line_items[{{ $product->id }}][quantity]" value="{{ $product->quantity }}">
                                             </td>
                                             <td>
                                                 <input type="number" step="0.001" min="0" class="form-control line-weight"
-                                                    name="line_items[{{ $product->id }}][weight]" value="{{ $product->product_weight ?? $product->weight }}">
+                                                    name="line_items[{{ $product->id }}][weight]" value="{{ $product->weight ?? $product->product_weight }}">
                                             </td>
                                             <td class="line-total text-end">{{ number_format($product->price, 2) }}</td>
                                         </tr>

@@ -79,7 +79,6 @@ class Order extends Model
         'customer_reviewing' => 'customer_reviewing',
         'in_route' => 'in_route',
         'delivered' => 'delivered',
-        'paid_completed' => 'paid_completed',
         'cancelled' => 'cancelled',
     ];
 
@@ -221,6 +220,15 @@ class Order extends Model
         return (float) $this->paid_amount > 0;
     }
 
+    public function isFullyPaid(): bool
+    {
+        if ($this->status === self::$status['cancelled']) {
+            return false;
+        }
+
+        return $this->balanceDue() <= 0.009;
+    }
+
     public function canShowInvoice(): bool
     {
         return $this->paymentCollected();
@@ -232,7 +240,7 @@ class Order extends Model
             return false;
         }
 
-        return $this->canShowInvoice();
+        return $this->isFullyPaid();
     }
 
     public function canShowDeliveryOrder(): bool
@@ -240,7 +248,6 @@ class Order extends Model
         return in_array($this->status, [
             self::$status['in_route'],
             self::$status['delivered'],
-            self::$status['paid_completed'],
         ], true);
     }
 

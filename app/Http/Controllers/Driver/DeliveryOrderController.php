@@ -70,7 +70,7 @@ class DeliveryOrderController extends Controller
         $orders = $query->orderByRaw("CASE status
                 WHEN 'in_route' THEN 0 WHEN 'delivering' THEN 0
                 WHEN 'pending' THEN 1 WHEN 'customer_reviewing' THEN 1 WHEN 'processing' THEN 1
-                WHEN 'delivered' THEN 2 WHEN 'completed' THEN 2 WHEN 'paid_completed' THEN 3
+                WHEN 'delivered' THEN 2 WHEN 'completed' THEN 2
                 ELSE 4 END")
             ->orderByDesc('id')
             ->paginate(20)
@@ -212,7 +212,7 @@ class DeliveryOrderController extends Controller
         return match ($filter) {
             'processing' => ['pending', 'customer_reviewing', 'processing'],
             'in_route', 'delivering' => ['in_route', 'delivering'],
-            'delivered', 'completed' => ['delivered', 'paid_completed', 'completed'],
+            'delivered', 'completed' => ['delivered', 'completed'],
             default => [],
         };
     }

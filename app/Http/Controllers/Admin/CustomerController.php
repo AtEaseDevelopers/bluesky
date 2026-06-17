@@ -33,20 +33,11 @@ class CustomerController extends Controller
         $shipping_state = $request['shipping_state'];
         $status = $request['status'];
 
-        $users = DB::table('users')
+        $users = User::query()
             ->leftJoin('areas', 'areas.id', '=', 'users.area')
             ->select(
-                'users.id',
-                'users.name',
-                'users.email',
-                'areas.area_name as area',
-                'users.category',
-                'users.billing_address',
-                'users.shipping_address',
-                'users.login_code',
-                'users.status',
-                'users.created_at',
-                'users.updated_at',
+                'users.*',
+                DB::raw('areas.area_name as area'),
             )
             ->when(($name != null), function ($q) use ($name) {
                 return $q->where('users.name', 'LIKE', "%$name%");

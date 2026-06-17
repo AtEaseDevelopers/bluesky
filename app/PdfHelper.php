@@ -107,7 +107,10 @@ class PdfHelper extends Model
             'void' => $void,
             'user' => $order->pdfCustomer(),
             'type' => 'order',
-            'payments' => $order->payments()->orderBy('id')->get(),
+            'payments' => $order->payments()
+                ->where('status', OrderPayment::STATUS_CONFIRMED)
+                ->orderBy('id')
+                ->get(),
             'payment_method_labels' => OrderPayment::$payment_methods,
         ];
 
@@ -136,7 +139,7 @@ class PdfHelper extends Model
         $pdf = PDF::loadView('pdf.invoicewithoutprice', $data);
         $pdf->setPaper('a4', 'portrait');
 
-        $invoiceFilename = 'invoice-' . $order->id . '.pdf';
+        $invoiceFilename = 'invoice2-' . $order->id . '.pdf';
 
         return self::handlePdfReturn($pdf, $invoiceFilename, Order::$path, $order->id, $returnPdf);
     }

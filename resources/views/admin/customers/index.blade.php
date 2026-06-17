@@ -91,6 +91,9 @@
                 <button type="button" id="copyGuestLink" class="btn btn-primary" data-link="{{ route('public.guest.index') }}">
                     Copy Guest Link
                 </button>
+                <a href="{{ route('admin.customers.invite') }}" class="btn btn-success">
+                    Invite Customer
+                </a>
                 <a href="{{ route('admin.customers.create') }}" class="btn btn-primary">
                     Add New Customer
                 </a>
@@ -112,6 +115,7 @@
                                 <tr>
                                     <th>Options</th>
                                     <th>Login Link</th>
+                                    <th>Registration</th>
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Category</th>
@@ -133,17 +137,33 @@
                                             </a>
                                         </td>
                                         <td>
-                                            <input type="text" class="form-control fast_link mb-2" style="width: 150px;" value="{{ url('fast-login/' . Crypt::encryptString($user->login_code)) }}" readonly />
-                                            <p>
-                                                <a href="{{ route('admin.customers.generate-new-login-link', $user->id) }}" class="btn btn-sm btn-primary me-1" title="Generate New Login Link">
-                                                    <i class="fa fa-refresh"></i>
-                                                </a>
-                                                <a type="button" class="btn btn-sm btn-primary copylink">
-                                                    <i class="fa fa-clipboard"></i>
-                                                </a>
-                                            </p>
+                                            @if ($user->hasCompletedRegistration())
+                                                <input type="text" class="form-control fast_link mb-2" style="width: 150px;" value="{{ url('fast-login/' . Crypt::encryptString($user->login_code)) }}" readonly />
+                                                <p>
+                                                    <a href="{{ route('admin.customers.generate-new-login-link', $user->id) }}" class="btn btn-sm btn-primary me-1" title="Generate New Login Link">
+                                                        <i class="fa fa-refresh"></i>
+                                                    </a>
+                                                    <a type="button" class="btn btn-sm btn-primary copylink">
+                                                        <i class="fa fa-clipboard"></i>
+                                                    </a>
+                                                </p>
+                                            @else
+                                                <span class="text-muted">Available after registration</span>
+                                            @endif
                                         </td>
-                                        <td>{{ $user->name }}</td>
+                                        <td>
+                                            @if ($user->isPendingRegistration() && $user->registrationUrl())
+                                                <input type="text" class="form-control registration_link mb-2" style="width: 150px;" value="{{ $user->registrationUrl() }}" readonly />
+                                                <a type="button" class="btn btn-sm btn-primary copy-registration-link">
+                                                    <i class="fa fa-clipboard"></i> Copy
+                                                </a>
+                                            @elseif ($user->hasCompletedRegistration())
+                                                <span class="badge bg-success">Registered</span>
+                                            @else
+                                                <a href="{{ route('admin.customers.generate-registration-link', $user->id) }}" class="btn btn-sm btn-outline-primary">Generate Link</a>
+                                            @endif
+                                        </td>
+                                        <td>{{ $user->hasCompletedRegistration() ? $user->name : 'Pending registration' }}</td>
                                         <td>{{ $user->email ?: '--' }}</td>
                                         <td>{{ $user->category ?: '--' }}</td>
                                         <td>{{ $user->area ?? '-' }}</td>
@@ -157,7 +177,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="11">
+                                    <td colspan="12">
                                         {{ $users->appends(request()->query())->links('pagination::bootstrap-4') }}
                                     </td>
                                 </tr>
@@ -179,6 +199,13 @@
                 linkToCopy.select();
                 document.execCommand('copy');
                 alert('Link copied to clipboard!');
+            });
+
+            $(".copy-registration-link").click(function() {
+                const linkToCopy = $(this).closest("td").children(".registration_link");
+                linkToCopy.select();
+                document.execCommand('copy');
+                alert('Registration link copied to clipboard!');
             });
 
             $("#copyGuestLink").click(function() {

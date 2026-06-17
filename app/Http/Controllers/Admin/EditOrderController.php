@@ -202,7 +202,7 @@ class EditOrderController extends Controller
 
     public function validateEditOrder(Request $request, Order $order)
     {
-        if(in_array($order->status, [Order::$status['paid_completed']])) {
+        if(in_array($order->status, [Order::$status['delivered']]) && $order->isFullyPaid()) {
             return [
                 'error' => "Order cannot be edited.",
                 'field_err' => [],

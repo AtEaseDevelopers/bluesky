@@ -54,8 +54,16 @@
                                     <tr>
                                         <td>{{ $product->product_name }}</td>
                                         <td class="text-end">{{ number_format($product->unit_price, 2) }}</td>
-                                        <td>{{ $product->quantity }}</td>
-                                        <td>{{ $product->product_weight ?? $product->weight ?? '-' }}</td>
+                                        <td>{{ $product->quantity ?? '-' }}</td>
+                                        <td>
+                                            @if ($product->weight)
+                                                {{ $product->weight }}
+                                            @elseif ($product->quantity && $product->product_weight)
+                                                {{ $product->quantity * $product->product_weight }}
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
                                         <td class="text-end">{{ number_format($product->price, 2) }}</td>
                                     </tr>
                                 @endforeach

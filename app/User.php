@@ -35,6 +35,9 @@ class User extends Authenticatable
         'shipping_state', 
         'payment_method', 
         'login_code', 
+        'registration_token',
+        'registration_token_expires_at',
+        'registration_completed_at',
         'remark', 
         'status', 
         'price_permission',
@@ -62,6 +65,8 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'credit_balance' => 'decimal:2',
+        'registration_token_expires_at' => 'datetime',
+        'registration_completed_at' => 'datetime',
     ];
 
     public static $attribute_rules = [
@@ -103,5 +108,51 @@ class User extends Authenticatable
     public function isCodCustomer(): bool
     {
         return !$this->isCreditCustomer();
+    }
+
+    public function generateRegistrationToken(int $expiryDays = 7): string
+    {
+        do {
+            $token = \App\Helper::generateRandomString(64);
+        } while (static::where('registration_token', $token)->exists());
+
+        $this->update([
+            'registration_token' => $token,
+            'registration_token_expires_at' => now()->addDays($expiryDays),
+        ]);
+
+        return $token;
+    }
+
+    public function registrationUrl(): ?string
+    {
+        if (!$this->registration_token) {
+            return null;
+        }
+
+        return url('/register/' . \Illuminate\Support\Facades\Crypt::encryptString($this->registration_token));
+    }
+
+    public function hasCompletedRegistration(): bool
+    {
+        return (bool) $this->registration_completed_at;
+    }
+
+    public function isPendingRegistration(): bool
+    {
+        return !$this->hasCompletedRegistration() && (bool) $this->registration_token;
+    }
+
+    public function registrationTokenValid(): bool
+    {
+        if (!$this->registration_token) {
+            return false;
+        }
+
+        if ($this->registration_token_expires_at && $this->registration_token_expires_at->isPast()) {
+            return false;
+        }
+
+        return true;
     }
 }

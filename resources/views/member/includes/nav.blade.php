@@ -41,6 +41,11 @@
                             @endif
                         </a>
                     </li>
+                    @if ($user && $user->isCreditCustomer() && ($portal['bulk_payments_url'] ?? null))
+                        <li class="nav-item">
+                            <a class="nav-link {{ $currentRoute === 'member.bulk-payments' ? 'active' : '' }}" href="{{ $portal['bulk_payments_url'] }}">Bulk Payment</a>
+                        </li>
+                    @endif
                 @endif
                 <li class="nav-item">
                     <a class="nav-link {{ in_array($currentRoute, ['member.cart', 'public.guest.cart']) ? 'active' : '' }}" href="{{ $portal['cart_url'] }}">

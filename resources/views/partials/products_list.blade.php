@@ -36,18 +36,28 @@
                     @foreach ($product_options as $type => $options)
                         @php
                             $is_required = isset($product_option['product_option_mandatory'][$type]);
+                            $isSituation = \App\OrderFieldSetting::isSituationOption($type);
                         @endphp
                         <div class="form-group mb-3">
                             <label class="mb-2" for="productOption-{{ $product->id }}-{{ $type }}">{{ $type }}</label>
                             @if ($is_required)
                                 <span class="text-danger"> *</span>
                             @endif
-                            <select id="productOption-{{ $product->id }}-{{ $type }}" class="form-select" name="{{ $type }}" {{ $is_required ? 'required' : '' }}>
-                                <option value="">Choose {{ $type }}...</option>
-                                @foreach ($options as $option)
-                                    <option value="{{ $option }}">{{ ucfirst($option) }}</option>
-                                @endforeach
-                            </select>
+                            @if ($isSituation)
+                                <input type="hidden" name="{{ $type }}" id="productOption-{{ $product->id }}-{{ $type }}" {{ $is_required ? 'required' : '' }}>
+                                <div class="d-flex flex-wrap gap-2 situation-btn-group" data-target="productOption-{{ $product->id }}-{{ $type }}">
+                                    @foreach ($options as $option)
+                                        <button type="button" class="btn btn-sm btn-outline-primary situation-preset-btn" data-value="{{ $option }}">{{ ucfirst($option) }}</button>
+                                    @endforeach
+                                </div>
+                            @else
+                                <select id="productOption-{{ $product->id }}-{{ $type }}" class="form-select" name="{{ $type }}" {{ $is_required ? 'required' : '' }}>
+                                    <option value="">Choose {{ $type }}...</option>
+                                    @foreach ($options as $option)
+                                        <option value="{{ $option }}">{{ ucfirst($option) }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
                         </div>
                     @endforeach
                 @endif
@@ -70,6 +80,7 @@
                     <div class="form-group mb-3">
                         <label class="mb-2" for="productWeight_{{ $product->id }}">Order Qty ({{ $uomLabel }})</label>
                         <span class="text-danger"> *</span>
+                        @include('partials.weight_presets', ['targetId' => 'productWeight_' . $product->id, 'uomLabel' => $uomLabel])
                         <div class="btn-group w-100" role="group">
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productWeight_{{ $product->id }}" data-action="minus">
                                 <i class="fa fa-minus"></i>

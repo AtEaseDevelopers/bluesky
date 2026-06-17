@@ -12,8 +12,7 @@ class OrderStatusService
         'pending' => ['customer_reviewing', 'cancelled'],
         'customer_reviewing' => ['in_route', 'cancelled'],
         'in_route' => ['delivered', 'cancelled'],
-        'delivered' => ['paid_completed'],
-        'paid_completed' => [],
+        'delivered' => [],
         'cancelled' => [],
     ];
 
@@ -36,10 +35,6 @@ class OrderStatusService
             );
         }
 
-        if ($newStatus === Order::$status['paid_completed'] && $order->balanceDue() > 0) {
-            throw new InvalidArgumentException('Full payment is required before completing the order.');
-        }
-
         $order->update(['status' => $newStatus]);
 
         if ($newStatus === Order::$status['customer_reviewing']) {
@@ -55,14 +50,6 @@ class OrderStatusService
         if ($newStatus === Order::$status['cancelled']) {
             PdfHelper::GenerateOrderInvoice($order);
             PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
-        }
-
-        if ($newStatus === Order::$status['paid_completed']) {
-            $order->update(['completed_at' => now()]);
-            if (!$order->invoice_number) {
-                app(OrderService::class)->generateInvoiceNumber($order);
-            }
-            app(AutoCountSyncService::class)->syncIfEligible($order->fresh(), $adminId);
         }
 
         app(StockService::class)->handleOrderStatusChange(

@@ -16,6 +16,8 @@ class FileController extends Controller
     {
         $this->guardOrderDocumentAccess($folder, $id, $filename);
 
+        $this->refreshCustomerInvoiceIfNeeded($folder, $id, $filename);
+
         $path = "$folder/$id/$filename";
         if (!Storage::disk('local')->exists($path)) {
             $this->ensureOrderDocumentExists($folder, $id, $filename);
@@ -34,6 +36,8 @@ class FileController extends Controller
     public function downloadAndUpdateStatus(Request $request, $folder, $id, $filename)
     {
         $this->guardOrderDocumentAccess($folder, $id, $filename);
+
+        $this->refreshCustomerInvoiceIfNeeded($folder, $id, $filename);
 
         $path = "$folder/$id/$filename";
         if (!Storage::disk('local')->exists($path)) {
@@ -88,7 +92,7 @@ class FileController extends Controller
         }
 
         if ($isInvoice && !$order->canShowInvoiceToCustomer($user)) {
-            abort(403, 'Invoice is available after payment has been collected.');
+            abort(403, 'Invoice is available after the order is fully paid.');
         }
 
         if ($isDeliveryOrder && (!$order->canShowDeliveryOrder() || !$user)) {
@@ -112,8 +116,34 @@ class FileController extends Controller
             return;
         }
 
-        if (str_contains($filename, 'invoice') && $order->canShowInvoice()) {
+        if (str_contains($filename, 'invoice') && !str_contains($filename, 'invoice2') && $order->canShowInvoice()) {
             PdfHelper::GenerateOrderInvoice($order);
         }
+    }
+
+    /**
+     * Customers must always see the same live invoice PDF as admin (prices, payments, invoice no.).
+     */
+    private function refreshCustomerInvoiceIfNeeded(string $folder, $id, string $filename): void
+    {
+        if ($folder !== Order::$path || !str_contains($filename, 'invoice') || str_contains($filename, 'invoice2')) {
+            return;
+        }
+
+        $user = Auth::guard('web')->user();
+        if (!$user) {
+            return;
+        }
+
+        $order = Order::find($id);
+        if (!$order || (int) $order->user_id !== (int) $user->id) {
+            return;
+        }
+
+        if (!$order->canShowInvoiceToCustomer($user)) {
+            return;
+        }
+
+        PdfHelper::GenerateOrderInvoice($order);
     }
 }
