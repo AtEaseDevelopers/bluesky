@@ -17,6 +17,12 @@
         <i class="fa fa-arrow-left me-1"></i> Back to deliveries
     </a>
 
+    @php
+        $driverPermissions = $driverPermissions ?? [];
+        $driverCan = fn (string $permission) => $driverPermissions[$permission] ?? true;
+    @endphp
+
+    @if ($driverCan('customer_info'))
     <div class="card driver-card mb-3">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start">
@@ -51,6 +57,16 @@
             </div>
         </div>
     </div>
+    @else
+    <div class="card driver-card mb-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <h2 class="display-font mb-0" style="font-size:1.5rem;">{{ $order->do_no ?? ('Order #' . $order->id) }}</h2>
+                <span class="pill pill-{{ $canonicalStatus }}">{{ $statusLabel }}</span>
+            </div>
+        </div>
+    </div>
+    @endif
 
     {{-- Order items --}}
     <div class="card driver-card mb-3">
@@ -96,7 +112,7 @@
                     {{ \App\OrderPayment::$payment_methods[$latestPayment->payment_method] ?? ucfirst($latestPayment->payment_method) }}
                     · {{ $latestPayment->created_at->format('d M Y, h:i A') }}
                 </div>
-                @if ($latestPayment->payment_proof)
+                @if ($latestPayment->payment_proof && $driverCan('payment_proof'))
                     <div class="mt-2">
                         <a href="{{ route('driver.orders.payment-proof', $order->id) }}" target="_blank" class="btn btn-sm btn-outline-brand">
                             <i class="fa fa-file me-1"></i> View Payment Proof
@@ -108,6 +124,7 @@
     </div>
 
     {{-- Update delivery status --}}
+    @if ($driverCan('update_status'))
     <div class="card driver-card mb-3">
         <div class="card-body">
             <h5 class="display-font mb-3" style="font-size:1.15rem;">Update Delivery Status</h5>
@@ -125,8 +142,10 @@
             </form>
         </div>
     </div>
+    @endif
 
     {{-- Record payment --}}
+    @if ($driverCan('record_payment'))
     <div class="card driver-card mb-3">
         <div class="card-body">
             <h5 class="display-font mb-3" style="font-size:1.15rem;">Record Payment</h5>
@@ -160,14 +179,19 @@
             </form>
         </div>
     </div>
+    @endif
 
 @endsection
+@if ($driverCan('record_payment'))
 @section('script')
     <script>
         (function () {
             var proofRequired = @json($proofRequiredMethods);
             var methodEl = document.getElementById('payment_method');
             var proofInput = document.getElementById('payment_proof');
+            if (!methodEl || !proofInput) {
+                return;
+            }
 
             function toggleProof() {
                 proofInput.required = proofRequired.indexOf(methodEl.value) !== -1;
@@ -177,3 +201,4 @@
         })();
     </script>
 @endsection
+@endif

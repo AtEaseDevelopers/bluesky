@@ -17,7 +17,8 @@ class AdminBootstrap
      */
     public function handle($request, Closure $next)
     {
-        if(Auth::guard('web_admin')->check()){
+        if (Auth::guard('web_admin')->check()) {
+            View::share('adminUser', Auth::guard('web_admin')->user());
         }
 
         return $next($request);

@@ -40,6 +40,7 @@ class User extends Authenticatable
         'registration_completed_at',
         'remark', 
         'status', 
+        'role_slug',
         'price_permission',
         'invoice_visibility',
         'invoice_price_permission',

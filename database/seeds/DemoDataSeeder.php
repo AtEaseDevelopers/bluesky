@@ -28,7 +28,7 @@ class DemoDataSeeder extends Seeder
 
         $this->command->info('Demo data seeded successfully.');
         $this->command->line('');
-        $this->command->line('Admin portal  — username: superadmin  password: password');
+        $this->command->line('Admin portal  — superadmin: superadmin / password  |  admin: manager / password');
         $this->command->line('Driver portal — username: driver1     password: password  (also driver2, driver3)');
         $this->command->line('Member portal — email: ocean@demo.test  password: password  (also harbour@demo.test, blueocean@demo.test, seaside@demo.test)');
     }
@@ -36,8 +36,8 @@ class DemoDataSeeder extends Seeder
     private function seedAdmins(): void
     {
         foreach ([
-            ['username' => 'superadmin', 'name' => 'Super Admin', 'email' => 'superadmin@bluesky.test', 'role' => 'superadmin'],
-            ['username' => 'manager', 'name' => 'Operations Manager', 'email' => 'manager@bluesky.test', 'role' => 'management'],
+            ['username' => 'superadmin', 'name' => 'Super Admin', 'email' => 'superadmin@bluesky.test', 'role' => 'superadmin', 'status' => 'active'],
+            ['username' => 'manager', 'name' => 'Operations Manager', 'email' => 'manager@bluesky.test', 'role' => 'admin', 'status' => 'active'],
         ] as $row) {
             $admin = Admin::updateOrCreate(
                 ['username' => $row['username']],
@@ -48,7 +48,10 @@ class DemoDataSeeder extends Seeder
                 ]
             );
 
-            DB::table('admins')->where('id', $admin->id)->update(['role' => $row['role']]);
+            DB::table('admins')->where('id', $admin->id)->update([
+                'role' => $row['role'],
+                'status' => $row['status'],
+            ]);
         }
     }
 

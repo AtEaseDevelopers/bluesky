@@ -16,13 +16,20 @@ class DriverAuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $driver = Driver::where('username', $data['username'])->where('is_active', true)->first();
+        $driver = Driver::where('username', $data['username'])->first();
 
         if (!$driver || !Hash::check($data['password'], $driver->password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid username or password.',
             ], 401);
+        }
+
+        if (!$driver->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your driver account is inactive. Please contact your administrator.',
+            ], 403);
         }
 
         $token = $driver->issueApiToken();

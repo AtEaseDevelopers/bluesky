@@ -17,6 +17,7 @@ class Driver extends Authenticatable
         'lorry_number',
         'api_token',
         'is_active',
+        'role_slug',
     ];
 
     protected $hidden = [

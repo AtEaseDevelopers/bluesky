@@ -19,6 +19,9 @@ class DriverBootstrap
     {
         if (Auth::guard('web_driver')->check()) {
             View::share('driver', Auth::guard('web_driver')->user());
+            View::share('driverPermissions', app(\App\Services\RolePermissionService::class)->allowedMap(
+                Auth::guard('web_driver')->user()->role_slug ?? 'driver'
+            ));
         }
 
         return $next($request);

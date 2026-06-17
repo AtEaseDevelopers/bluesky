@@ -91,6 +91,14 @@ class FileController extends Controller
             abort(403);
         }
 
+        $filePermission = app(\App\Services\RolePermissionService::class)->memberFilePermission($filename);
+        if ($filePermission) {
+            $roleSlug = $user->role_slug ?? 'customer';
+            if (!app(\App\Services\RolePermissionService::class)->can($roleSlug, $filePermission)) {
+                abort(403, 'You do not have permission to access this document.');
+            }
+        }
+
         if ($isInvoice && !$order->canShowInvoiceToCustomer($user)) {
             abort(403, 'Invoice is available after the order is fully paid.');
         }

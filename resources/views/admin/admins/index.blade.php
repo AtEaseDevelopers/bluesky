@@ -11,7 +11,7 @@
             <div class="card shadow no-border">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-                        <h5 class="card-title">All Admin</h5>
+                        <h5 class="card-title">Admin Users</h5>
                         <a href="{{ route('admin.admins.create') }}" class="btn btn-primary">
                             Add New Admin
                         </a>
@@ -26,6 +26,8 @@
                                     <th>Name</th>
                                     <th>Username</th>
                                     <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
                                     <th>Created At</th>
                                 </tr>
                             </thead>
@@ -98,9 +100,9 @@
             toast.className = `toast align-items-center text-white bg-${type} border-0 show`;
             toast.role = 'alert';
             toast.style.position = 'fixed';
-            toast.style.top = '20px'; // Top instead of bottom
-            toast.style.right = '20px'; // Still on the right
-            toast.style.bottom = ''; // Clear bottom setting
+            toast.style.top = '20px';
+            toast.style.right = '20px';
+            toast.style.bottom = '';
             toast.style.zIndex = 9999;
 
             toast.innerHTML = `
@@ -160,6 +162,14 @@
                 {
                     "data": "admin_email",
                     orderable: true
+                },
+                {
+                    "data": "admin_role",
+                    orderable: true
+                },
+                {
+                    "data": "admin_status",
+                    orderable: false
                 },
                 {
                     "data": "created_at",

@@ -51,7 +51,13 @@ class LoginController extends Controller
             'password' => $data['password'],
         ];
         if (Auth::guard('web_admin')->attempt($login_data)) {
-            // Authentication successful for admin
+            $admin = Auth::guard('web_admin')->user();
+            if (!$admin->isActive()) {
+                Auth::guard('web_admin')->logout();
+
+                return back()->with('error', 'Your account is inactive. Please contact a superadmin.')->withInput();
+            }
+
             return redirect(route('admin.dashboard'));
         } else {
             // Authentication failed

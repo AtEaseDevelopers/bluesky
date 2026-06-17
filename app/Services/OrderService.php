@@ -590,7 +590,7 @@ class OrderService
 
     public function canAdjustAmount($admin): bool
     {
-        return in_array($admin->role ?? '', ['superadmin', 'management'], true);
+        return $admin->isSuperadmin() || $admin->canAccessModule('orders');
     }
 
     private function resolvePaymentDueDate(Order $order, ?string $requestedDate): ?string

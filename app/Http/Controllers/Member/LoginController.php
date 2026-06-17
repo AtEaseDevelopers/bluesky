@@ -37,6 +37,10 @@ class LoginController extends Controller
                 Auth::guard('web')->logout();
                 return back()->with('error', 'Please complete registration using the link sent to you by admin.')->withInput();
             }
+            if ($user->status !== User::$user_status['active']) {
+                Auth::guard('web')->logout();
+                return back()->with('error', 'Your account is not active. Please contact us for assistance.')->withInput();
+            }
             return redirect(route('member.products'));
         } else {
             // Authentication failed
@@ -77,7 +81,10 @@ class LoginController extends Controller
             if (!$user->hasCompletedRegistration()) {
                 return redirect()->to('/')->with(['error' => 'Please complete registration using your invitation link first.']);
             }
-            Auth::guard('web')->login($user); 
+            if ($user->status !== User::$user_status['active']) {
+                return redirect()->to('/')->with(['error' => 'Your account is not active. Please contact us for assistance.']);
+            }
+            Auth::guard('web')->login($user);
             return redirect(route('member.products'));
         } else {
             // Authentication failed

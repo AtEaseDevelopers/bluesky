@@ -54,6 +54,12 @@ class MemberBootstrap
             'situation_label' => OrderFieldSetting::situationLabel(),
         ]);
 
+        View::share('customerPermissions', app(\App\Services\RolePermissionService::class)->allowedMap(
+            Auth::guard('web')->check()
+                ? (Auth::guard('web')->user()->role_slug ?? 'customer')
+                : 'customer'
+        ));
+
         return $next($request);
     }
 }

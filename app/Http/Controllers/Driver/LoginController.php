@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Driver;
 
+use App\Driver;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
 {
@@ -30,18 +32,20 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $credentials = [
-            'username' => $data['username'],
-            'password' => $data['password'],
-            'is_active' => true,
-        ];
+        $driver = Driver::where('username', $data['username'])->first();
 
-        if (Auth::guard('web_driver')->attempt($credentials)) {
-            $request->session()->regenerate();
-            return redirect(route('driver.orders.index'));
+        if (!$driver || !Hash::check($data['password'], $driver->password)) {
+            return back()->with('error', 'Invalid username or password.')->withInput($request->only('username'));
         }
 
-        return back()->with('error', 'Invalid username or password.')->withInput($request->only('username'));
+        if (!$driver->is_active) {
+            return back()->with('error', 'Your driver account is inactive. Please contact your administrator.')->withInput($request->only('username'));
+        }
+
+        Auth::guard('web_driver')->login($driver);
+        $request->session()->regenerate();
+
+        return redirect(route('driver.orders.index'));
     }
 
     /**

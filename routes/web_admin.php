@@ -158,6 +158,10 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
 
                 Route::get('/settings/order-fields', 'OrderFieldSettingController@edit')->name('order-field-settings.edit');
                 Route::post('/settings/order-fields', 'OrderFieldSettingController@update')->name('order-field-settings.update');
+                Route::resource('roles', 'RoleController')->parameters(['roles' => 'role']);
+                Route::get('/role-permissions', function () {
+                    return redirect()->route('admin.roles.index');
+                })->name('role-permissions.edit');
             }
         );
 

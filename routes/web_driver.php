@@ -20,7 +20,7 @@ Route::namespace('Driver')->middleware(['web'])->prefix('driver')->group(
         Route::get('/logout', 'LoginController@logout')->name('driver.logout');
 
         Route::group(
-            ['middleware' => ['auth_driver', 'driver_bootstrap'], 'as' => 'driver.'],
+            ['middleware' => ['auth_driver', 'driver_bootstrap', 'driver.permission'], 'as' => 'driver.'],
             function () {
                 Auth::setDefaultDriver('web_driver');
 

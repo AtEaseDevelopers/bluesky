@@ -36,8 +36,11 @@ $adminUrl = config('app.admin_url');
             Route::post('/login', 'LoginController@login')->name('login.submit');
             Route::get('/logout', 'LoginController@logout')->name('logout');
 
-            Route::group(
-                ['middleware' => ['web'], 'as' => 'member.'], function () {
+            Route::group(['middleware' => ['web'], 'as' => 'member.'], function () {
+                Route::get('/terms/{page}', 'PolicyController@show')->name('policies.show')->middleware('member.permission');
+            });
+
+            Route::group(['middleware' => ['web', 'auth_member', 'member.permission'], 'as' => 'member.'], function () {
                     Route::get('/products', 'ProductController@index')->name('products');
                     Route::get('/product/{product}', 'ProductController@view')->name('products.show');
                     Route::post('/add-to-cart/{product}', 'AddToCartController@addToCart')->name('add-to-cart');
@@ -50,13 +53,11 @@ $adminUrl = config('app.admin_url');
                     Route::get('/profile', 'ProfileController@index')->name('profile');
                     Route::post('/customer/update-password/', 'ProfileController@updatePassword')->name('update.password');
 
-                    // checkout
                     Route::get('/checkout', 'CheckoutController@viewForm')->name('checkout');
                     Route::get('/checkout/{buy_again}', 'CheckoutController@viewForm');
                     Route::post('/checkout', 'CheckoutController@checkout');
                     Route::post('/checkout/{buy_again}', 'CheckoutController@checkout');
 
-                    // order
                     Route::get('/orders', 'OrderController@index')->name('orders');
                     Route::get('/orders/export', 'OrderController@export');
                     Route::get('/order/summary/{order}', 'OrderController@viewSummary')->name('orders.summary');
@@ -68,16 +69,13 @@ $adminUrl = config('app.admin_url');
                     Route::get('/bulk-payments', 'BulkPaymentController@index')->name('bulk-payments');
                     Route::post('/bulk-payments', 'BulkPaymentController@store')->name('bulk-payments.store');
 
-                    Route::get('/terms/{page}', 'PolicyController@show')->name('policies.show');
-
-                    // Buy again
                     Route::get('/order/buy-again/{order}', 'BuyAgainController@index');
-                }
-            );
+            });
 
-            // File Controller
-            Route::get('{folder}/{id}/{filename}', 'FileController@download');
-            Route::get('download/{folder}/{id}/{filename}', 'FileController@downloadAndUpdateStatus');
+            Route::group(['middleware' => ['web', 'auth_member', 'member.permission']], function () {
+                Route::get('{folder}/{id}/{filename}', 'FileController@download');
+                Route::get('download/{folder}/{id}/{filename}', 'FileController@downloadAndUpdateStatus');
+            });
         }
     );
     // }
