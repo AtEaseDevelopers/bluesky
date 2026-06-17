@@ -37,7 +37,6 @@
                         @if (Auth::guard('web_admin')->user()->role == 'superadmin')
                             <li><a class="dropdown-item" href="{{ route('admin.orders.create') }}">Add New Order</a></li>
                             <li><a class="dropdown-item" href="{{ route('admin.delivery-slots.index') }}">Delivery Slots</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.public-order-links.index') }}">Public Order Links</a></li>
                         @endif
                     </ul>
                 </li>

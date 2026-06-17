@@ -288,6 +288,7 @@
                                                 $paymentBadgeClass = match ($order->payment_status ?? 'unpaid') {
                                                     'payment_due' => 'bg-danger',
                                                     'paid' => 'bg-success',
+                                                    'pending' => 'bg-warning text-dark',
                                                     'partial' => 'bg-warning text-dark',
                                                     default => 'bg-secondary',
                                                 };

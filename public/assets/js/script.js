@@ -90,17 +90,29 @@ document.addEventListener('DOMContentLoaded', function () {
                     var productOptions = {};
                     const card = document.getElementById('product-card-' + product_id);
     
-                    var inputs = card.querySelectorAll('select, input, textarea');
+                    var inputs = card.querySelectorAll('.product-option-section select, .product-option-section input:not([type="checkbox"]), .product-option-section textarea');
                     inputs.forEach(function(element) {
                         var optionName = element.name;
-                        var selectedValue = element.value;
-    
-                        if (isOrder && element.hasAttribute('required') && !selectedValue) {
-                            element.focus();
-                            isValid = false;
+                        if (!optionName) {
                             return;
                         }
-    
+
+                        var selectedValue = element.value;
+
+                        if (isOrder && element.hasAttribute('required')) {
+                            var numVal = element.type === 'number' ? parseFloat(selectedValue) : null;
+                            if (element.type === 'number' && (isNaN(numVal) || numVal <= 0)) {
+                                element.focus();
+                                isValid = false;
+                                return;
+                            }
+                            if (element.type !== 'number' && !selectedValue) {
+                                element.focus();
+                                isValid = false;
+                                return;
+                            }
+                        }
+
                         productOptions[optionName] = selectedValue;
                     });
     
@@ -231,11 +243,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (document.querySelector('input[name="quantity[]"]')) {
-        document.querySelectorAll('input[name="quantity[]"]').forEach(function(input) {
-            input.addEventListener('change', function() {
-                calculateTotal();
-            });
-        });
+        calculateTotal();
     }
 
     if (document.querySelector('.checkall')) {
@@ -445,14 +453,40 @@ document.addEventListener('change', function(event) {
         }
     }
 
-    if (event.target.matches('.add-products-quantity')) {
-        const input = event.target;
-        document.getElementById('productQuantity_' + input.getAttribute('data-pid')).value = input.value;  
+    if (event.target.matches('input[name="quantity[]"]')) {
+        syncBagQuantityToSelectedProducts(event.target);
+        calculateTotal();
+    }
+});
+
+document.addEventListener('input', function(event) {
+    if (event.target.matches('input[name="quantity[]"]')) {
+        syncBagQuantityToSelectedProducts(event.target);
         calculateTotal();
     }
 });
 
 document.addEventListener('click', function(event) {
+    const adjustBtn = event.target.closest('.btn-adjust-qty');
+    if (adjustBtn) {
+        const input = document.getElementById(adjustBtn.dataset.target);
+        if (input) {
+            const step = parseFloat(input.step) || 1;
+            const min = parseFloat(input.min) || 0.001;
+            let value = parseFloat(input.value) || min;
+
+            if (adjustBtn.dataset.action === 'plus') {
+                value += step;
+            } else {
+                value = Math.max(min, value - step);
+            }
+
+            input.value = Number(value.toFixed(3));
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        return;
+    }
+
     if (event.target.closest('.remove-from-bag')) {
         var index = Array.from(document.querySelectorAll('.remove-from-bag')).indexOf(event.target.closest('.remove-from-bag'));
 
@@ -654,13 +688,21 @@ function display_selected_products() {
                  productHtml += `
                 ${optionHtml}
                 <div class="form-group mb-3">
-                    <label class="mb-2">Weight/KG</label>
+                    <label class="mb-2">Order Qty (KG)</label>
                     <span class="text-danger"> *</span>
-                    <input type="number" class="form-control add-products-weight" name="quantity[]" value="${product.weight}" data-pid="${product.product_id}" data-price="${product.price}" min="1" step="0.1">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagWeight_${product.product_id}" data-action="minus">
+                            <i class="fa fa-minus"></i>
+                        </button>
+                        <input type="number" class="form-control text-center add-products-weight" id="bagWeight_${product.product_id}" name="quantity[]" value="${product.weight}" data-pid="${product.product_id}" data-price="${product.price}" data-field="weight" min="0.001" step="0.001" required>
+                        <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagWeight_${product.product_id}" data-action="plus">
+                            <i class="fa fa-plus"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="form-group mb-3">
                     <label class="mb-2">Remark</label>
-                    <textarea class="form-control" name="remark[]">${product.remark}</textarea>
+                    <textarea class="form-control" name="remark[]">${product.remark || ''}</textarea>
                 </div>
             `;
             }
@@ -671,11 +713,19 @@ function display_selected_products() {
                 <div class="form-group mb-3">
                     <label class="mb-2">Quantity</label>
                     <span class="text-danger"> *</span>
-                    <input type="number" class="form-control add-products-quantity" name="quantity[]" value="${product.quantity}" data-pid="${product.product_id}" data-price="${product.price}" min="1" step="1">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="minus">
+                            <i class="fa fa-minus"></i>
+                        </button>
+                        <input type="number" class="form-control text-center add-products-quantity" id="bagQty_${product.product_id}" name="quantity[]" value="${product.quantity}" data-pid="${product.product_id}" data-price="${product.price}" data-field="quantity" min="0.001" step="0.001" required>
+                        <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="plus">
+                            <i class="fa fa-plus"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="form-group mb-3">
                     <label class="mb-2">Remark</label>
-                    <textarea class="form-control" name="remark[]">${product.remark}</textarea>
+                    <textarea class="form-control" name="remark[]">${product.remark || ''}</textarea>
                 </div>
             `;
             }
@@ -700,6 +750,29 @@ function display_selected_products() {
     if (modal) {
         modal.hide();
     }
+}
+
+function syncBagQuantityToSelectedProducts(input) {
+    const pid = input.getAttribute('data-pid');
+    const value = input.value;
+    const field = input.getAttribute('data-field') || 'quantity';
+    const product = selected_products.find(function(item) {
+        return String(item.product_id) === String(pid);
+    });
+
+    if (!product) {
+        return;
+    }
+
+    if (field === 'weight') {
+        product.weight = value;
+        delete product.quantity;
+    } else {
+        product.quantity = value;
+        delete product.weight;
+    }
+
+    product.total_price = parseFloat(product.price) * parseFloat(value || 0);
 }
 
 function calculateTotal() {
@@ -748,8 +821,13 @@ function init_pre_order_data() {
             for (var key in product) {
                 if (key == 'product_id') {
                     const quantityElement = document.getElementById('productQuantity_' + product['product_id']);
-                    if (quantityElement) {
+                    if (quantityElement && product['quantity']) {
                         quantityElement.value = product['quantity'];
+                    }
+
+                    const weightElement = document.getElementById('productWeight_' + product['product_id']);
+                    if (weightElement && product['weight']) {
+                        weightElement.value = product['weight'];
                     }
                     
                     const remarkElement = document.getElementById('productRemark_' + product['product_id']);

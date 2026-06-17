@@ -1,6 +1,7 @@
 @foreach ($products as $product)
     @php
         $product_option = $product->product_option;
+        $uomLabel = $product->uom->uom_name ?? 'KG';
     @endphp
     <div class="card products-card mb-3" id="product-card-{{ $product->id }}" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-sku="{{ $product->sku }}">
         <div class="card-body">
@@ -24,7 +25,7 @@
                     </div>
                 </div>
             </div>
-            <div class="product-option-section d-none" id="product-option-{{ $product->id }}">
+            <div class="product-option-section {{ in_array($product->id, $selected_ids) ? '' : 'd-none' }}" id="product-option-{{ $product->id }}">
                 <input type="hidden" name="product_id" value="{{ $product->id }}" />
                 <input type="hidden" name="product_name" value="{{ $product->name }}" />
                 <input type="hidden" name="price" value="{{ $product->price }}" />
@@ -37,11 +38,11 @@
                             $is_required = isset($product_option['product_option_mandatory'][$type]);
                         @endphp
                         <div class="form-group mb-3">
-                            <label class="mb-2" for="productOption-{{ $type }}">{{ $type }}</label>
+                            <label class="mb-2" for="productOption-{{ $product->id }}-{{ $type }}">{{ $type }}</label>
                             @if ($is_required)
                                 <span class="text-danger"> *</span>
                             @endif
-                            <select id="productOption-{{ $type }}" class="form-select" name="{{ $type }}" {{ $is_required ? 'required' : '' }}>
+                            <select id="productOption-{{ $product->id }}-{{ $type }}" class="form-select" name="{{ $type }}" {{ $is_required ? 'required' : '' }}>
                                 <option value="">Choose {{ $type }}...</option>
                                 @foreach ($options as $option)
                                     <option value="{{ $option }}">{{ ucfirst($option) }}</option>
@@ -52,26 +53,37 @@
                 @endif
 
                 @if ($product->sell_in == 'qty')
-                <div class="form-group mb-3">
-                    <label class="mb-2" for="productQuantity">Quantity</label>
-                    <span class="text-danger"> *</span>
-                    <input type="number" class="form-control col-3" id="productQuantity_{{ $product->id }}" name="quantity" value="1" min="0" step="0.10">
-                </div>
-@else
-    <div class="form-group mb-3">
-        <label class="mb-2" for="productQuantity">Weight/KG</label>
-        <span class="text-danger"> *</span>
-        <input type="number" class="form-control col-3" id="productWeight_{{ $product->id }}" name="weight" value="1" min="0" step="0.10">
-    </div>
-@endif
+                    <div class="form-group mb-3">
+                        <label class="mb-2" for="productQuantity_{{ $product->id }}">Quantity</label>
+                        <span class="text-danger"> *</span>
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productQuantity_{{ $product->id }}" data-action="minus">
+                                <i class="fa fa-minus"></i>
+                            </button>
+                            <input type="number" class="form-control text-center" id="productQuantity_{{ $product->id }}" name="quantity" value="1" min="0.001" step="0.001" required>
+                            <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productQuantity_{{ $product->id }}" data-action="plus">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                @else
+                    <div class="form-group mb-3">
+                        <label class="mb-2" for="productWeight_{{ $product->id }}">Order Qty ({{ $uomLabel }})</label>
+                        <span class="text-danger"> *</span>
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productWeight_{{ $product->id }}" data-action="minus">
+                                <i class="fa fa-minus"></i>
+                            </button>
+                            <input type="number" class="form-control text-center" id="productWeight_{{ $product->id }}" name="weight" value="1" min="0.001" step="0.001" required>
+                            <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productWeight_{{ $product->id }}" data-action="plus">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                @endif
 
-
-                <!--<div class="form-group mb-3">-->
-                <!--    <label class="mb-2" for="nos">Nos</label>-->
-                <!--    <textarea class="form-control" id="nos_{{ $product->id }}" name="nos"></textarea>-->
-                <!--</div>-->
                 <div class="form-group mb-3">
-                    <label class="mb-2" for="productRemark">Remark</label>
+                    <label class="mb-2" for="productRemark_{{ $product->id }}">Remark</label>
                     <textarea class="form-control" id="productRemark_{{ $product->id }}" name="remark"></textarea>
                 </div>
             </div>

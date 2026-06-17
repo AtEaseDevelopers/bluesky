@@ -24,6 +24,8 @@
                                     <th>ID</th>
                                     <th>Options</th>
                                     <th>Lorry Number</th>
+                                    <th>Driver Name</th>
+                                    <th>Phone</th>
                                     <th>Created At</th>
                                 </tr>
                             </thead>
@@ -100,6 +102,14 @@
                     },
                     {
                         "data": "lorry_number",
+                        orderable: true
+                    },
+                    {
+                        "data": "name",
+                        orderable: true
+                    },
+                    {
+                        "data": "phone",
                         orderable: true
                     },
                     {

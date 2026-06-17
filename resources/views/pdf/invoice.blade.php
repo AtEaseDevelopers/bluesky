@@ -165,6 +165,33 @@
             <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; text-align: right; padding: 5px 0 5px 0;">TOTAL WEIGHT : {{ $total_weight ?? 0 }} KG</td>
             <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; text-align: right; padding: 5px 0 5px 0;">TOTAL AMOUNT : {{ number_format($grandTotal, 2) }}</td>
         </tr>
+        @if (isset($payments) && $payments->count())
+            @php
+                $paidTotal = (float) $payments->sum('amount');
+            @endphp
+            <tr>
+                <td colspan="3" style="font-size: 14px; font-weight: 700; padding: 15px 0 5px 0;">PAYMENTS RECEIVED</td>
+            </tr>
+            @foreach ($payments as $payment)
+                <tr>
+                    <td colspan="2"></td>
+                    <td style="font-size: 14px; text-align: right; padding: 2px 0;">
+                        {{ $payment_method_labels[$payment->payment_method] ?? $payment->payment_method }}
+                        : {{ number_format($payment->amount, 2) }}
+                    </td>
+                </tr>
+            @endforeach
+            <tr>
+                <td colspan="2"></td>
+                <td style="font-size: 14px; font-weight: 700; text-align: right; padding: 5px 0;">TOTAL PAID : {{ number_format($paidTotal, 2) }}</td>
+            </tr>
+            @if ($paidTotal < $grandTotal)
+                <tr>
+                    <td colspan="2"></td>
+                    <td style="font-size: 14px; font-weight: 700; text-align: right; padding: 5px 0;">BALANCE DUE : {{ number_format($grandTotal - $paidTotal, 2) }}</td>
+                </tr>
+            @endif
+        @endif
         <tr>
             <td colspan="3 padding: 5px 0;">
                 <span style="font-size: 12px;">BEFORE ACCEPTANCE , PLEASE INSPECT THE GOODS AS WE WILL NOT BE RESPONSIBLE FOR ANY DEFECTS AFTER ACCEPTANCE NO CLAIMS OR WHATSOEVER WILL BE ENTERTAINED UNLESS WITH OFFICIAL WRITTEN ADVICE TO US WITHIN 7 DAYS OF CHOP SIGN OF RECEIFT OF GOODS.</span>

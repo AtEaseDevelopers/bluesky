@@ -48,6 +48,10 @@ class OrderStatusService
             PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
         }
 
+        if ($newStatus === Order::$status['in_route']) {
+            PdfHelper::GenerateDeliveryOrder($order->fresh());
+        }
+
         if ($newStatus === Order::$status['cancelled']) {
             PdfHelper::GenerateOrderInvoice($order);
             PdfHelper::GenerateOrderInvoiceWithoutPrice($order);

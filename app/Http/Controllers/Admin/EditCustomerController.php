@@ -6,6 +6,7 @@ use App\Helper;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\ProductVisibility;
+use App\Services\CreditService;
 use App\System;
 use App\User;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +56,9 @@ class EditCustomerController extends Controller
                 'category_list' => $category_list,
                 'payment_method_options' => User::$payment_method,
                 'shipping_state_options' => System::$country_state['MY'],
+                'credit_logs' => $customer->isCreditCustomer()
+                    ? app(CreditService::class)->logsForCustomer($customer->id)
+                    : collect(),
             ]
         );
     }
@@ -97,6 +101,13 @@ class EditCustomerController extends Controller
 
             ]
         )->save();
+
+        if (($request->input('customer_type', 'cod') === 'cod')) {
+            app(CreditService::class)->clearBalanceForCodCustomer(
+                $customer->fresh(),
+                auth('web_admin')->id()
+            );
+        }
 
         if ($request['product_id']) {
             foreach ($request['product_id'] as $pid) {

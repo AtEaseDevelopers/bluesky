@@ -98,6 +98,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/customer/generate-new-login-link/{customer}', 'EditCustomerController@generateNewLoginLink')->name('customers.generate-new-login-link');
                 Route::post('/delete-customer-visibility-product', 'CustomerController@deleteCustomerProduct');
                 Route::post('/get-products-for-category', 'AddCustomerController@getProductsForCategory');
+                Route::post('/customer/{customer}/credit-adjust', 'CustomerCreditController@adjust')->name('customers.credit.adjust');
 
                 Route::resource('lorry', 'LorryController');
                 Route::post('/get-lorry', 'LorryController@get_lorry');
@@ -109,6 +110,8 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
 
                 Route::controller('OrderPaymentController')->group(function () {
                     Route::post('/order/{id}/payments', 'store')->name('orders.payments.store');
+                    Route::post('/order/{orderId}/payments/{paymentId}/confirm', 'confirm')->name('orders.payments.confirm');
+                    Route::post('/order/{orderId}/payments/{paymentId}/reject', 'reject')->name('orders.payments.reject');
                     Route::get('/orders/{order}/payment-proof/{filename}', 'viewProof')->name('orders.payment-proof');
                     Route::post('/order/{id}/sync-autocount', 'syncAutoCount')->name('orders.sync-autocount');
                     Route::post('/order/{id}/complete', 'complete')->name('orders.complete');
@@ -117,11 +120,6 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::resource('delivery-slots', 'DeliverySlotController');
                 Route::controller('DeliverySlotController')->group(function () {
                     Route::post('/fetch-delivery-slots', 'fetch_delivery_slots');
-                });
-
-                Route::controller('PublicOrderLinkController')->group(function () {
-                    Route::get('/public-order-links', 'index')->name('public-order-links.index');
-                    Route::post('/public-order-links/generate', 'generate')->name('public-order-links.generate');
                 });
 
                 // order

@@ -20,29 +20,95 @@ class OrderPaymentController extends Controller
 
     public function store(Request $request, $id)
     {
-        $order = Order::findOrFail($id);
+        $order = Order::with('customer')->findOrFail($id);
 
-        $data = $request->validate([
-            'payment_method' => 'required|in:' . implode(',', array_keys(OrderPayment::$payment_methods)),
-            'amount' => 'required|numeric|min:0.01',
-            'payment_proof' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
-            'notes' => 'nullable|string|max:500',
-        ]);
+        if ($order->status === Order::$status['cancelled']) {
+            return back()->with('error', 'Payments cannot be recorded on a cancelled order.');
+        }
+
+        if (!$order->canRecordAdminPayment()) {
+            return back()->with('error', $order->isCodCustomer()
+                ? 'COD payment can only be recorded when the order is in route or delivered.'
+                : 'Payment cannot be recorded for this order in its current status.');
+        }
+
+        $allowedMethods = array_keys($order->allowedAdminPaymentMethods());
+
+        $proofMessages = OrderPayment::proofValidationMessages('payments.*.payment_proof');
+
+        $request->validate([
+            'payments' => 'required|array|min:1',
+            'payments.*.payment_method' => 'required|in:' . implode(',', $allowedMethods),
+            'payments.*.amount' => 'required|numeric|min:0.01',
+            'payments.*.notes' => 'nullable|string|max:500',
+            'payments.*.payment_proof' => OrderPayment::proofRules(false),
+        ], $proofMessages);
+
+        $payments = [];
+        foreach ($request->input('payments', []) as $index => $row) {
+            $payments[] = [
+                'payment_method' => $row['payment_method'],
+                'amount' => (float) $row['amount'],
+                'notes' => $row['notes'] ?? null,
+                'proof' => $request->file("payments.{$index}.payment_proof"),
+            ];
+        }
 
         try {
-            app(OrderService::class)->recordPayment(
+            app(OrderService::class)->recordPayments(
                 $order,
-                $data['payment_method'],
-                (float) $data['amount'],
-                $request->file('payment_proof'),
-                $data['notes'] ?? null,
+                $payments,
                 Auth::guard('web_admin')->id()
             );
         } catch (\InvalidArgumentException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Payment recorded and knocked off against order balance.');
+        $count = count($payments);
+        $message = $count === 1
+            ? 'Payment recorded and knocked off against order balance.'
+            : "{$count} payments recorded (split payment).";
+
+        return back()->with('success', $message);
+    }
+
+    public function confirm(Request $request, $orderId, $paymentId)
+    {
+        $order = Order::findOrFail($orderId);
+        $payment = OrderPayment::where('order_id', $order->id)->findOrFail($paymentId);
+
+        try {
+            app(OrderService::class)->confirmPendingPayment(
+                $payment,
+                Auth::guard('web_admin')->id()
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Customer payment proof confirmed and applied to order balance.');
+    }
+
+    public function reject(Request $request, $orderId, $paymentId)
+    {
+        $order = Order::findOrFail($orderId);
+        $payment = OrderPayment::where('order_id', $order->id)->findOrFail($paymentId);
+
+        $data = $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            app(OrderService::class)->rejectPendingPayment(
+                $payment,
+                Auth::guard('web_admin')->id(),
+                $data['reason'] ?? null
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Customer payment submission rejected.');
     }
 
     public function viewProof($orderId, $filename)

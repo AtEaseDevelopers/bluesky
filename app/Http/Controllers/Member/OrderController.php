@@ -121,7 +121,7 @@ class OrderController extends Controller
             $order_products[$key]->options = OrderProduct::getOption($value->order_product_id);
         }
 
-        $payments = $order->payments()->orderByDesc('created_at')->get();
+        $payments = $order->payments()->with('submitter')->orderByDesc('created_at')->get();
 
         return view('member.order-summary', [
             'order' => $order,
@@ -132,6 +132,10 @@ class OrderController extends Controller
             'products' => $order_products,
             'customer' => $user,
             'payments' => $payments,
+            'paymentMethods' => \App\OrderPayment::$payment_methods,
+            'customerPaymentMethods' => $order->allowedCustomerPaymentMethods(),
+            'isCreditCustomer' => $order->isCreditCustomer(),
+            'paymentStatusLabels' => \App\OrderPayment::$status_labels,
         ]);
     }
 

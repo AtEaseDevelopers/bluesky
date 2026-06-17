@@ -138,8 +138,8 @@
                                         <option value="cod" {{ old('customer_type', $customer->customer_type ?? 'cod') === 'cod' ? 'selected' : '' }}>COD</option>
                                         <option value="credit" {{ old('customer_type', $customer->customer_type ?? 'cod') === 'credit' ? 'selected' : '' }}>Credit</option>
                                     </select>
-                                    <small class="text-muted">Credit customers can be assigned payment due dates on orders.</small>
-                                    <small class="text-muted">Credit customers get a payment due date on order review.</small>
+                                    <small class="text-muted d-block">COD — pays in full on delivery; no credit balance.</small>
+                                    <small class="text-muted d-block">Credit — payment terms, credit balance, and payment due dates on orders.</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -409,6 +409,86 @@
 
     <div class="row">
         <div class="col-md-8">
+            @if ($customer->isCreditCustomer())
+            <div class="card shadow no-border mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Credit Balance</h5>
+                    <hr>
+                    @php
+                        $creditBalance = (float) ($customer->credit_balance ?? 0);
+                    @endphp
+                    <div class="d-flex align-items-center flex-wrap gap-3 mb-4">
+                        <div>
+                            <p class="mb-1 text-muted">Current Balance</p>
+                            <h3 class="mb-0 {{ $creditBalance >= 0 ? 'text-success' : 'text-danger' }}">
+                                RM {{ number_format($creditBalance, 2) }}
+                            </h3>
+                        </div>
+                        <div>
+                            @if ($creditBalance > 0)
+                                <span class="badge bg-success">Credit available — auto-applied on next order</span>
+                            @elseif ($creditBalance < 0)
+                                <span class="badge bg-danger">Outstanding balance</span>
+                            @else
+                                <span class="badge bg-secondary">No credit balance</span>
+                            @endif
+                        </div>
+                    </div>
+
+                    <form action="{{ route('admin.customers.credit.adjust', encrypt($customer->id)) }}" method="POST" class="form-wrapper mb-4">
+                        @csrf
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="mb-2" for="credit_amount">Adjustment (RM)</label>
+                                <input type="number" step="0.01" class="form-control" name="amount" id="credit_amount" placeholder="e.g. 50 or -20" required>
+                                <small class="text-muted">Positive adds credit, negative reduces.</small>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="mb-2" for="credit_notes">Reason</label>
+                                <input type="text" class="form-control" name="notes" id="credit_notes" placeholder="Reason for adjustment" required>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary btn-sm">Apply Adjustment</button>
+                        </div>
+                    </form>
+
+                    <h6 class="mb-3">Credit Adjustment Log</h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Balance After</th>
+                                    <th>Order</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($credit_logs as $log)
+                                    <tr>
+                                        <td>{{ $log->created_at->format('d-m-Y H:i') }}</td>
+                                        <td>{{ \App\CustomerCreditLog::$types[$log->type] ?? ucfirst(str_replace('_', ' ', $log->type)) }}</td>
+                                        <td class="{{ $log->amount >= 0 ? 'text-success' : 'text-danger' }}">
+                                            {{ $log->amount >= 0 ? '+' : '' }}{{ number_format($log->amount, 2) }}
+                                        </td>
+                                        <td>{{ number_format($log->balance_after, 2) }}</td>
+                                        <td>{{ $log->order_id ? '#' . $log->order_id : '-' }}</td>
+                                        <td>{{ $log->notes ?: '-' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-muted">No credit movements yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            @endif
             <div class="card shadow no-border">
                 <div class="card-body">
                     <div class="mb-4">

@@ -6,6 +6,7 @@ use App\Order;
 use App\OrderPayment;
 use App\OrderProduct;
 use App\PdfHelper;
+use App\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -35,14 +36,20 @@ class OrderService
     public function refreshPaymentStatus(Order $order): Order
     {
         $total = (float) $order->total_price;
-        $paid = (float) OrderPayment::where('order_id', $order->id)->sum('amount');
+        $paid = (float) OrderPayment::where('order_id', $order->id)
+            ->where('status', OrderPayment::STATUS_CONFIRMED)
+            ->sum('amount');
+
+        $hasPendingProof = OrderPayment::where('order_id', $order->id)
+            ->where('status', OrderPayment::STATUS_PENDING)
+            ->exists();
 
         if ($paid >= $total && $total > 0) {
             $status = Order::$payment_status['paid'];
+        } elseif ($hasPendingProof) {
+            $status = Order::$payment_status['pending'];
         } elseif ($this->isPaymentOverdue($order, $paid, $total)) {
             $status = Order::$payment_status['payment_due'];
-        } elseif ($paid > 0) {
-            $status = Order::$payment_status['partial'];
         } else {
             $status = Order::$payment_status['unpaid'];
         }
@@ -99,17 +106,27 @@ class OrderService
         float $amount,
         ?UploadedFile $proof,
         ?string $notes,
-        ?int $adminId
+        ?int $adminId,
+        ?int $driverId = null,
+        bool $splitLine = false
     ): OrderPayment {
-        $balanceDue = $order->balanceDue();
-        if ($amount > $balanceDue + 0.0001) {
-            throw new \InvalidArgumentException(
-                'Payment amount exceeds balance due (RM ' . number_format($balanceDue, 2) . ').'
-            );
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Payment amount must be greater than zero.');
         }
+
+        $this->assertAdminPaymentMethod($order, $method);
+
+        $balanceDue = $order->balanceDue();
+        $this->assertPaymentAmount($order, $amount, $balanceDue, $splitLine);
+
+        $amountToOrder = min($amount, $balanceDue);
+        $overpayment = $order->allowsOverpayment()
+            ? max(0, round($amount - $balanceDue, 2))
+            : 0;
 
         $proofPath = null;
         if ($proof) {
+            OrderPayment::assertValidProof($proof, false);
             $extension = $proof->getClientOriginalExtension();
             $filename = time() . rand() . '.' . $extension;
             $path = Order::$path . '/' . $order->id . '/payments';
@@ -117,18 +134,280 @@ class OrderService
             $proofPath = $filename;
         }
 
+        $payment = null;
+        if ($amountToOrder > 0) {
+            $payment = OrderPayment::create([
+                'order_id' => $order->id,
+                'payment_method' => $method,
+                'amount' => $amountToOrder,
+                'status' => OrderPayment::STATUS_CONFIRMED,
+                'payment_proof' => $proofPath,
+                'recorded_by' => $adminId,
+                'recorded_by_driver' => $driverId,
+                'notes' => $notes,
+            ]);
+        }
+
+        if ($overpayment > 0 && $order->user_id && $order->allowsOverpayment()) {
+            $customer = $order->customer;
+            if ($customer) {
+                app(CreditService::class)->recordOverpayment(
+                    $customer,
+                    $overpayment,
+                    $order,
+                    $adminId,
+                    $driverId,
+                    $notes
+                );
+            }
+        }
+
+        if ($amountToOrder <= 0 && $overpayment <= 0) {
+            throw new \InvalidArgumentException('No balance due on this order.');
+        }
+
+        if (!$payment && $overpayment > 0) {
+            $payment = OrderPayment::create([
+                'order_id' => $order->id,
+                'payment_method' => $method,
+                'amount' => 0,
+                'status' => OrderPayment::STATUS_CONFIRMED,
+                'payment_proof' => $proofPath,
+                'recorded_by' => $adminId,
+                'recorded_by_driver' => $driverId,
+                'notes' => trim(($notes ?? '') . ' Overpayment RM ' . number_format($overpayment, 2) . ' added to customer credit.'),
+            ]);
+        }
+
+        $this->refreshPaymentStatus($order->fresh());
+
+        return $payment;
+    }
+
+    public function recordPayments(
+        Order $order,
+        array $payments,
+        ?int $adminId = null,
+        ?int $driverId = null
+    ): array {
+        if (!$order->canRecordAdminPayment()) {
+            throw new \InvalidArgumentException(
+                $order->isCodCustomer()
+                    ? 'COD payment can only be recorded when the order is in route or delivered.'
+                    : 'Payment cannot be recorded for this order in its current status.'
+            );
+        }
+
+        $totalAmount = 0;
+        foreach ($payments as $paymentData) {
+            $totalAmount += (float) ($paymentData['amount'] ?? 0);
+        }
+
+        if ($order->requiresExactPayment()) {
+            $balanceDue = $order->balanceDue();
+            if (abs($totalAmount - $balanceDue) > 0.009) {
+                throw new \InvalidArgumentException(
+                    'COD orders require the full exact balance (RM ' . number_format($balanceDue, 2) . '). Partial or excess payment is not allowed.'
+                );
+            }
+        }
+
+        $recorded = [];
+
+        foreach ($payments as $paymentData) {
+            $amount = (float) ($paymentData['amount'] ?? 0);
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $recorded[] = $this->recordPayment(
+                $order->fresh(),
+                $paymentData['payment_method'],
+                $amount,
+                $paymentData['proof'] ?? null,
+                $paymentData['notes'] ?? null,
+                $adminId,
+                $driverId,
+                $order->requiresExactPayment()
+            );
+        }
+
+        if (empty($recorded)) {
+            throw new \InvalidArgumentException('At least one valid payment is required.');
+        }
+
+        return $recorded;
+    }
+
+    public function submitCustomerPaymentProof(
+        Order $order,
+        User $customer,
+        string $method,
+        float $amount,
+        UploadedFile $proof,
+        ?string $notes = null
+    ): OrderPayment {
+        if (!$order->canSubmitPaymentProof()) {
+            throw new \InvalidArgumentException('Payment proof cannot be submitted for this order.');
+        }
+
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Payment amount must be greater than zero.');
+        }
+
+        $allowedMethods = $order->allowedCustomerPaymentMethods();
+        if (!array_key_exists($method, $allowedMethods)) {
+            throw new \InvalidArgumentException('Invalid payment method for this customer type.');
+        }
+
+        if ($order->requiresExactPayment()) {
+            $balanceDue = $order->balanceDue();
+            if (abs($amount - $balanceDue) > 0.009) {
+                throw new \InvalidArgumentException(
+                    'COD orders require payment of the exact balance due (RM ' . number_format($balanceDue, 2) . ').'
+                );
+            }
+        }
+
+        OrderPayment::assertValidProof($proof, true);
+
+        $extension = $proof->getClientOriginalExtension();
+        $filename = 'customer_' . time() . rand() . '.' . $extension;
+        $path = Order::$path . '/' . $order->id . '/payments';
+        Storage::disk('local')->put($path . '/' . $filename, file_get_contents($proof));
+
         $payment = OrderPayment::create([
             'order_id' => $order->id,
             'payment_method' => $method,
             'amount' => $amount,
-            'payment_proof' => $proofPath,
-            'recorded_by' => $adminId,
+            'status' => OrderPayment::STATUS_PENDING,
+            'payment_proof' => $filename,
+            'submitted_by_user_id' => $customer->id,
             'notes' => $notes,
         ]);
 
         $this->refreshPaymentStatus($order->fresh());
 
         return $payment;
+    }
+
+    public function confirmPendingPayment(OrderPayment $payment, int $adminId): OrderPayment
+    {
+        if (!$payment->isPending()) {
+            throw new \InvalidArgumentException('This payment submission has already been processed.');
+        }
+
+        $order = $payment->order;
+        if (!$order) {
+            throw new \InvalidArgumentException('Order not found for this payment.');
+        }
+
+        return DB::transaction(function () use ($payment, $order, $adminId) {
+            $amount = (float) $payment->amount;
+            $balanceDue = $order->balanceDue();
+
+            if ($order->requiresExactPayment() && abs($amount - $balanceDue) > 0.009) {
+                throw new \InvalidArgumentException(
+                    'COD payment must match the exact balance due (RM ' . number_format($balanceDue, 2) . ').'
+                );
+            }
+
+            $amountToOrder = $order->requiresExactPayment()
+                ? $balanceDue
+                : min($amount, $balanceDue);
+            $overpayment = $order->allowsOverpayment()
+                ? max(0, round($amount - $balanceDue, 2))
+                : 0;
+
+            if (!$order->allowsOverpayment() && $amount > $balanceDue + 0.009) {
+                throw new \InvalidArgumentException('COD orders cannot accept overpayment.');
+            }
+
+            $payment->update([
+                'amount' => $amountToOrder > 0 ? $amountToOrder : 0,
+                'status' => OrderPayment::STATUS_CONFIRMED,
+                'recorded_by' => $adminId,
+            ]);
+
+            if ($overpayment > 0 && $order->user_id && $order->allowsOverpayment()) {
+                $customer = $order->customer;
+                if ($customer) {
+                    app(CreditService::class)->recordOverpayment(
+                        $customer,
+                        $overpayment,
+                        $order,
+                        $adminId,
+                        null,
+                        $payment->notes
+                    );
+                }
+            }
+
+            $this->refreshPaymentStatus($order->fresh());
+
+            return $payment->fresh();
+        });
+    }
+
+    public function rejectPendingPayment(OrderPayment $payment, int $adminId, ?string $reason = null): OrderPayment
+    {
+        if (!$payment->isPending()) {
+            throw new \InvalidArgumentException('This payment submission has already been processed.');
+        }
+
+        $payment->update([
+            'status' => OrderPayment::STATUS_REJECTED,
+            'recorded_by' => $adminId,
+            'notes' => trim(($payment->notes ? $payment->notes . ' — ' : '') . 'Rejected: ' . ($reason ?: 'Payment proof not accepted')),
+        ]);
+
+        $this->refreshPaymentStatus($payment->order->fresh());
+
+        return $payment->fresh();
+    }
+
+    private function assertAdminPaymentMethod(Order $order, string $method): void
+    {
+        $allowed = $order->allowedAdminPaymentMethods();
+
+        if ($method === 'customer-credit') {
+            return;
+        }
+
+        if (!array_key_exists($method, $allowed)) {
+            throw new \InvalidArgumentException(
+                'Payment method not allowed for ' . strtoupper($order->customerType()) . ' customers.'
+            );
+        }
+    }
+
+    private function assertPaymentAmount(Order $order, float $amount, float $balanceDue, bool $splitLine = false): void
+    {
+        if ($balanceDue <= 0) {
+            throw new \InvalidArgumentException('No balance due on this order.');
+        }
+
+        if ($order->requiresExactPayment()) {
+            if ($splitLine) {
+                if ($amount > $balanceDue + 0.009) {
+                    throw new \InvalidArgumentException(
+                        'COD payment line cannot exceed balance due (RM ' . number_format($balanceDue, 2) . ').'
+                    );
+                }
+                return;
+            }
+
+            if (abs($amount - $balanceDue) > 0.009) {
+                throw new \InvalidArgumentException(
+                    'COD orders require the exact balance due (RM ' . number_format($balanceDue, 2) . ').'
+                );
+            }
+            return;
+        }
+
+        if ($amount > $balanceDue + 0.009 && !$order->allowsOverpayment()) {
+            throw new \InvalidArgumentException('Payment amount exceeds balance due.');
+        }
     }
 
     public function generateInvoiceNumber(Order $order): Order
@@ -222,11 +501,11 @@ class OrderService
 
     public function displayCustomerName(Order $order): string
     {
-        if ($order->order_type === Order::$order_types['walk_in'] || $order->order_type === Order::$order_types['public']) {
-            return $order->walk_in_name ?: 'Walk-in Customer';
+        if ($order->customer) {
+            return $order->customer->name ?? '-';
         }
 
-        return $order->customer->name ?? '-';
+        return $order->walk_in_name ?: 'Walk-in Customer';
     }
 
     public function assignDoNumber(Order $order): Order

@@ -15,6 +15,7 @@ use App\PdfHelper;
 use App\Product;
 use App\System;
 use App\Services\OrderService;
+use App\Services\CreditService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -80,6 +81,7 @@ class CheckoutController extends Controller
                 'products' => $cart_products,
                 'payment_method' => $payment_method? : [],
                 'total' => number_format($total, 2, '.', ''),
+                'available_credit' => app(CreditService::class)->availableCredit($user),
                 'shipping_state_options' => System::$country_state['MY'],
                 'customer' => $user,
                 'deliverySlots' => DeliverySlot::availableSlots(),
@@ -228,7 +230,14 @@ class CheckoutController extends Controller
 
         app(OrderService::class)->assignDoNumber($order);
 
-        return redirect()->to('/order/summary/' . encrypt($order->id))->with('success', "Thank you! Your order has been submitted and is pending review.");
+        $creditApplied = app(CreditService::class)->applyAvailableCredit($order->fresh());
+
+        $message = "Thank you! Your order has been submitted and is pending review.";
+        if ($creditApplied > 0) {
+            $message .= ' RM ' . number_format($creditApplied, 2) . ' from your credit balance was applied.';
+        }
+
+        return redirect()->to('/order/summary/' . encrypt($order->id))->with('success', $message);
     }
 
     public function validateCheckout(Request $request)

@@ -1,19 +1,17 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\DriverAuthController;
+use App\Http\Controllers\Api\DriverOrderController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
+Route::prefix('driver')->group(function () {
+    Route::post('/login', [DriverAuthController::class, 'login']);
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
+    Route::middleware('auth_driver')->group(function () {
+        Route::post('/logout', [DriverAuthController::class, 'logout']);
+        Route::get('/me', [DriverAuthController::class, 'me']);
+        Route::get('/orders', [DriverOrderController::class, 'index']);
+        Route::get('/orders/{id}', [DriverOrderController::class, 'show']);
+        Route::post('/orders/{id}/collect-cod', [DriverOrderController::class, 'collectCod']);
+    });
 });

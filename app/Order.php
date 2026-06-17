@@ -81,6 +81,7 @@ class Order extends Model
 
     public static $payment_status = [
         'unpaid' => 'unpaid',
+        'pending' => 'pending',
         'partial' => 'partial',
         'paid' => 'paid',
         'payment_due' => 'payment_due',
@@ -89,7 +90,6 @@ class Order extends Model
     public static $order_types = [
         'registered' => 'registered',
         'walk_in' => 'walk_in',
-        'public' => 'public',
     ];
 
     public function customer()
@@ -107,6 +107,34 @@ class Order extends Model
         return $this->hasMany(OrderPayment::class);
     }
 
+    public function paymentBreakdown(): array
+    {
+        return $this->payments()
+            ->where('status', OrderPayment::STATUS_CONFIRMED)
+            ->selectRaw('payment_method, SUM(amount) as total_amount')
+            ->groupBy('payment_method')
+            ->pluck('total_amount', 'payment_method')
+            ->map(fn ($amount) => (float) $amount)
+            ->all();
+    }
+
+    public function paymentMethodsLabel(): string
+    {
+        $breakdown = $this->paymentBreakdown();
+
+        if (empty($breakdown)) {
+            return '-';
+        }
+
+        $parts = [];
+        foreach ($breakdown as $method => $amount) {
+            $label = OrderPayment::$payment_methods[$method] ?? ucfirst(str_replace('-', ' ', $method));
+            $parts[] = $label . ' RM ' . number_format($amount, 2);
+        }
+
+        return implode(' + ', $parts);
+    }
+
     public function orderProducts()
     {
         return $this->hasMany(OrderProduct::class);
@@ -116,6 +144,56 @@ class Order extends Model
     {
         return $this->customer !== null
             && ($this->customer->customer_type ?? 'cod') === 'credit';
+    }
+
+    public function isCodCustomer(): bool
+    {
+        return !$this->isCreditCustomer();
+    }
+
+    public function allowsOverpayment(): bool
+    {
+        return $this->isCreditCustomer();
+    }
+
+    public function requiresExactPayment(): bool
+    {
+        return $this->isCodCustomer();
+    }
+
+    public function customerType(): string
+    {
+        return $this->isCreditCustomer() ? 'credit' : 'cod';
+    }
+
+    public function allowedAdminPaymentMethods(): array
+    {
+        return OrderPayment::adminMethodsFor($this->customerType());
+    }
+
+    public function allowedCustomerPaymentMethods(): array
+    {
+        return OrderPayment::customerSubmitMethodsFor($this->customerType());
+    }
+
+    public function canRecordAdminPayment(): bool
+    {
+        if ($this->status === self::$status['cancelled'] || $this->balanceDue() <= 0) {
+            return false;
+        }
+
+        if ($this->isCodCustomer()) {
+            return in_array($this->status, [
+                self::$status['in_route'],
+                self::$status['delivered'],
+            ], true);
+        }
+
+        return in_array($this->status, [
+            self::$status['customer_reviewing'],
+            self::$status['in_route'],
+            self::$status['delivered'],
+        ], true);
     }
 
     public function balanceDue(): float
@@ -151,6 +229,26 @@ class Order extends Model
         ], true);
     }
 
+    public function canSubmitPaymentProof(): bool
+    {
+        if ($this->status === self::$status['cancelled'] || $this->balanceDue() <= 0) {
+            return false;
+        }
+
+        if ($this->isCodCustomer()) {
+            return in_array($this->status, [
+                self::$status['in_route'],
+                self::$status['delivered'],
+            ], true);
+        }
+
+        return in_array($this->status, [
+            self::$status['customer_reviewing'],
+            self::$status['in_route'],
+            self::$status['delivered'],
+        ], true);
+    }
+
     public static function canAdjustQuantities(string $status): bool
     {
         return in_array($status, [
@@ -178,7 +276,7 @@ class Order extends Model
     }
 
     /**
-     * Customer details for PDF documents (registered, walk-in, or public orders).
+     * Customer details for PDF documents (registered or walk-in orders).
      */
     public function pdfCustomer(): object
     {

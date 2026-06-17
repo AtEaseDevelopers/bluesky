@@ -81,6 +81,8 @@ class PdfHelper extends Model
             'void' => $void,
             'user' => $order->pdfCustomer(),
             'type' => 'order',
+            'payments' => $order->payments()->orderBy('id')->get(),
+            'payment_method_labels' => OrderPayment::$payment_methods,
         ];
 
         $pdf = PDF::loadView('pdf.invoice', $data);

@@ -180,6 +180,8 @@
                                         <option value="cod" {{ old('customer_type', 'cod') === 'cod' ? 'selected' : '' }}>COD</option>
                                         <option value="credit" {{ old('customer_type') === 'credit' ? 'selected' : '' }}>Credit</option>
                                     </select>
+                                    <small class="text-muted d-block">COD — pays in full on delivery; no credit balance.</small>
+                                    <small class="text-muted d-block">Credit — payment terms, credit balance, and payment due dates on orders.</small>
                                     <small class="text-muted">Credit customers can be assigned payment due dates on orders.</small>
                                 </div>
                             </div>

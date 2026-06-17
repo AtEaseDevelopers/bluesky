@@ -19,6 +19,7 @@ use App\Helper;
 use App\Order;
 use App\User;
 use App\Services\OrderService;
+use App\Services\CreditService;
 
 class AddOrderController extends Controller
 {
@@ -192,6 +193,10 @@ class AddOrderController extends Controller
         )->save();
 
         app(OrderService::class)->assignDoNumber($order);
+
+        if (!$isWalkIn && $user) {
+            app(CreditService::class)->applyAvailableCredit($order->fresh());
+        }
 
         return redirect(route('admin.orders.summary', $order->id))->with('success', "Order has been created!");
     }

@@ -202,10 +202,23 @@
                         </tbody>
                         @if ($user->price_permission)
                             <tfoot>
+                                @if ($user->isCreditCustomer() && $available_credit > 0)
+                                    <tr>
+                                        <td colspan="4">
+                                            <span class="badge bg-success">Credit balance RM {{ number_format($available_credit, 2) }} will be applied automatically</span>
+                                        </td>
+                                    </tr>
+                                @endif
                                 <tr>
                                     <td>Total</td>
                                     <td colspan="3" align="right"><strong><span id="total-price-value">{{ number_format($total, 2) }}</span></strong></td>
                                 </tr>
+                                @if ($user->isCreditCustomer() && $available_credit > 0)
+                                    <tr>
+                                        <td colspan="3">Est. after credit</td>
+                                        <td align="right"><strong>RM {{ number_format(max(0, $total - $available_credit), 2) }}</strong></td>
+                                    </tr>
+                                @endif
                             </tfoot>
                         @endif
                     </table>

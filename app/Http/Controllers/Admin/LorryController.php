@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Driver;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class LorryController extends Controller
 {
@@ -26,12 +27,19 @@ class LorryController extends Controller
 
     public function store(Request $request)
     {
-        $this->validate($request, [
-            'lorry_number' => 'required',
+        $data = $request->validate([
+            'lorry_number' => 'required|string|max:50',
+            'name' => 'nullable|string|max:100',
+            'phone' => 'nullable|string|max:30|unique:drivers,phone',
+            'pin' => 'nullable|string|min:4|max:20',
         ]);
 
         Driver::create([
-            'lorry_number' => $request->lorry_number,
+            'lorry_number' => $data['lorry_number'],
+            'name' => $data['name'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'pin_hash' => !empty($data['pin']) ? Hash::make($data['pin']) : null,
+            'is_active' => true,
         ]);
 
         return redirect(route('admin.lorry.index'))->with('success', 'Driver added successfully.');
@@ -39,19 +47,34 @@ class LorryController extends Controller
 
     public function edit($id)
     {
-        $data['driver'] = Driver::where('id', decrypt($id))->first();
+        $data['driver'] = Driver::where('id', decrypt($id))->firstOrFail();
         return view('admin.drivers.edit', $data);
     }
 
     public function update(Request $request, $id)
     {
-        $this->validate($request, [
-            'lorry_number' => 'required',
+        $driver = Driver::where('id', decrypt($id))->firstOrFail();
+
+        $data = $request->validate([
+            'lorry_number' => 'required|string|max:50',
+            'name' => 'nullable|string|max:100',
+            'phone' => 'nullable|string|max:30|unique:drivers,phone,' . $driver->id,
+            'pin' => 'nullable|string|min:4|max:20',
         ]);
 
-        Driver::where('id', decrypt($id))->update([
-            'lorry_number' => $request->lorry_number,
-        ]);
+        $update = [
+            'lorry_number' => $data['lorry_number'],
+            'name' => $data['name'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'is_active' => $request->boolean('is_active'),
+        ];
+
+        if (!empty($data['pin'])) {
+            $update['pin_hash'] = Hash::make($data['pin']);
+            $update['api_token'] = null;
+        }
+
+        $driver->update($update);
 
         return redirect(route('admin.lorry.index'))->with('success', 'Driver updated successfully.');
     }
@@ -65,7 +88,7 @@ class LorryController extends Controller
 
     public function get_lorry(Request $request)
     {
-        $columns = array('id', 'options', 'lorry_number', 'created_at');
+        $columns = array('id', 'options', 'lorry_number', 'name', 'phone', 'created_at');
 
         $totalitems = DB::table('drivers')->count();
         $totalFiltered = $totalitems;
@@ -78,32 +101,28 @@ class LorryController extends Controller
         $order = $columns[$request->input('order.0.column')];
         $dir = $request->input('order.0.dir');
 
-        if (empty($request->input('search.value'))) {
-            $records = DB::table('drivers')
-                ->select('id', 'lorry_number', 'created_at')
-                ->offset($start)
-                ->limit($limit)
-                ->orderBy($order, $dir)
-                ->get();
-        } else {
-            $search = $request->input('search.value');
-            $records = DB::table('drivers')
-                ->select('id', 'lorry_number', 'created_at')
-                ->where('lorry_number', 'LIKE', "%{$search}%")
-                ->offset($start)
-                ->limit($limit)
-                ->orderBy($order, $dir)
-                ->get();
+        $query = DB::table('drivers')->select('id', 'lorry_number', 'name', 'phone', 'is_active', 'created_at');
 
-            $totalFiltered = $records->count();
+        if (!empty($request->input('search.value'))) {
+            $search = $request->input('search.value');
+            $query->where(function ($q) use ($search) {
+                $q->where('lorry_number', 'LIKE', "%{$search}%")
+                    ->orWhere('name', 'LIKE', "%{$search}%")
+                    ->orWhere('phone', 'LIKE', "%{$search}%");
+            });
+            $totalFiltered = $query->count();
         }
+
+        $records = $query->offset($start)->limit($limit)->orderBy($order, $dir)->get();
 
         $data = array();
         if (!empty($records)) {
             foreach ($records as $record) {
                 $nestedData['id'] = $record->id;
                 $nestedData['lorry_number'] = $record->lorry_number;
-                $nestedData['created_at'] = date('m-d-Y', strtotime($record->created_at));   
+                $nestedData['name'] = $record->name ?: '-';
+                $nestedData['phone'] = $record->phone ?: '-';
+                $nestedData['created_at'] = date('m-d-Y', strtotime($record->created_at));
                 $nestedData['options'] = '
                     <a href="' . route('admin.lorry.edit', encrypt($record->id)) . '" class="btn btn-sm btn-primary">
                         <i class="fa fa-edit"></i>

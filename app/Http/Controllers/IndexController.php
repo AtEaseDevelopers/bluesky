@@ -16,8 +16,8 @@ class IndexController extends Controller
             $customer = User::find($id);
         }
 
-        $products = Product::
-            where('status', Product::$status['active'])
+        $products = Product::with('uom')
+            ->where('status', Product::$status['active'])
             ->get();
 
         $products_output = [];

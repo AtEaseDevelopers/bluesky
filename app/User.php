@@ -21,6 +21,7 @@ class User extends Authenticatable
         'password', 
         'category', 
         'customer_type',
+        'credit_balance',
         'attn_name', 
         'attn_contact', 
         'area', 
@@ -60,6 +61,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'credit_balance' => 'decimal:2',
     ];
 
     public static $attribute_rules = [
@@ -92,4 +94,14 @@ class User extends Authenticatable
         'locked' => 'locked',
         'terminated' => 'terminated',
     ];
+
+    public function isCreditCustomer(): bool
+    {
+        return ($this->customer_type ?? 'cod') === 'credit';
+    }
+
+    public function isCodCustomer(): bool
+    {
+        return !$this->isCreditCustomer();
+    }
 }

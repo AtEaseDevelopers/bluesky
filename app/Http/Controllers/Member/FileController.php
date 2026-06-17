@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Member;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Order;
+use App\PdfHelper;
 use App\Services\OrderStatusService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +17,10 @@ class FileController extends Controller
         $this->guardOrderDocumentAccess($folder, $id, $filename);
 
         $path = "$folder/$id/$filename";
+        if (!Storage::disk('local')->exists($path)) {
+            $this->ensureOrderDocumentExists($folder, $id, $filename);
+        }
+
         if (Storage::disk('local')->exists($path)) {
             $mime = Storage::disk('local')->mimeType($path);
             $file = Storage::disk('local')->get($path);
@@ -31,6 +36,10 @@ class FileController extends Controller
         $this->guardOrderDocumentAccess($folder, $id, $filename);
 
         $path = "$folder/$id/$filename";
+        if (!Storage::disk('local')->exists($path)) {
+            $this->ensureOrderDocumentExists($folder, $id, $filename);
+        }
+
         if (!Storage::disk('local')->exists($path)) {
             abort(404, 'File not found');
         }
@@ -84,6 +93,27 @@ class FileController extends Controller
 
         if ($isDeliveryOrder && (!$order->canShowDeliveryOrder() || !$user)) {
             abort(403, 'Delivery order is available once the order is in route for delivery.');
+        }
+    }
+
+    private function ensureOrderDocumentExists(string $folder, $id, string $filename): void
+    {
+        if ($folder !== Order::$path) {
+            return;
+        }
+
+        $order = Order::find($id);
+        if (!$order) {
+            return;
+        }
+
+        if (str_contains($filename, 'delivery-order') && $order->canShowDeliveryOrder()) {
+            PdfHelper::GenerateDeliveryOrder($order);
+            return;
+        }
+
+        if (str_contains($filename, 'invoice') && $order->canShowInvoice()) {
+            PdfHelper::GenerateOrderInvoice($order);
         }
     }
 }

@@ -11,14 +11,15 @@ return [
     ],
     'payment_status' => [
         'unpaid' => 'Unpaid',
-        'partial' => 'Partially Paid',
+        'pending' => 'Pending',
+        'partial' => 'Unpaid',
         'paid' => 'Paid',
-        'payment_due' => 'Payment Due',
+        'payment_due' => 'Due',
     ],
     'order_type' => [
         'registered' => 'Registered Customer',
         'walk_in' => 'Walk-in',
-        'public' => 'Public Order',
+        'public' => 'Walk-in',
     ],
     'file' => [
         'invoice' => 'Invoice',

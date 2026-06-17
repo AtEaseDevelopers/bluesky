@@ -53,6 +53,7 @@
                                             $paymentBadgeClass = match ($order->payment_status) {
                                                 'payment_due' => 'bg-danger',
                                                 'paid' => 'bg-success',
+                                                'pending' => 'bg-warning text-dark',
                                                 'partial' => 'bg-warning text-dark',
                                                 default => 'bg-secondary',
                                             };
@@ -61,6 +62,9 @@
                                             {{ __('order.payment_status.' . $order->payment_status) }}
                                         </span>
                                     </p>
+                                    @if ($payments->count())
+                                        <p><strong>Payment Methods:</strong> {{ $order->paymentMethodsLabel() }}</p>
+                                    @endif
                                     @if ($isCreditCustomer)
                                         @if ($order->payment_due_date)
                                             <p><strong>Payment Due:</strong> {{ $order->payment_due_date->format('d-m-Y') }}</p>
@@ -131,6 +135,12 @@
                                             <td colspan="4" class="text-end"><strong>Paid</strong></td>
                                             <td class="text-end text-success">{{ number_format($order->paid_amount, 2) }}</td>
                                         </tr>
+                                        @if ($payments->count())
+                                            <tr>
+                                                <td colspan="4" class="text-end"><strong>Payment Breakdown</strong></td>
+                                                <td class="text-end">{{ $order->paymentMethodsLabel() }}</td>
+                                            </tr>
+                                        @endif
                                         <tr>
                                             <td colspan="4" class="text-end"><strong>Balance Due</strong></td>
                                             <td class="text-end text-danger"><strong>{{ number_format($order->balanceDue(), 2) }}</strong></td>
@@ -196,37 +206,73 @@
                         </div>
                     </div>
 
+                    @if ($order->canRecordAdminPayment())
                     <div class="card shadow no-border mb-4">
                         <div class="card-body">
                             <h5 class="card-title">Record Payment</h5>
+                            @if ($isCreditCustomer)
+                                <p class="text-muted small mb-3">Credit customer — partial payments are allowed until the payment due date. One order can use multiple methods (e.g. bank transfer + e-wallet).</p>
+                            @else
+                                <p class="text-muted small mb-3">COD customer — payment must be collected in full at delivery (cash, QR, or COD). The total must match the balance due exactly; partial or excess payment is not allowed.</p>
+                            @endif
                             <hr>
-                            <form action="{{ route('admin.orders.payments.store', $order->id) }}" method="POST" enctype="multipart/form-data">
+                            <form action="{{ route('admin.orders.payments.store', $order->id) }}" method="POST" enctype="multipart/form-data" id="split-payment-form">
                                 @csrf
-                                <div class="mb-3">
-                                    <label class="mb-1">Method</label>
-                                    <select name="payment_method" class="form-select" required>
-                                        @foreach ($paymentMethods as $key => $label)
-                                            <option value="{{ $key }}">{{ $label }}</option>
-                                        @endforeach
-                                    </select>
+                                <div id="payment-lines">
+                                    <div class="payment-line border rounded p-3 mb-3" data-index="0">
+                                        <div class="row g-2">
+                                            <div class="col-md-4">
+                                                <label class="mb-1">Method</label>
+                                                <select name="payments[0][payment_method]" class="form-select" required>
+                                                    @foreach ($paymentMethods as $key => $label)
+                                                        <option value="{{ $key }}">{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="mb-1">Amount (RM)</label>
+                                                <input type="number" step="0.01" min="0.01" name="payments[0][amount]" class="form-control payment-amount"
+                                                    value="{{ number_format($order->balanceDue(), 2, '.', '') }}" required
+                                                    @if (!$isCreditCustomer) data-cod-exact="1" @endif>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="mb-1">Proof</label>
+                                                <input type="file" name="payments[0][payment_proof]" class="form-control payment-proof-input"
+                                                    accept="{{ \App\OrderPayment::proofAcceptAttribute() }}">
+                                                <small class="text-muted">{{ \App\OrderPayment::proofHelpText() }}</small>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="mb-1">Notes</label>
+                                                <input type="text" name="payments[0][notes]" class="form-control" placeholder="Optional">
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="mb-1">Amount (RM)</label>
-                                    <input type="number" step="0.01" min="0.01" name="amount" class="form-control"
-                                        value="{{ number_format($order->balanceDue(), 2, '.', '') }}" required>
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                    @if ($isCreditCustomer)
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-payment-line">
+                                            <i class="fa fa-plus"></i> Add Payment Method
+                                        </button>
+                                    @else
+                                        <span class="text-muted small">Split across methods? Add lines — total must equal balance due.</span>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-payment-line">
+                                            <i class="fa fa-plus"></i> Add Payment Method
+                                        </button>
+                                    @endif
+                                    <span class="text-muted small">Total entering: RM <strong id="payment-lines-total">{{ number_format($order->balanceDue(), 2) }}</strong> · Balance due: RM {{ number_format($order->balanceDue(), 2) }}</span>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="mb-1">Payment Proof</label>
-                                    <input type="file" name="payment_proof" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="mb-1">Notes</label>
-                                    <textarea name="notes" class="form-control" rows="2"></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100">Record Payment</button>
+                                @if ($isCreditCustomer)
+                                    <p class="text-muted small">Amounts above balance due are added to the customer's credit balance.</p>
+                                @endif
+                                <button type="submit" class="btn btn-primary w-100">Record Payment(s)</button>
                             </form>
                         </div>
                     </div>
+                    @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && !$isCreditCustomer)
+                    <div class="alert alert-info mb-4">
+                        COD payment can be recorded when this order is <strong>In Route</strong> or <strong>Delivered</strong>.
+                    </div>
+                    @endif
                 </div>
             </div>
 
@@ -234,6 +280,11 @@
                 <div class="card shadow no-border">
                     <div class="card-body">
                         <h5 class="card-title">Payment History</h5>
+                        @if ($payments->where('status', \App\OrderPayment::STATUS_PENDING)->count())
+                            <div class="alert alert-warning py-2 mb-3">
+                                {{ $payments->where('status', \App\OrderPayment::STATUS_PENDING)->count() }} customer payment proof(s) awaiting review.
+                            </div>
+                        @endif
                         <hr>
                         <div class="table-responsive">
                             <table class="table table-bordered">
@@ -242,22 +293,54 @@
                                         <th>Date</th>
                                         <th>Method</th>
                                         <th>Amount</th>
+                                        <th>Status</th>
                                         <th>Recorded By</th>
                                         <th>Notes</th>
                                         <th>Proof</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach ($payments as $payment)
                                         <tr>
                                             <td>{{ $payment->created_at->format('d-m-Y H:i') }}</td>
-                                            <td>{{ $paymentMethods[$payment->payment_method] ?? $payment->payment_method }}</td>
+                                            <td>{{ ($allPaymentMethods ?? $paymentMethods)[$payment->payment_method] ?? $payment->payment_method }}</td>
                                             <td>{{ number_format($payment->amount, 2) }}</td>
-                                            <td>{{ $payment->recorder->name ?? 'System' }}</td>
+                                            <td>
+                                                @php
+                                                    $payStatusClass = match ($payment->status) {
+                                                        \App\OrderPayment::STATUS_CONFIRMED => 'bg-success',
+                                                        \App\OrderPayment::STATUS_PENDING => 'bg-warning text-dark',
+                                                        \App\OrderPayment::STATUS_REJECTED => 'bg-danger',
+                                                        default => 'bg-secondary',
+                                                    };
+                                                @endphp
+                                                <span class="badge {{ $payStatusClass }}">
+                                                    {{ $paymentStatusLabels[$payment->status] ?? ucfirst($payment->status) }}
+                                                </span>
+                                                @if ($payment->submitter)
+                                                    <br><small class="text-muted">By {{ $payment->submitter->name }}</small>
+                                                @endif
+                                            </td>
+                                            <td>{{ $payment->recorder->name ?? ($payment->submitter->name ?? 'System') }}</td>
                                             <td>{{ $payment->notes ?: '-' }}</td>
                                             <td>
                                                 @if ($payment->payment_proof)
                                                     <a href="{{ route('admin.orders.payment-proof', [$order->id, $payment->payment_proof]) }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if ($payment->status === \App\OrderPayment::STATUS_PENDING)
+                                                    <form action="{{ route('admin.orders.payments.confirm', [$order->id, $payment->id]) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-success">Confirm</button>
+                                                    </form>
+                                                    <form action="{{ route('admin.orders.payments.reject', [$order->id, $payment->id]) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                                                    </form>
                                                 @else
                                                     -
                                                 @endif
@@ -361,6 +444,138 @@
             $("#pdfFrame").attr("src", $(this).attr("href"));
             $("#downloadLink").attr("href", $(this).data('url') + '/download');
             $("#pdfModal").modal("show");
+        });
+
+        var paymentMethodOptions = @json($paymentMethods);
+        var paymentLineIndex = 1;
+        var balanceDue = {{ number_format($order->balanceDue(), 2, '.', '') }};
+        var requiresExactTotal = {{ $isCreditCustomer ? 'false' : 'true' }};
+        var proofAccept = @json(\App\OrderPayment::proofAcceptAttribute());
+        var proofHelpText = @json(\App\OrderPayment::proofHelpText());
+        var proofMaxBytes = {{ \App\OrderPayment::PROOF_MAX_KB * 1024 }};
+        var proofAllowedExtensions = @json(\App\OrderPayment::$proof_mimes);
+
+        function validatePaymentProofFile(file, required) {
+            if (!file || !file.name) {
+                return required ? 'Payment proof is required.' : null;
+            }
+
+            var extension = file.name.split('.').pop().toLowerCase();
+            if (proofAllowedExtensions.indexOf(extension) === -1) {
+                return 'Payment proof must be a JPG, PNG image or PDF file.';
+            }
+
+            if (file.size > proofMaxBytes) {
+                return 'Payment proof must not exceed ' + (proofMaxBytes / 1024 / 1024) + ' MB.';
+            }
+
+            return null;
+        }
+
+        function validatePaymentProofInputs(form) {
+            var inputs = form.querySelectorAll('.payment-proof-input');
+            for (var i = 0; i < inputs.length; i++) {
+                var input = inputs[i];
+                var error = validatePaymentProofFile(input.files[0], input.hasAttribute('required'));
+                if (error) {
+                    return error;
+                }
+            }
+
+            return null;
+        }
+
+        function updatePaymentLinesTotal() {
+            var total = 0;
+            document.querySelectorAll('.payment-amount').forEach(function (input) {
+                total += parseFloat(input.value) || 0;
+            });
+            var totalEl = document.getElementById('payment-lines-total');
+            if (totalEl) {
+                totalEl.textContent = total.toFixed(2);
+                if (requiresExactTotal) {
+                    totalEl.classList.toggle('text-danger', Math.abs(total - balanceDue) > 0.009);
+                    totalEl.classList.toggle('text-success', Math.abs(total - balanceDue) <= 0.009);
+                }
+            }
+        }
+
+        document.getElementById('split-payment-form')?.addEventListener('submit', function (event) {
+            var proofError = validatePaymentProofInputs(this);
+            if (proofError) {
+                event.preventDefault();
+                Swal.fire('Invalid payment proof', proofError, 'warning');
+                return;
+            }
+
+            if (!requiresExactTotal) {
+                return;
+            }
+            var total = 0;
+            document.querySelectorAll('.payment-amount').forEach(function (input) {
+                total += parseFloat(input.value) || 0;
+            });
+            if (Math.abs(total - balanceDue) > 0.009) {
+                event.preventDefault();
+                Swal.fire('Invalid amount', 'COD orders require the exact balance due (RM ' + balanceDue.toFixed(2) + ').', 'warning');
+            }
+        });
+
+        document.getElementById('split-payment-form')?.addEventListener('input', function (event) {
+            if (event.target.matches('.payment-amount')) {
+                updatePaymentLinesTotal();
+            }
+        });
+
+        document.getElementById('add-payment-line')?.addEventListener('click', function () {
+            var container = document.getElementById('payment-lines');
+            var idx = paymentLineIndex++;
+            var optionsHtml = Object.keys(paymentMethodOptions).map(function (key) {
+                return '<option value="' + key + '">' + paymentMethodOptions[key] + '</option>';
+            }).join('');
+
+            var line = document.createElement('div');
+            line.className = 'payment-line border rounded p-3 mb-3';
+            line.dataset.index = idx;
+            line.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong>Payment ${idx + 1}</strong>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-payment-line">&times; Remove</button>
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="mb-1">Method</label>
+                        <select name="payments[${idx}][payment_method]" class="form-select" required>${optionsHtml}</select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="mb-1">Amount (RM)</label>
+                        <input type="number" step="0.01" min="0.01" name="payments[${idx}][amount]" class="form-control payment-amount" value="0.01" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="mb-1">Proof</label>
+                        <input type="file" name="payments[${idx}][payment_proof]" class="form-control payment-proof-input" accept="${proofAccept}">
+                        <small class="text-muted">${proofHelpText}</small>
+                    </div>
+                    <div class="col-12">
+                        <label class="mb-1">Notes</label>
+                        <input type="text" name="payments[${idx}][notes]" class="form-control" placeholder="Optional">
+                    </div>
+                </div>
+            `;
+            container.appendChild(line);
+            updatePaymentLinesTotal();
+        });
+
+        document.getElementById('payment-lines')?.addEventListener('click', function (event) {
+            if (event.target.closest('.remove-payment-line')) {
+                var lines = document.querySelectorAll('#payment-lines .payment-line');
+                if (lines.length <= 1) {
+                    Swal.fire('Warning', 'At least one payment line is required.', 'warning');
+                    return;
+                }
+                event.target.closest('.payment-line').remove();
+                updatePaymentLinesTotal();
+            }
         });
     </script>
 @endsection
