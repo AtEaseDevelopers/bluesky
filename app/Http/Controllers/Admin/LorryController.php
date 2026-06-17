@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Driver;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class LorryController extends Controller
 {
@@ -26,12 +28,22 @@ class LorryController extends Controller
 
     public function store(Request $request)
     {
-        $this->validate($request, [
+        $data = $this->validate($request, [
+            'name' => 'nullable|string|max:100',
+            'phone' => 'nullable|string|max:30',
             'lorry_number' => 'required',
+            'username' => ['required', 'string', 'max:50', Rule::unique('drivers', 'username')],
+            'password' => 'required|string|min:6',
+            'is_active' => 'nullable|boolean',
         ]);
 
         Driver::create([
-            'lorry_number' => $request->lorry_number,
+            'name' => $data['name'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'lorry_number' => $data['lorry_number'],
+            'username' => $data['username'],
+            'password' => Hash::make($data['password']),
+            'is_active' => $request->boolean('is_active', true),
         ]);
 
         return redirect(route('admin.lorry.index'))->with('success', 'Driver added successfully.');
@@ -45,13 +57,31 @@ class LorryController extends Controller
 
     public function update(Request $request, $id)
     {
-        $this->validate($request, [
+        $driverId = decrypt($id);
+
+        $data = $this->validate($request, [
+            'name' => 'nullable|string|max:100',
+            'phone' => 'nullable|string|max:30',
             'lorry_number' => 'required',
+            'username' => ['required', 'string', 'max:50', Rule::unique('drivers', 'username')->ignore($driverId)],
+            'password' => 'nullable|string|min:6',
+            'is_active' => 'nullable|boolean',
         ]);
 
-        Driver::where('id', decrypt($id))->update([
-            'lorry_number' => $request->lorry_number,
-        ]);
+        $update = [
+            'name' => $data['name'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'lorry_number' => $data['lorry_number'],
+            'username' => $data['username'],
+            'is_active' => $request->boolean('is_active', true),
+        ];
+
+        // Only change the password when a new one is supplied.
+        if (!empty($data['password'])) {
+            $update['password'] = Hash::make($data['password']);
+        }
+
+        Driver::where('id', $driverId)->update($update);
 
         return redirect(route('admin.lorry.index'))->with('success', 'Driver updated successfully.');
     }
@@ -65,7 +95,7 @@ class LorryController extends Controller
 
     public function get_lorry(Request $request)
     {
-        $columns = array('id', 'options', 'lorry_number', 'created_at');
+        $columns = array('id', 'options', 'name', 'username', 'lorry_number', 'is_active', 'created_at');
 
         $totalitems = DB::table('drivers')->count();
         $totalFiltered = $totalitems;
@@ -80,7 +110,7 @@ class LorryController extends Controller
 
         if (empty($request->input('search.value'))) {
             $records = DB::table('drivers')
-                ->select('id', 'lorry_number', 'created_at')
+                ->select('id', 'name', 'username', 'lorry_number', 'is_active', 'created_at')
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order, $dir)
@@ -88,8 +118,10 @@ class LorryController extends Controller
         } else {
             $search = $request->input('search.value');
             $records = DB::table('drivers')
-                ->select('id', 'lorry_number', 'created_at')
+                ->select('id', 'name', 'username', 'lorry_number', 'is_active', 'created_at')
                 ->where('lorry_number', 'LIKE', "%{$search}%")
+                ->orWhere('name', 'LIKE', "%{$search}%")
+                ->orWhere('username', 'LIKE', "%{$search}%")
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order, $dir)
@@ -102,13 +134,18 @@ class LorryController extends Controller
         if (!empty($records)) {
             foreach ($records as $record) {
                 $nestedData['id'] = $record->id;
+                $nestedData['name'] = $record->name ?: '-';
+                $nestedData['username'] = $record->username ?: '-';
                 $nestedData['lorry_number'] = $record->lorry_number;
-                $nestedData['created_at'] = date('m-d-Y', strtotime($record->created_at));   
+                $nestedData['is_active'] = $record->is_active
+                    ? '<span class="badge bg-success">Active</span>'
+                    : '<span class="badge bg-secondary">Inactive</span>';
+                $nestedData['created_at'] = date('m-d-Y', strtotime($record->created_at));
                 $nestedData['options'] = '
-                    <a href="' . route('admin.lorry.edit', encrypt($record->id)) . '" class="btn btn-sm btn-primary">
+                    <a href="' . route('admin.lorry.edit', encrypt($record->id)) . '" class="btn btn-sm btn-primary" title="Edit">
                         <i class="fa fa-edit"></i>
                     </a>
-                    <button type="button" class="btn btn-sm btn-danger btn-delete" data-action="' . route('admin.lorry.destroy', encrypt($record->id)) . '" data-bs-toggle="modal" data-bs-target="#delete">
+                    <button type="button" class="btn btn-sm btn-danger btn-delete" title="Delete" data-action="' . route('admin.lorry.destroy', encrypt($record->id)) . '" data-bs-toggle="modal" data-bs-target="#delete">
                         <i class="fa fa-trash"></i>
                     </button>
                 ';

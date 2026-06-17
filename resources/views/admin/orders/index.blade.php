@@ -235,9 +235,14 @@
                                         {{-- <td>{{ $order->do_no }}</td> --}}
                                         <td>{{ $order->created_at }}</td>
                                         <td>
-                                            <a href="{{ route('admin.customers.edit', encrypt($customer->id)) }}" class="text-dark" target="_blank">
-                                                {{ $customer->name }}
-                                            </a>
+                                            @if ($customer)
+                                                <a href="{{ route('admin.customers.edit', encrypt($customer->id)) }}" class="text-dark" target="_blank">
+                                                    {{ $customer->name }}
+                                                </a>
+                                            @else
+                                                {{ $order->attn_name ?: 'General Customer' }}
+                                                <span class="badge bg-info text-dark">General</span>
+                                            @endif
                                         </td>
                                         <!--<td>{{ $order->order_weight ?? 0 }}KG</td>-->
                                         <td class="white-space-nowrap">{!! $order->order_products !!}</td>

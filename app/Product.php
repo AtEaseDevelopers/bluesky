@@ -62,6 +62,27 @@ class Product extends Model
         return $product->price;
     }
 
+    /**
+     * Price shown to public / General Customer (no account, no category).
+     * Uses today's "all categories" daily price, else the product default price.
+     */
+    public static function getPublicTodayPrice($id){
+        $product = Product::find($id);
+        $date = Carbon::now()->format('Y-m-d');
+
+        $product_daily_price = ProductDailyPrice::where('date', $date)
+            ->where('product_id', $product->id)
+            ->where('status', ProductDailyPrice::$status['active'])
+            ->whereNull('user_category') // For all categories (null)
+            ->first();
+
+        if ($product_daily_price) {
+            return $product_daily_price->price;
+        }
+
+        return $product->price;
+    }
+
     public static function getOption($id, $return_array=false){
         $product_option = [];
         $product_option_mandatory = [];

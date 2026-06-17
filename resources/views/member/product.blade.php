@@ -14,7 +14,7 @@
             <div class="col-12 col-custom-2 col-sm-6 col-md-3 mb-4">
                 <div class="card no-border shadow {{ $product->added_to_cart ? 'added-in-cart' : '' }}">
                     <div class="card-body">
-                        <a href="{{ route('member.products.show', encrypt($product->id)) }}">
+                        <a href="{{ ($portal['product_show_name'] ? route($portal['product_show_name'], encrypt($product->id)) : 'javascript:void(0)') }}">
                             <img src="{{ $product->image_url }}" onError="this.onerror=null;this.src='{{ asset('assets/images/product-default.jpg') }}';" class="card-img-top" alt="{{ $product->name }}">
                         </a>
                         <h5 class="card-title my-4">{{ $product->name }}</h5>
@@ -28,7 +28,7 @@
                                 @endif
                             </div>
                             <div class="full-width-on-mobile">
-                                <button type="button" class="btn btn-outline-primary btn-add-to-cart mb-1" data-id="{{ encrypt($product->id) }}" data-action="{{ route('member.add-to-cart', encrypt($product->id)) }}" data-bs-toggle="modal" data-bs-target="#add-to-cart">
+                                <button type="button" class="btn btn-outline-primary btn-add-to-cart mb-1" data-id="{{ encrypt($product->id) }}" data-action="{{ route($portal['add_to_cart_name'], encrypt($product->id)) }}" data-bs-toggle="modal" data-bs-target="#add-to-cart">
                                     Add to cart
                                 </button>
                                 @if ($product->added_to_cart)
@@ -44,7 +44,7 @@
         @endforeach
     </div>
 
-    @if ($preferred_products)
+    @if (!($isGuest ?? false) && count($preferred_products))
         <h3 class="mb-4"><i class="fa fa-lightbulb-o me-2" aria-hidden="true"></i> Based On Your Previous Order</h3>
         <div class="row mb-5">
             @foreach ($preferred_products as $product)
@@ -64,7 +64,7 @@
                                     @endif
                                 </div>
                                 <div class="full-width-on-mobile">
-                                    <a href="{{ route('member.products.show', encrypt($product->id)) }}" class="btn btn-outline-primary btn-add-to-cart mb-1" data-id="{{ encrypt($product->id) }}" data-action="{{ route('member.add-to-cart', encrypt($product->id)) }}" data-bs-toggle="modal" data-bs-target="#add-to-cart">
+                                    <a href="{{ ($portal['product_show_name'] ? route($portal['product_show_name'], encrypt($product->id)) : 'javascript:void(0)') }}" class="btn btn-outline-primary btn-add-to-cart mb-1" data-id="{{ encrypt($product->id) }}" data-action="{{ route($portal['add_to_cart_name'], encrypt($product->id)) }}" data-bs-toggle="modal" data-bs-target="#add-to-cart">
                                         Add to cart
                                     </a>
                                     @if ($product->added_to_cart)

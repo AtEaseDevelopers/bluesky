@@ -1,14 +1,20 @@
 @php
     $user = Auth::guard('web')->user();
     $currentRoute = Route::currentRouteName();
+    $isGuest = $isGuest ?? false;
+    $portal = $portal ?? [
+        'products_url' => route('member.products'),
+        'cart_url' => route('member.cart'),
+        'orders_url' => route('member.orders'),
+    ];
 @endphp
 <nav class="navbar sticky-top navbar-expand-lg bg-body-tertiary">
     <div class="container">
-        <a class="navbar-brand" href="{{ route('member.products') }}">
+        <a class="navbar-brand" href="{{ $portal['products_url'] }}">
             <img src="{{ asset('assets/images/logo.png') }}" alt="{{ env('APP_NAME') }}" class="app-logo">
         </a>
         <div>
-            <a href="{{ route('member.cart') }}" class="navbar-toggler-cart btn btn-success">
+            <a href="{{ $portal['cart_url'] }}" class="navbar-toggler-cart btn btn-success">
                 <i class="fa fa-shopping-cart"></i> <span>{{ $cartCount ?? 0 }}</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarScroll"
@@ -19,31 +25,35 @@
         <div class="collapse navbar-collapse" id="navbarScroll">
             <ul class="navbar-nav me-auto my-2 my-lg-0 navbar-nav-scroll">
                 <li class="nav-item">
-                    <a class="nav-link {{ in_array($currentRoute, ['member.products']) ? 'active' : '' }}" href="{{ route('member.products') }}">Products</a>
+                    <a class="nav-link {{ in_array($currentRoute, ['member.products', 'public.order.index']) ? 'active' : '' }}" href="{{ $portal['products_url'] }}">Products</a>
                 </li>
+                @if (!$isGuest && ($portal['orders_url'] ?? null))
+                    <li class="nav-item">
+                        <a class="nav-link {{ in_array($currentRoute, ['member.orders']) ? 'active' : '' }}" href="{{ $portal['orders_url'] }}">My Orders</a>
+                    </li>
+                @endif
                 <li class="nav-item">
-                    <a class="nav-link {{ in_array($currentRoute, ['member.orders']) ? 'active' : '' }}" href="{{ route('member.orders') }}">My Orders</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ in_array($currentRoute, ['member.cart']) ? 'active' : '' }}" href="{{ route('member.cart') }}">
+                    <a class="nav-link {{ in_array($currentRoute, ['member.cart', 'public.order.cart']) ? 'active' : '' }}" href="{{ $portal['cart_url'] }}">
                         Cart <span class="badge badge-success">{{ $cartCount ?? 0 }}</span>
                     </a>
                 </li>
             </ul>
-            <ul class="navbar-nav d-flex">
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Hi, {{ $user->name }}
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="/profile">My Profile</a></li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li><a class="dropdown-item" href="{{ route('logout') }}">Logout</a></li>
-                    </ul>
-                </li>
-            </ul>
+            @if (!$isGuest && $user)
+                <ul class="navbar-nav d-flex">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Hi, {{ $user->name }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/profile">My Profile</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item" href="{{ route('logout') }}">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            @endif
         </div>
     </div>
 </nav>

@@ -133,8 +133,8 @@
                     $total_weight += $prod->weight;
                 }
                 if ($user->invoice_price_permission) {
-                    $sub_total += $prod->unit_price;
-                    $total += $prod->unit_price;
+                    $sub_total += $prod->price;
+                    $total += $prod->price;
                 }
             @endphp
         @endforeach

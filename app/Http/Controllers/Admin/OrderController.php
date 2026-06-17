@@ -34,20 +34,20 @@ class OrderController extends Controller
         $orders = Order::select(
             "*",
             DB::raw(
-                "CONCAT(
-                    orders.billing_address, '<br />', 
-                    orders.billing_city, '<br />', 
-                    orders.billing_postcode, '<br />', 
-                    orders.billing_state
+                "CONCAT_WS('<br />',
+                    NULLIF(orders.billing_address, ''),
+                    NULLIF(orders.billing_city, ''),
+                    NULLIF(orders.billing_postcode, ''),
+                    NULLIF(orders.billing_state, '')
                 ) AS billing_address"
             ),
             DB::raw(
-                "CONCAT(
-                orders.shipping_address, '<br />', 
-                orders.shipping_city, '<br />', 
-                orders.shipping_postcode, '<br />', 
-                orders.shipping_state
-            ) AS shipping_address"
+                "CONCAT_WS('<br />',
+                    NULLIF(orders.shipping_address, ''),
+                    NULLIF(orders.shipping_city, ''),
+                    NULLIF(orders.shipping_postcode, ''),
+                    NULLIF(orders.shipping_state, '')
+                ) AS shipping_address"
             )
         );
 
@@ -267,20 +267,20 @@ class OrderController extends Controller
         $order = Order::select(
             "*",
             DB::raw(
-                "CONCAT(
-                    orders.billing_address, '<br />', 
-                    orders.billing_city, '<br />', 
-                    orders.billing_postcode, '<br />', 
-                    orders.billing_state
+                "CONCAT_WS('<br />',
+                    NULLIF(orders.billing_address, ''),
+                    NULLIF(orders.billing_city, ''),
+                    NULLIF(orders.billing_postcode, ''),
+                    NULLIF(orders.billing_state, '')
                 ) AS billing_address"
             ),
             DB::raw(
-                "CONCAT(
-                orders.shipping_address, '<br />', 
-                orders.shipping_city, '<br />', 
-                orders.shipping_postcode, '<br />', 
-                orders.shipping_state
-            ) AS shipping_address"
+                "CONCAT_WS('<br />',
+                    NULLIF(orders.shipping_address, ''),
+                    NULLIF(orders.shipping_city, ''),
+                    NULLIF(orders.shipping_postcode, ''),
+                    NULLIF(orders.shipping_state, '')
+                ) AS shipping_address"
             ),
         )->where('id', $id)->first();
 

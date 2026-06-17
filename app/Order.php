@@ -8,8 +8,9 @@ class Order extends Model
 {
     // Specify the fillable attributes for mass assignment
     protected $fillable = [
-        'user_id', 
-        'cart_id', 
+        'user_id',
+        'is_general',
+        'cart_id',
         'total_price', 
         'attn_name', 
         'attn_contact', 
@@ -28,7 +29,11 @@ class Order extends Model
         'driver_id',
         'order_weight',
         'do_no',
-        'do_date'
+        'do_date',
+        'paid_amount',
+        'payment_proof',
+        'payment_collected_at',
+        'payment_collected_by'
     ];
 
     public static $path = 'orders';
@@ -57,5 +62,15 @@ class Order extends Model
     public function customer()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function driver()
+    {
+        return $this->belongsTo(Driver::class, 'driver_id', 'id');
+    }
+
+    public function products()
+    {
+        return $this->hasMany(OrderProduct::class, 'order_id', 'id');
     }
 }

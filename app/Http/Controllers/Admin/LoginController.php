@@ -27,7 +27,7 @@ class LoginController extends Controller
      */
     public function showForm()
     {
-        if (Auth::check()) {
+        if (Auth::guard('web_admin')->check()) {
             return redirect(route('admin.dashboard'));
         }
 
@@ -50,7 +50,7 @@ class LoginController extends Controller
             'username' => $data['username'],
             'password' => $data['password'],
         ];
-        if (Auth::attempt($login_data)) {
+        if (Auth::guard('web_admin')->attempt($login_data)) {
             // Authentication successful for admin
             return redirect(route('admin.dashboard'));
         } else {
@@ -90,9 +90,9 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
-        Auth::logout();
+        Auth::guard('web_admin')->logout();
 
         // Redirect to a specific page after logout
-        return redirect('/login');
+        return redirect(route('admin.login'));
     }
 }

@@ -88,6 +88,9 @@
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="d-flex justify-content-end align-items-center flex-wrap gap-3">
+                <button type="button" id="copyGuestLink" class="btn btn-primary" data-link="{{ route('public.order.index') }}">
+                    Copy Guest Link
+                </button>
                 <a href="{{ route('admin.customers.create') }}" class="btn btn-primary">
                     Add New Customer
                 </a>
@@ -179,6 +182,14 @@
                 linkToCopy.select();
                 document.execCommand('copy');
                 alert('Link copied to clipboard!');
+            });
+
+            $("#copyGuestLink").click(function() {
+                const link = $(this).data('link');
+                const temp = $('<input>').val(link).appendTo('body').select();
+                document.execCommand('copy');
+                temp.remove();
+                alert('Guest order link copied to clipboard!');
             });
         });
     </script>
