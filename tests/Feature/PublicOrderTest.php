@@ -228,6 +228,8 @@ class PublicOrderTest extends TestCase
         $this->actingAs($admin, 'web_admin')
             ->get(route('admin.orders.summary', $order->id))
             ->assertOk()
+            ->assertSee('Summary Guest')
+            ->assertSee('0181113333')
             ->assertSee('77 Delivery Lane, KL');
     }
 }

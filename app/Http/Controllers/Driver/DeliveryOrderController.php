@@ -4,22 +4,34 @@ namespace App\Http\Controllers\Driver;
 
 use App\Http\Controllers\Controller;
 use App\Order;
+use App\OrderPayment;
+use App\Services\OrderService;
+use App\Services\OrderStatusService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class DeliveryOrderController extends Controller
 {
-    /**
-     * Delivery-status values the driver is allowed to set, mapped onto the
-     * system's existing order statuses:
-     *   "In Route"  => delivering
-     *   "Delivered" => completed
-     */
+    /** Statuses a driver may set (canonical order workflow values). */
     public static $driver_statuses = [
-        'delivering' => 'In Route',
-        'completed' => 'Delivered',
+        'in_route' => 'In Route',
+        'delivered' => 'Delivered',
+    ];
+
+    /** Legacy DB values kept for display/filter compatibility. */
+    public static $legacy_status_map = [
+        'processing' => 'processing',
+        'delivering' => 'in_route',
+        'completed' => 'delivered',
+    ];
+
+    /** Map driver-portal form values to canonical payment method keys. */
+    public static $payment_method_map = [
+        'cash' => 'cash',
+        'qr' => 'qr',
+        'transfer' => 'bank-transfer',
+        'credit' => 'credit-term',
     ];
 
     /**
@@ -48,13 +60,18 @@ class DeliveryOrderController extends Controller
             ->where('driver_id', $driver->id)
             ->where('status', '!=', Order::$status['cancelled']);
 
-        // Optional status filter from the tab/segmented control.
-        if ($request->filled('status') && array_key_exists($request->status, Order::$status)) {
-            $query->where('status', Order::$status[$request->status]);
+        if ($request->filled('status')) {
+            $filterStatuses = self::statusesForFilter($request->status);
+            if ($filterStatuses !== []) {
+                $query->whereIn('status', $filterStatuses);
+            }
         }
 
-        // Portable ordering (works on MySQL and SQLite): active deliveries first.
-        $orders = $query->orderByRaw("CASE status WHEN 'delivering' THEN 0 WHEN 'processing' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END")
+        $orders = $query->orderByRaw("CASE status
+                WHEN 'in_route' THEN 0 WHEN 'delivering' THEN 0
+                WHEN 'pending' THEN 1 WHEN 'customer_reviewing' THEN 1 WHEN 'processing' THEN 1
+                WHEN 'delivered' THEN 2 WHEN 'completed' THEN 2 WHEN 'paid_completed' THEN 3
+                ELSE 4 END")
             ->orderByDesc('id')
             ->paginate(20)
             ->withQueryString();
@@ -72,7 +89,7 @@ class DeliveryOrderController extends Controller
     {
         $order = $this->findAssignedOrder($id);
 
-        $order->load(['customer', 'products']);
+        $order->load(['customer', 'products', 'payments']);
 
         return view('driver.orders.show', [
             'order' => $order,
@@ -93,7 +110,15 @@ class DeliveryOrderController extends Controller
             'status' => ['required', 'in:' . implode(',', array_keys(self::$driver_statuses))],
         ]);
 
-        $order->update(['status' => $data['status']]);
+        try {
+            app(OrderStatusService::class)->transition(
+                $order,
+                Order::$status[$data['status']],
+                null
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Delivery status updated to "' . self::$driver_statuses[$data['status']] . '".');
     }
@@ -105,9 +130,15 @@ class DeliveryOrderController extends Controller
     {
         $order = $this->findAssignedOrder($id);
 
+        if (!$order->canRecordAdminPayment()) {
+            return back()->with('error', $order->isCodCustomer()
+                ? 'COD payment can only be recorded when the order is in route or delivered.'
+                : 'Payment cannot be recorded for this order in its current status.');
+        }
+
         $data = $request->validate([
             'payment_method' => ['required', 'in:' . implode(',', array_keys(self::$payment_methods))],
-            'paid_amount' => ['required', 'numeric', 'min:0'],
+            'paid_amount' => ['required', 'numeric', 'min:0.01'],
             'payment_proof' => [
                 'nullable',
                 'required_if:payment_method,' . implode(',', self::$proof_required_methods),
@@ -119,24 +150,21 @@ class DeliveryOrderController extends Controller
             'payment_proof.required_if' => 'Payment proof is required for QR and bank transfer payments.',
         ]);
 
-        $proofFilename = $order->payment_proof;
-        if ($request->hasFile('payment_proof')) {
-            $path = Order::$path . '/' . $order->id;
-            do {
-                $extension = $request->file('payment_proof')->getClientOriginalExtension();
-                $proofFilename = time() . rand() . '.' . $extension;
-            } while (Storage::disk('local')->exists($path . '/' . $proofFilename));
+        $method = self::$payment_method_map[$data['payment_method']] ?? $data['payment_method'];
 
-            Storage::disk('local')->put($path . '/' . $proofFilename, file_get_contents($request->file('payment_proof')));
+        try {
+            app(OrderService::class)->recordPayment(
+                $order,
+                $method,
+                (float) $data['paid_amount'],
+                $request->file('payment_proof'),
+                null,
+                null,
+                Auth::guard('web_driver')->id()
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
         }
-
-        $order->update([
-            'payment_method' => $data['payment_method'],
-            'paid_amount' => $data['paid_amount'],
-            'payment_proof' => $proofFilename,
-            'payment_collected_at' => Carbon::now(),
-            'payment_collected_by' => Auth::guard('web_driver')->id(),
-        ]);
 
         return back()->with('success', 'Payment recorded successfully.');
     }
@@ -148,11 +176,17 @@ class DeliveryOrderController extends Controller
     {
         $order = $this->findAssignedOrder($id);
 
-        if (!$order->payment_proof) {
+        $payment = $order->payments()
+            ->where('status', OrderPayment::STATUS_CONFIRMED)
+            ->whereNotNull('payment_proof')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$payment) {
             abort(404, 'No payment proof uploaded.');
         }
 
-        $path = Order::$path . '/' . $order->id . '/' . $order->payment_proof;
+        $path = Order::$path . '/' . $order->id . '/payments/' . $payment->payment_proof;
         if (!Storage::disk('local')->exists($path)) {
             abort(404, 'File not found.');
         }
@@ -171,5 +205,24 @@ class DeliveryOrderController extends Controller
         return Order::where('id', $id)
             ->where('driver_id', Auth::guard('web_driver')->id())
             ->firstOrFail();
+    }
+
+    public static function statusesForFilter(string $filter): array
+    {
+        return match ($filter) {
+            'processing' => ['pending', 'customer_reviewing', 'processing'],
+            'in_route', 'delivering' => ['in_route', 'delivering'],
+            'delivered', 'completed' => ['delivered', 'paid_completed', 'completed'],
+            default => [],
+        };
+    }
+
+    public static function statusLabel(string $status): string
+    {
+        $canonical = self::$legacy_status_map[$status] ?? $status;
+        $key = 'order.status.' . $canonical;
+        $label = __($key);
+
+        return $label !== $key ? $label : ucfirst(str_replace('_', ' ', $status));
     }
 }

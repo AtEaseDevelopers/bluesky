@@ -94,6 +94,7 @@ class Order extends Model
     public static $order_types = [
         'registered' => 'registered',
         'walk_in' => 'walk_in',
+        'public' => 'public',
     ];
 
     public function customer()
@@ -299,7 +300,7 @@ class Order extends Model
         }
 
         return (object) [
-            'name' => $this->walk_in_name ?: 'Walk-in Customer',
+            'name' => $this->walk_in_name ?: ($this->attn_name ?: 'Walk-in Customer'),
             'attn_contact' => $this->walk_in_phone ?: $this->attn_contact,
             'sql_customer_code' => null,
             'fax_no' => null,

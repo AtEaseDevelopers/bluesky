@@ -2,13 +2,6 @@
 @section('title', 'My Deliveries')
 @section('content')
 
-    @php
-        $statusLabels = [
-            'processing' => 'Processing',
-            'delivering' => 'In Route',
-            'completed'  => 'Delivered',
-        ];
-    @endphp
 
     <div class="d-flex justify-content-between align-items-end mb-3">
         <div>
@@ -21,10 +14,10 @@
         <li class="nav-item">
             <a class="nav-link {{ !$activeStatus ? 'active' : '' }}" href="{{ route('driver.orders.index') }}">All</a>
         </li>
-        @foreach (['processing', 'delivering', 'completed'] as $st)
+        @foreach (['processing' => 'Processing', 'in_route' => 'In Route', 'delivered' => 'Delivered'] as $st => $label)
             <li class="nav-item">
                 <a class="nav-link text-nowrap {{ $activeStatus === $st ? 'active' : '' }}"
-                   href="{{ route('driver.orders.index', ['status' => $st]) }}">{{ $statusLabels[$st] }}</a>
+                   href="{{ route('driver.orders.index', ['status' => $st]) }}">{{ $label }}</a>
             </li>
         @endforeach
     </ul>
@@ -47,8 +40,12 @@
                                 <i class="fa fa-user me-1"></i>{{ $order->attn_name ?? optional($order->customer)->name ?? '—' }}
                             </div>
                         </div>
-                        <span class="pill pill-{{ $order->status }}">
-                            {{ $statusLabels[$order->status] ?? ucfirst($order->status) }}
+                        @php
+                            $rowStatusLabel = \App\Http\Controllers\Driver\DeliveryOrderController::statusLabel($order->status);
+                            $rowCanonicalStatus = \App\Http\Controllers\Driver\DeliveryOrderController::$legacy_status_map[$order->status] ?? $order->status;
+                        @endphp
+                        <span class="pill pill-{{ $rowCanonicalStatus }}">
+                            {{ $rowStatusLabel }}
                         </span>
                     </div>
                     <div class="text-muted-ink mb-2">

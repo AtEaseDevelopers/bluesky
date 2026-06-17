@@ -3,12 +3,8 @@
 @section('content')
 
     @php
-        $statusLabels = [
-            'processing' => 'Processing',
-            'delivering' => 'In Route',
-            'completed'  => 'Delivered',
-            'cancelled'  => 'Cancelled',
-        ];
+        $statusLabel = \App\Http\Controllers\Driver\DeliveryOrderController::statusLabel($order->status);
+        $canonicalStatus = \App\Http\Controllers\Driver\DeliveryOrderController::$legacy_status_map[$order->status] ?? $order->status;
         $total = (float) $order->total_price;
         $paid = (float) $order->paid_amount;
         $balance = $total - $paid;
@@ -25,7 +21,7 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start">
                 <h2 class="display-font mb-0" style="font-size:1.5rem;">{{ $order->do_no ?? ('Order #' . $order->id) }}</h2>
-                <span class="pill pill-{{ $order->status }}">{{ $statusLabels[$order->status] ?? ucfirst($order->status) }}</span>
+                <span class="pill pill-{{ $canonicalStatus }}">{{ $statusLabel }}</span>
             </div>
             @if ($order->do_date)
                 <div class="text-muted-ink mt-1"><i class="fa fa-calendar me-1"></i>{{ \Illuminate\Support\Carbon::parse($order->do_date)->format('d M Y') }}</div>
@@ -93,13 +89,14 @@
                 <div class="col-4"><div class="detail-label">Paid</div><div class="fw-semibold">RM {{ number_format($paid, 2) }}</div></div>
                 <div class="col-4"><div class="detail-label">Balance</div><div class="fw-semibold">RM {{ number_format(max($balance, 0), 2) }}</div></div>
             </div>
-            @if ($order->payment_method && $order->payment_collected_at)
+            @php $latestPayment = $order->payments->where('status', 'confirmed')->sortByDesc('id')->first(); @endphp
+            @if ($latestPayment)
                 <hr style="border-color:var(--line);">
                 <div class="text-muted-ink" style="font-size:.92rem;">
-                    {{ \App\Http\Controllers\Driver\DeliveryOrderController::$payment_methods[$order->payment_method] ?? ucfirst($order->payment_method) }}
-                    · {{ \Illuminate\Support\Carbon::parse($order->payment_collected_at)->format('d M Y, h:i A') }}
+                    {{ \App\OrderPayment::$payment_methods[$latestPayment->payment_method] ?? ucfirst($latestPayment->payment_method) }}
+                    · {{ $latestPayment->created_at->format('d M Y, h:i A') }}
                 </div>
-                @if ($order->payment_proof)
+                @if ($latestPayment->payment_proof)
                     <div class="mt-2">
                         <a href="{{ route('driver.orders.payment-proof', $order->id) }}" target="_blank" class="btn btn-sm btn-outline-brand">
                             <i class="fa fa-file me-1"></i> View Payment Proof
@@ -119,8 +116,8 @@
                 <div class="d-flex gap-2">
                     @foreach ($driverStatuses as $value => $label)
                         <button type="submit" name="status" value="{{ $value }}"
-                            class="btn btn-block-tall flex-fill {{ $order->status === $value ? 'btn-brand' : 'btn-outline-brand' }}">
-                            @if ($value === 'delivering') <i class="fa fa-truck me-1"></i> @else <i class="fa fa-check-circle me-1"></i> @endif
+                            class="btn btn-block-tall flex-fill {{ $canonicalStatus === $value ? 'btn-brand' : 'btn-outline-brand' }}">
+                            @if ($value === 'in_route') <i class="fa fa-truck me-1"></i> @else <i class="fa fa-check-circle me-1"></i> @endif
                             {{ $label }}
                         </button>
                     @endforeach

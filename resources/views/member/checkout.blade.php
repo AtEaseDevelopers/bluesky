@@ -200,7 +200,7 @@
                                     <td>{{ $product->quantity ?? ($product->weight . ' KG') }}</td>
                                     <td align="right">
                                         @if ($user->price_permission)
-                                            {{ number_format($product->unit_price * $product->quantity, 2) }}
+                                            {{ number_format($product->unit_price * ($product->quantity ?? $product->weight), 2) }}
                                         @else
                                         -
                                         @endif

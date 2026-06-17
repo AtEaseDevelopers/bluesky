@@ -55,7 +55,7 @@ class CustomerController extends Controller
                 return $q->where('users.email', 'LIKE', "%$email%");
             })
             ->when(($category != null), function ($q) use ($category) {
-                return $q->where('users.customer_category_id', $category);
+                return $q->where('users.category', $category);
             })
             ->when(($area != null), function ($q) use ($area) {
                 return $q->where('users.area', $area);

@@ -251,11 +251,11 @@ class OrderController extends Controller
     {
         DB::table('orders')->where('id', decrypt($request['orders_id']))->update(
             [
-                'driver_id' => $request['driver_id'],
+                'driver_id' => $request->input('driver_id') ?: null,
             ]
         );
 
-        return back()->with('success', 'Lorry has been changed successfully.');
+        return back()->with('success', 'Driver has been updated successfully.');
     }
 
     public function assign_order_driver(Request $request)
@@ -264,12 +264,12 @@ class OrderController extends Controller
         if ($ids) {
             DB::table('orders')->whereIn('id', $ids)->update(
                 [
-                    'driver_id' => $request['driver_id'],
+                    'driver_id' => $request->input('driver_id') ?: null,
                 ]
             );
         }
 
-        return back()->with('success', 'Lorry has been changed successfully.');
+        return back()->with('success', 'Driver has been updated successfully.');
     }
 
     public function viewSummary($id)
@@ -355,9 +355,35 @@ class OrderController extends Controller
                 'paymentStatusLabels' => OrderPayment::$status_labels,
                 'nextStatuses' => app(OrderStatusService::class)->nextStatuses($order->status),
                 'isCreditCustomer' => $order->isCreditCustomer(),
-                'drivers' => DB::table('drivers')->pluck('lorry_number', 'id'),
+                'drivers' => $this->driverOptionsForOrder($order),
             ]
         );
+    }
+
+    private function driverOptionsForOrder(Order $order): array
+    {
+        return DB::table('drivers')
+            ->select('id', 'name', 'lorry_number', 'is_active')
+            ->where(function ($query) use ($order) {
+                $query->where('is_active', true);
+                if ($order->driver_id) {
+                    $query->orWhere('id', $order->driver_id);
+                }
+            })
+            ->orderBy('lorry_number')
+            ->get()
+            ->mapWithKeys(function ($driver) {
+                $label = $driver->lorry_number;
+                if ($driver->name) {
+                    $label = $driver->name . ' (' . $driver->lorry_number . ')';
+                }
+                if (!$driver->is_active) {
+                    $label .= ' [Inactive]';
+                }
+
+                return [$driver->id => $label];
+            })
+            ->all();
     }
 
     public function updatePaymentDueDate(Request $request, $id)

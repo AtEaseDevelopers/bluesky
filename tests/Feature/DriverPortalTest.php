@@ -149,13 +149,13 @@ class DriverPortalTest extends TestCase
     public function driver_can_update_delivery_status_to_in_route()
     {
         $driver = $this->makeDriver();
-        $order = $this->makeOrder($driver);
+        $order = $this->makeOrder($driver, ['status' => 'customer_reviewing']);
 
         $this->actingAs($driver, 'web_driver')
-            ->post(route('driver.orders.update-status', $order->id), ['status' => 'delivering'])
+            ->post(route('driver.orders.update-status', $order->id), ['status' => 'in_route'])
             ->assertRedirect();
 
-        $this->assertSame('delivering', $order->fresh()->status);
+        $this->assertSame('in_route', $order->fresh()->status);
     }
 
     /** @test */
@@ -175,7 +175,10 @@ class DriverPortalTest extends TestCase
     public function driver_can_record_a_cash_payment_without_proof()
     {
         $driver = $this->makeDriver();
-        $order = $this->makeOrder($driver, ['total_price' => 150.00]);
+        $order = $this->makeOrder($driver, [
+            'total_price' => 150.00,
+            'status' => 'in_route',
+        ]);
 
         $this->actingAs($driver, 'web_driver')
             ->post(route('driver.orders.record-payment', $order->id), [
@@ -184,17 +187,22 @@ class DriverPortalTest extends TestCase
             ])->assertRedirect();
 
         $fresh = $order->fresh();
-        $this->assertEquals('cash', $fresh->payment_method);
         $this->assertEquals(150.00, (float) $fresh->paid_amount);
-        $this->assertEquals($driver->id, $fresh->payment_collected_by);
-        $this->assertNotNull($fresh->payment_collected_at);
+        $this->assertEquals('paid', $fresh->payment_status);
+        $this->assertDatabaseHas('order_payments', [
+            'order_id' => $order->id,
+            'payment_method' => 'cash',
+            'amount' => 150.00,
+            'status' => 'confirmed',
+            'recorded_by_driver' => $driver->id,
+        ]);
     }
 
     /** @test */
     public function transfer_payment_requires_proof()
     {
         $driver = $this->makeDriver();
-        $order = $this->makeOrder($driver);
+        $order = $this->makeOrder($driver, ['status' => 'in_route']);
 
         $this->actingAs($driver, 'web_driver')
             ->post(route('driver.orders.record-payment', $order->id), [
@@ -202,8 +210,8 @@ class DriverPortalTest extends TestCase
                 'paid_amount' => 150.00,
             ])->assertSessionHasErrors('payment_proof');
 
-        // paid_amount stays at its unpaid default (0) since validation blocked the update.
         $this->assertEquals(0.0, (float) $order->fresh()->paid_amount);
+        $this->assertDatabaseMissing('order_payments', ['order_id' => $order->id]);
     }
 
     /** @test */
@@ -212,7 +220,7 @@ class DriverPortalTest extends TestCase
         Storage::fake('local');
 
         $driver = $this->makeDriver();
-        $order = $this->makeOrder($driver);
+        $order = $this->makeOrder($driver, ['status' => 'in_route']);
 
         $this->actingAs($driver, 'web_driver')
             ->post(route('driver.orders.record-payment', $order->id), [
@@ -221,9 +229,10 @@ class DriverPortalTest extends TestCase
                 'payment_proof' => UploadedFile::fake()->image('proof.jpg'),
             ])->assertRedirect();
 
-        $fresh = $order->fresh();
-        $this->assertEquals('transfer', $fresh->payment_method);
-        $this->assertNotNull($fresh->payment_proof);
-        Storage::disk('local')->assertExists(Order::$path . '/' . $order->id . '/' . $fresh->payment_proof);
+        $payment = \App\OrderPayment::where('order_id', $order->id)->first();
+        $this->assertNotNull($payment);
+        $this->assertEquals('bank-transfer', $payment->payment_method);
+        $this->assertNotNull($payment->payment_proof);
+        Storage::disk('local')->assertExists(Order::$path . '/' . $order->id . '/payments/' . $payment->payment_proof);
     }
 }

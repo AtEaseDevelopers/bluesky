@@ -8,6 +8,10 @@ return [
         'delivered' => 'Delivered',
         'paid_completed' => 'Paid & Completed',
         'cancelled' => 'Cancelled',
+        // Legacy values written before status workflow was unified.
+        'processing' => 'Processing',
+        'delivering' => 'In Route',
+        'completed' => 'Delivered',
     ],
     'payment_status' => [
         'unpaid' => 'Unpaid',
@@ -19,7 +23,7 @@ return [
     'order_type' => [
         'registered' => 'Registered Customer',
         'walk_in' => 'Walk-in',
-        'public' => 'Walk-in',
+        'public' => 'General Link Order',
     ],
     'file' => [
         'invoice' => 'Invoice',

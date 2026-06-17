@@ -15,12 +15,14 @@ class Driver extends Authenticatable
         'username',
         'password',
         'lorry_number',
+        'api_token',
         'is_active',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'api_token',
     ];
 
     protected $casts = [
@@ -38,5 +40,24 @@ class Driver extends Authenticatable
     public function orders()
     {
         return $this->hasMany(Order::class, 'driver_id', 'id');
+    }
+
+    public function issueApiToken(): string
+    {
+        $plainToken = bin2hex(random_bytes(32));
+        $this->update(['api_token' => hash('sha256', $plainToken)]);
+
+        return $plainToken;
+    }
+
+    public static function findByToken(?string $plainToken): ?self
+    {
+        if (!$plainToken) {
+            return null;
+        }
+
+        return static::where('api_token', hash('sha256', $plainToken))
+            ->where('is_active', true)
+            ->first();
     }
 }

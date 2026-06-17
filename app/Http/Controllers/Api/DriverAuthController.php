@@ -12,16 +12,16 @@ class DriverAuthController extends Controller
     public function login(Request $request)
     {
         $data = $request->validate([
-            'phone' => 'required|string',
-            'pin' => 'required|string|min:4|max:20',
+            'username' => 'required|string',
+            'password' => 'required|string',
         ]);
 
-        $driver = Driver::where('phone', $data['phone'])->where('is_active', true)->first();
+        $driver = Driver::where('username', $data['username'])->where('is_active', true)->first();
 
-        if (!$driver || !$driver->verifyPin($data['pin'])) {
+        if (!$driver || !Hash::check($data['password'], $driver->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid phone or PIN.',
+                'message' => 'Invalid username or password.',
             ], 401);
         }
 

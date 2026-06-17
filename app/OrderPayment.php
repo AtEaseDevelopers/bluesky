@@ -37,6 +37,7 @@ class OrderPayment extends Model
     public static $cod_admin_methods = [
         'cash' => 'Cash',
         'qr' => 'QR',
+        'bank-transfer' => 'Bank Transfer',
         'cod' => 'COD',
     ];
 

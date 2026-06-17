@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('driver')->group(function () {
     Route::post('/login', [DriverAuthController::class, 'login']);
 
-    Route::middleware('auth_driver')->group(function () {
+    Route::middleware('auth_driver_api')->group(function () {
         Route::post('/logout', [DriverAuthController::class, 'logout']);
         Route::get('/me', [DriverAuthController::class, 'me']);
         Route::get('/orders', [DriverOrderController::class, 'index']);

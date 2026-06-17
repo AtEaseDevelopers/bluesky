@@ -40,11 +40,12 @@
                                     @if ($customer && ($customer->customer_type ?? 'cod') === 'credit')
                                         <p><strong>Customer Type:</strong> Credit</p>
                                     @endif
-                                    @if ($order->walk_in_phone)
-                                        <p><strong>Phone:</strong> {{ $order->walk_in_phone }}</p>
+                                    @if ($order->walk_in_phone || $order->attn_contact || ($customer->attn_contact ?? null))
+                                        <p><strong>Phone:</strong> {{ $order->walk_in_phone ?: ($order->attn_contact ?: ($customer->attn_contact ?? '-')) }}</p>
                                     @endif
                                     <p><strong>Order Date:</strong> {{ $order->created_at->format('Y-m-d h:i a') }}</p>
                                     <p><strong>Delivery:</strong> {{ $order->delivery_date ? $order->delivery_date->format('d-m-Y') : '-' }} {{ $order->delivery_time_slot }}</p>
+                                    <p><strong>Driver / Lorry:</strong> {{ $order->driver_id && isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '-' }}</p>
                                 </div>
                                 <div class="col-md-6">
                                     <p><strong>Status:</strong> {{ __('order.status.' . $order->status) }}</p>
@@ -171,6 +172,32 @@
                             </div>
                         </div>
                     @endif
+
+                    <div class="card shadow no-border mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Assign Driver</h5>
+                            <hr>
+                            @if (count($drivers))
+                                <form action="{{ route('admin.change-order-lorry') }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="orders_id" value="{{ encrypt($order->id) }}">
+                                    <div class="mb-3">
+                                        <label class="mb-1">Driver / Lorry</label>
+                                        <select name="driver_id" class="form-select">
+                                            <option value="">None</option>
+                                            @foreach ($drivers as $id => $label)
+                                                <option value="{{ $id }}" {{ (int) $order->driver_id === (int) $id ? 'selected' : '' }}>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">Update Driver</button>
+                                </form>
+                            @else
+                                <p class="text-muted mb-3">No drivers configured yet.</p>
+                                <a href="{{ route('admin.lorry.create') }}" class="btn btn-outline-primary w-100">Add Driver / Lorry</a>
+                            @endif
+                        </div>
+                    </div>
 
                     <div class="card shadow no-border mb-4">
                         <div class="card-body">

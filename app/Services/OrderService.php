@@ -505,7 +505,15 @@ class OrderService
             return $order->customer->name ?? '-';
         }
 
-        return $order->walk_in_name ?: 'Walk-in Customer';
+        if ($order->walk_in_name) {
+            return $order->walk_in_name;
+        }
+
+        if ($order->attn_name) {
+            return $order->attn_name;
+        }
+
+        return 'Walk-in Customer';
     }
 
     public function assignDoNumber(Order $order): Order
