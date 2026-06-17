@@ -29,8 +29,9 @@ class PublicOrderController extends Controller
     public function index(Request $request)
     {
         $products = Product::query()
-            ->select('products.*', 'product_stocks.quantity as stock_quantity')
+            ->select('products.*', 'product_stocks.quantity as stock_quantity', 'uoms.uom_name')
             ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
+            ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id')
             ->where('products.status', Product::$status['active'])
             ->where('product_stocks.quantity', '>', 0)
             ->when($request->keyword, function ($q) use ($request) {
@@ -39,11 +40,12 @@ class PublicOrderController extends Controller
             ->orderBy('products.nos')
             ->get()
             ->map(function ($product) {
-                $image = json_decode($product->images, true);
                 $product->original_price = $product->price = Product::getPublicTodayPrice($product->id);
-                $product->image_url = isset($image[0])
-                    ? url('/') . '/' . Product::$path . '/' . $product->id . '/' . $image[0]
-                    : asset('assets/images/product-default.jpg');
+                $product->image_url = Product::resolveImageUrl($product);
+                $uomName = $product->uom_name ?? optional($product->uom)->uom_name;
+                $product->stock_label = Product::formatStockQuantity((float) $product->stock_quantity, $uomName);
+                $product->price_label = Product::formatUnitPrice((float) $product->price, $uomName);
+                $product->original_price_label = Product::formatUnitPrice((float) $product->original_price, $uomName);
                 $product->added_to_cart = null;
                 return $product;
             });

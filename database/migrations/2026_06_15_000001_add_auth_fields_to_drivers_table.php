@@ -21,7 +21,7 @@ class AddAuthFieldsToDriversTable extends Migration
                 $table->string('phone')->nullable()->after('name');
             }
             if (!Schema::hasColumn('drivers', 'username')) {
-                $table->string('username')->nullable()->unique()->after('phone');
+                $table->string('username', 191)->nullable()->unique()->after('phone');
             }
             if (!Schema::hasColumn('drivers', 'password')) {
                 $table->string('password')->nullable()->after('username');

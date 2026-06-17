@@ -34,9 +34,9 @@ class Product extends Model
         'removed' => 'removed',
     ];
 
-    public static function get_today_price($id, User $user)
+    public static function get_today_price($id, ?User $user = null)
     {
-        return self::resolvePrice($id, $user->category);
+        return self::resolvePrice($id, $user->category ?? null);
     }
 
     public static function resolvePrice($id, ?string $userCategory = null): float

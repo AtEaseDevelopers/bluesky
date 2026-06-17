@@ -125,6 +125,10 @@ class ProductController extends Controller
             ->firstOrFail();
 
         $user = Auth::guard('web')->user();
+        if (!$user) {
+            return redirect(route('login'))->with('error', 'Please login to continue using your account');
+        }
+
         $product = $this->formatProductForMember($product, $user);
         $product->product_option = Product::getOption($product->id, true);
 
