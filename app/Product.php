@@ -34,9 +34,9 @@ class Product extends Model
         'removed' => 'removed',
     ];
 
-    public static function get_today_price($id, User $user)
+    public static function get_today_price($id, ?User $user = null)
     {
-        return self::resolvePrice($id, $user->category);
+        return self::resolvePrice($id, $user->category ?? null);
     }
 
     public static function resolvePrice($id, ?string $userCategory = null): float
@@ -86,6 +86,27 @@ class Product extends Model
     public static function formatUnitPrice(float $price, ?string $uomName = null): string
     {
         return 'RM ' . number_format($price, 2) . ' / ' . ($uomName ?: 'KG');
+    }
+
+    /**
+     * Price shown to public / General Customer (no account, no category).
+     * Uses today's "all categories" daily price, else the product default price.
+     */
+    public static function getPublicTodayPrice($id){
+        $product = Product::find($id);
+        $date = Carbon::now()->format('Y-m-d');
+
+        $product_daily_price = ProductDailyPrice::where('date', $date)
+            ->where('product_id', $product->id)
+            ->where('status', ProductDailyPrice::$status['active'])
+            ->whereNull('user_category') // For all categories (null)
+            ->first();
+
+        if ($product_daily_price) {
+            return $product_daily_price->price;
+        }
+
+        return $product->price;
     }
 
     public static function getOption($id, $return_array=false){

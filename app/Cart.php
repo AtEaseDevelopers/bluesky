@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Cart extends Model
 {
     // Specify the fillable attributes for mass assignment
-    protected $fillable = ['replicated_id', 'user_id', 'status'];
+    protected $fillable = ['replicated_id', 'user_id', 'session_id', 'status'];
 
     public static $attribute_rules = [
     ];

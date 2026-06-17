@@ -58,7 +58,11 @@ return new class extends Migration
             $table->timestamp('completed_at')->nullable()->after('is_estimated');
         });
 
-        DB::statement('ALTER TABLE orders MODIFY user_id BIGINT UNSIGNED NULL');
+        // user_id was already made nullable by an earlier migration; this raw
+        // statement only applies to MySQL (SQLite, used in tests, rejects it).
+        if (DB::connection()->getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE orders MODIFY user_id BIGINT UNSIGNED NULL');
+        }
 
         DB::table('orders')->where('status', 'processing')->update(['status' => 'pending']);
         DB::table('orders')->where('status', 'delivering')->update(['status' => 'in_route']);

@@ -183,7 +183,7 @@
                                                 class="btn btn-sm btn-primary mb-1" title="Edit">
                                                 <i class="fa fa-edit"></i>
                                             </a>
-                                            @if (Auth::user()->id == 1)
+                                            @if (Auth::guard('web_admin')->user()->id == 1)
                                                 <a href="#" class="btn btn-sm btn-danger mb-1"
                                                     onclick="confirmRemove('{{ $product->id }}')" title="Remove">
                                                     <i class="fa fa-trash"></i>

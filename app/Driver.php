@@ -2,53 +2,41 @@
 
 namespace App;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
-class Driver extends Model
+class Driver extends Authenticatable
 {
-    use HasFactory;
+    use Notifiable;
 
     protected $fillable = [
-        'lorry_number',
         'name',
         'phone',
-        'pin_hash',
-        'api_token',
+        'username',
+        'password',
+        'lorry_number',
         'is_active',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
     ];
 
-    protected $hidden = [
-        'pin_hash',
-        'api_token',
+    public static $attribute_rules = [
+        'username' => ['required', 'string'],
+        'password' => ['required', 'string'],
     ];
 
-    public function verifyPin(string $pin): bool
+    /**
+     * Delivery orders assigned to this driver.
+     */
+    public function orders()
     {
-        return $this->pin_hash && Hash::check($pin, $this->pin_hash);
-    }
-
-    public function issueApiToken(): string
-    {
-        $plainToken = bin2hex(random_bytes(32));
-        $this->update(['api_token' => hash('sha256', $plainToken)]);
-
-        return $plainToken;
-    }
-
-    public static function findByToken(?string $plainToken): ?self
-    {
-        if (!$plainToken) {
-            return null;
-        }
-
-        return static::where('api_token', hash('sha256', $plainToken))
-            ->where('is_active', true)
-            ->first();
+        return $this->hasMany(Order::class, 'driver_id', 'id');
     }
 }

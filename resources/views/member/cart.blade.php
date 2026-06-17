@@ -75,7 +75,7 @@
                                 @empty
                                     <tr>
                                         <td colspan="7">
-                                            Your cart is empty. <a href='{{ route('member.products') }}'>Shop now</a>
+                                            Your cart is empty. <a href='{{ $portal['products_url'] }}'>Shop now</a>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -95,7 +95,7 @@
                                 <tr>
                                     <td colspan="7">
                                         <div class="d-flex justify-content-end">
-                                            <a href="{{ route('member.checkout') }}" class="btn btn-primary px-5">Proceed to Checkout</a>
+                                            <a href="{{ $portal['checkout_url'] }}" class="btn btn-primary px-5">Proceed to Checkout</a>
                                         </div>
                                     </td>
                                 </tr>
@@ -128,7 +128,7 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         // Redirect to remove cart item URL
-                        window.location.href = "{{ url('/remove-cart-item') }}" + "/" + cartProductId;
+                        window.location.href = "{{ $portal['remove_cart_url'] }}" + "/" + cartProductId;
                     }
                 });
             })
@@ -185,7 +185,7 @@
                 }
 
                 $.ajax({
-                    url: document.querySelector('meta[name="app-url"]').getAttribute('content') + "/update-cart-item",
+                    url: "{{ $portal['update_cart_url'] }}",
                     method: 'POST',
                     data: {
                         _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -228,7 +228,7 @@
                 }
 
                 $.ajax({
-                    url: document.querySelector('meta[name="app-url"]').getAttribute('content') + "/update-cart-item",
+                    url: "{{ $portal['update_cart_url'] }}",
                     method: 'POST',
                     data: {
                         _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),

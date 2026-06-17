@@ -264,7 +264,10 @@
                                                     {{ $customer->name }}
                                                 </a>
                                             @else
-                                                {{ $order->walk_in_name ?? 'Walk-in / Public' }}
+                                                {{ $order->walk_in_name ?: ($order->attn_name ?: 'Walk-in / Public') }}
+                                                @if ($order->is_general)
+                                                    <span class="badge bg-info text-dark">General</span>
+                                                @endif
                                             @endif
                                         </td>
                                         <!--<td>{{ $order->order_weight ?? 0 }}KG</td>-->

@@ -8,6 +8,7 @@ class Order extends Model
 {
     protected $fillable = [
         'user_id',
+        'is_general',
         'order_type',
         'walk_in_name',
         'walk_in_phone',
@@ -46,6 +47,9 @@ class Order extends Model
         'order_weight',
         'do_no',
         'do_date',
+        'payment_proof',
+        'payment_collected_at',
+        'payment_collected_by',
     ];
 
     protected $casts = [
@@ -95,6 +99,16 @@ class Order extends Model
     public function customer()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function driver()
+    {
+        return $this->belongsTo(Driver::class, 'driver_id', 'id');
+    }
+
+    public function products()
+    {
+        return $this->hasMany(OrderProduct::class, 'order_id', 'id');
     }
 
     public function deliverySlot()

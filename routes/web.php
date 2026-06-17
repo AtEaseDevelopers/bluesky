@@ -7,6 +7,23 @@ $adminUrl = config('app.admin_url');
 // if ((request()->isSecure()? "https://" : "http://") . request()->getHost() == $adminUrl) {
 //     // Requests with URLs matching the ADMIN_URL prefix
     require __DIR__.'/web_admin.php';
+
+    // Driver Web App (registered before the Member catch-all file route below)
+    require __DIR__.'/web_driver.php';
+
+    // General Customer (public) ordering link - no account required, COD only.
+    // Registered before the Member catch-all file route below.
+    Route::namespace('Public')->prefix('order')->middleware(['web', 'public_bootstrap'])->name('public.guest.')->group(
+        function () {
+            Route::get('/', 'PublicOrderController@index')->name('index');
+            Route::post('/add-to-cart/{id}', 'PublicOrderController@addToCart')->name('add-to-cart');
+            Route::post('/update-cart-item', 'PublicOrderController@updateCartItem')->name('update-cart-item');
+            Route::get('/remove-cart-item/{cart_product}', 'PublicOrderController@removeCartItem')->name('remove-cart-item');
+            Route::get('/cart', 'PublicOrderController@cart')->name('cart');
+            Route::get('/checkout', 'PublicOrderController@checkout')->name('checkout');
+            Route::post('/checkout', 'PublicOrderController@placeOrder')->name('checkout.submit');
+        }
+    );
 // } else {
     // Route::namespace('Member')->prefix(env('APP_URL'))->middleware(['bootstrap'])->group(function () {
     Route::namespace('Member')->middleware(['bootstrap'])->group(

@@ -33,6 +33,32 @@ class PdfHelper extends Model
     }
 
     /**
+     * Ensure the order has a customer to render. General Customer (public)
+     * orders have no user account, so build a transient fallback from the
+     * order's own guest fields and attach it as the customer relation.
+     * Returns the resolved customer (real or fallback).
+     */
+    private static function resolveCustomer(Order $order)
+    {
+        if ($order->customer) {
+            return $order->customer;
+        }
+
+        $fallback = new User([
+            'name' => $order->attn_name,
+            'attn_contact' => $order->attn_contact,
+        ]);
+        // Public COD invoices should display prices; no per-customer flags exist.
+        $fallback->invoice_price_permission = true;
+        $fallback->fax_no = null;
+        $fallback->sql_customer_code = null;
+
+        $order->setRelation('customer', $fallback);
+
+        return $fallback;
+    }
+
+    /**
      * Common method to get products for orders or quotations
      */
     private static function getProductsData($type, $id, $productModel)
@@ -117,6 +143,7 @@ class PdfHelper extends Model
 
     public static function GenerateDeliveryOrder(Order $order, $void = false, $returnPdf = false)
     {
+        self::resolveCustomer($order);
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
         $data = [
             'invoice_number' => $order->invoice_number ?: ('INV-' . $order->id),
@@ -138,6 +165,7 @@ class PdfHelper extends Model
   
     public static function UpdateDeliveryOrder(Order $order, $void = false, $custom_date = null)
     {
+        self::resolveCustomer($order);
         $order_products = DB::table('order_products')
             ->select(
                 'order_products.id as order_product_id', 

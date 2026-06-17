@@ -37,8 +37,8 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="attn_name">Attn. Name</label>
-                                    <input type="text" class="form-control" name="attn_name" id="attn_name" value="{{ old('attn_name')? : $customer->attn_name }}" placeholder="Enter Attn. Name (optional)">
+                                    <label class="mb-2" for="attn_name">Attn. Name @if($isGuest ?? false)<span class="text-danger ml-1">*</span>@endif</label>
+                                    <input type="text" class="form-control" name="attn_name" id="attn_name" value="{{ old('attn_name')? : $customer->attn_name }}" placeholder="Enter Attn. Name @unless($isGuest ?? false)(optional)@endunless" @if($isGuest ?? false) required @endif>
                                     @error('attn_name')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $errors->first('attn_name') }}</strong>
@@ -48,8 +48,8 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="attn_contact">Attn. Contact</label>
-                                    <input type="text" class="form-control" name="attn_contact" id="attn_contact" value="{{ old('attn_contact')? : $customer->attn_contact }}" placeholder="Enter Attn. Contact (optional)">
+                                    <label class="mb-2" for="attn_contact">Attn. Contact @if($isGuest ?? false)<span class="text-danger ml-1">*</span>@endif</label>
+                                    <input type="text" class="form-control" name="attn_contact" id="attn_contact" value="{{ old('attn_contact')? : $customer->attn_contact }}" placeholder="Enter Attn. Contact @unless($isGuest ?? false)(optional)@endunless" @if($isGuest ?? false) required @endif>
                                     @error('attn_contact')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $errors->first('attn_contact') }}</strong>
@@ -59,11 +59,11 @@
                             </div>
                         </div>
 
-                        <h6 class="card-subtitle my-3 text-body-secondary">Billing Info</h6>
+                        <h6 class="card-subtitle my-3 text-body-secondary">{{ ($isGuest ?? false) ? 'Delivery Info' : 'Billing Info' }}</h6>
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="billing_address">Billing Address<span class="text-danger ml-1">*</span></label>
+                                    <label class="mb-2" for="billing_address">{{ ($isGuest ?? false) ? 'Delivery Address' : 'Billing Address' }}<span class="text-danger ml-1">*</span></label>
                                     <textarea id="billing_address" name="billing_address" value="{{ old('billing_address')? : $customer->billing_address }}" class="form-control" rows="3" placeholder="Enter your billing address" required>{{ old('billing_address')? : $customer->billing_address }}</textarea>
                                     @error('billing_address')
                                         <span class="text-danger" role="alert">
@@ -74,6 +74,7 @@
                             </div>
                         </div>
 
+                        @unless($isGuest ?? false)
                         <h6 class="card-subtitle my-3 text-body-secondary">Delivery Slot</h6>
                         <div class="row">
                             <div class="col-md-12">
@@ -139,11 +140,18 @@
                                 </div>
                             </div>
                         </div>
+                        @endunless
+                        @if($isGuest ?? false)
+                            <div class="alert alert-info mt-2 mb-0">
+                                <i class="fa fa-money" aria-hidden="true"></i>
+                                <strong>Cash on Delivery.</strong> Pay our driver when your order arrives. The final amount may adjust based on the actual weighed seafood.
+                            </div>
+                        @endif
                         <div class="row mt-3">
                             <div class="col-md-12">
                                 <div class="d-flex justify-content-end">
-                                    <a href="{{ route('member.cart') }}" class="btn btn-outline-primary me-3 mb-1 px-3">My Cart</a>
-                                    <button type="submit" class="btn btn-primary mb-1 px-3" {{ $deliverySlots->isEmpty() ? 'disabled' : '' }}>
+                                    <a href="{{ $portal['cart_url'] }}" class="btn btn-outline-primary me-3 mb-1 px-3">My Cart</a>
+                                    <button type="submit" class="btn btn-primary mb-1 px-3" {{ (!($isGuest ?? false) && isset($deliverySlots) && $deliverySlots->isEmpty()) ? 'disabled' : '' }}>
                                         Place Order
                                         <div class="spinner-border spinner-border-sm d-none" role="status">
                                             <span class="visually-hidden">Loading...</span>

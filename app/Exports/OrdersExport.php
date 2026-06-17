@@ -106,12 +106,12 @@ class OrdersExport implements FromCollection, WithHeadings, WithEvents, WithColu
 
         $this->orders = DB::table('order_products')
             ->join('orders', 'orders.id', '=', 'order_products.order_id')
-            ->join('users', 'users.id', '=', 'orders.user_id')
+            ->leftJoin('users', 'users.id', '=', 'orders.user_id')
             ->join('products', 'products.id', '=', 'order_products.product_id')
             ->select(
                 'orders.id',
                 'orders.created_at',
-                'users.name',
+                DB::raw('COALESCE(users.name, orders.attn_name) AS name'),
                 'order_products.product_name',
                 'products.sku',
                 'order_products.quantity',

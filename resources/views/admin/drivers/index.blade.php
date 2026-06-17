@@ -23,9 +23,10 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Options</th>
+                                    <th>Name</th>
+                                    <th>Username</th>
                                     <th>Lorry Number</th>
-                                    <th>Driver Name</th>
-                                    <th>Phone</th>
+                                    <th>Status</th>
                                     <th>Created At</th>
                                 </tr>
                             </thead>
@@ -101,15 +102,19 @@
                         orderable: false
                     },
                     {
-                        "data": "lorry_number",
-                        orderable: true
-                    },
-                    {
                         "data": "name",
                         orderable: true
                     },
                     {
-                        "data": "phone",
+                        "data": "username",
+                        orderable: true
+                    },
+                    {
+                        "data": "lorry_number",
+                        orderable: true
+                    },
+                    {
+                        "data": "is_active",
                         orderable: true
                     },
                     {

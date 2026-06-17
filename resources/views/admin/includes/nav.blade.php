@@ -1,5 +1,5 @@
 @php
-    $user = Auth::user();
+    $user = Auth::guard('web_admin')->user();
     $currentRoute = Route::currentRouteName();
 @endphp
 <nav class="navbar sticky-top navbar-expand-lg bg-body-tertiary">
