@@ -9,15 +9,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('role_permissions', function (Blueprint $table) {
-            $table->id();
-            $table->string('role', 30);
-            $table->string('permission', 60);
-            $table->boolean('allowed')->default(true);
-            $table->timestamps();
+        if (! Schema::hasTable('role_permissions')) {
+            Schema::create('role_permissions', function (Blueprint $table) {
+                $table->id();
+                $table->string('role', 30);
+                $table->string('permission', 60);
+                $table->boolean('allowed')->default(true);
+                $table->timestamps();
 
-            $table->unique(['role', 'permission']);
-        });
+                $table->unique(['role', 'permission']);
+            });
+        }
+
+        if (DB::table('role_permissions')->count() > 0) {
+            return;
+        }
 
         $now = now();
         $portals = config('permissions.portals', []);
