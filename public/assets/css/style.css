@@ -41,6 +41,99 @@ body {
     background-color: var(--bs-body-bg) !important;
     border: var(--bs-border-width) solid var(--bs-border-color) !important;
     border-radius: var(--bs-border-radius) !important;
+    min-height: 38px;
+    padding: 4px 8px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__rendered {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    float: none;
+    display: inline-block;
+    margin: 2px 4px 2px 0;
+}
+
+.select2-container--default .select2-selection--multiple .select2-search--inline {
+    float: none;
+    display: inline-block;
+    min-width: 120px;
+}
+
+.driver-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    min-height: 48px;
+    background-color: var(--bs-body-bg);
+    border: var(--bs-border-width) solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+}
+
+.driver-picker.is-invalid {
+    border-color: var(--bs-danger);
+}
+
+.driver-picker__chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid #ced4da;
+    border-radius: 999px;
+    background: #f8f9fa;
+    color: #495057;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.driver-picker__chip:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.1rem rgba(13, 110, 253, 0.15);
+}
+
+.driver-picker__chip.is-selected {
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+}
+
+.driver-picker__chip.is-default {
+    padding-right: 0.65rem;
+}
+
+.driver-picker__input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+.driver-picker__default-badge {
+    display: none;
+    margin-left: 0.35rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.driver-picker__chip.is-default .driver-picker__default-badge {
+    display: inline-block;
 }
 
 .app-logo {
