@@ -28,6 +28,15 @@ Route::namespace('Driver')->middleware(['web'])->prefix('driver')->group(
                     return redirect(route('driver.orders.index'));
                 });
 
+                // Vehicle selection (driver chooses which lorry they are operating)
+                Route::get('/vehicle', 'VehicleController@edit')->name('vehicle.edit');
+                Route::post('/vehicle', 'VehicleController@update')->middleware('driver.lorry_available')->name('vehicle.update');
+
+                // Assigned customers (invoice payment status & due dates)
+                Route::get('/customers', 'CustomerController@index')->name('customers.index');
+                Route::get('/customers/{id}', 'CustomerController@show')->name('customers.show');
+                Route::post('/customers/{customer}/invoices/{order}/payment', 'CustomerController@recordPayment')->name('customers.record-payment');
+
                 // Assigned delivery orders
                 Route::get('/orders', 'DeliveryOrderController@index')->name('orders.index');
                 Route::get('/orders/{id}', 'DeliveryOrderController@show')->name('orders.show');

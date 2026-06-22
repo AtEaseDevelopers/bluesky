@@ -111,6 +111,16 @@ return [
                     'description' => 'View assigned delivery order list.',
                     'default' => true,
                 ],
+                'vehicle' => [
+                    'label' => 'Vehicle Selection',
+                    'description' => 'Choose which registered lorry the driver is operating.',
+                    'default' => true,
+                ],
+                'assigned_customers' => [
+                    'label' => 'Assigned Customers',
+                    'description' => 'View assigned customer list with invoice payment status and due dates.',
+                    'default' => true,
+                ],
                 'order_detail' => [
                     'label' => 'Order Detail',
                     'description' => 'Open assigned order detail pages.',
@@ -175,6 +185,11 @@ return [
     ],
 
     'driver_routes' => [
+        'driver.vehicle.edit' => 'vehicle',
+        'driver.vehicle.update' => 'vehicle',
+        'driver.customers.index' => 'assigned_customers',
+        'driver.customers.show' => 'assigned_customers',
+        'driver.customers.record-payment' => 'record_payment',
         'driver.orders.index' => 'delivery_orders',
         'driver.orders.show' => 'order_detail',
         'driver.orders.update-status' => 'update_status',

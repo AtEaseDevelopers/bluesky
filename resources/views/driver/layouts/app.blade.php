@@ -83,6 +83,8 @@
         .pill-unpaid  { background: #fbe5e9; color: var(--danger); }
         .pill-partial { background: #fff1e6; color: var(--warn); }
         .pill-paid    { background: #e3f3ec; color: var(--ok); }
+        .pill-due     { background: #e7eef6; color: var(--deep); }
+        .text-danger-ink { color: var(--danger) !important; }
 
         /* Buttons */
         .btn { font-weight: 600; border-radius: .7rem; }
@@ -103,6 +105,7 @@
         .form-label { font-weight: 600; }
         .nav-pills .nav-link { color: var(--muted); font-weight: 600; border-radius: 999px; }
         .nav-pills .nav-link.active { background: var(--deep); }
+        .driver-navbar .nav-link.active-tab { opacity: 1; box-shadow: inset 0 -2px 0 0 #fff; }
     </style>
     @yield('css')
 </head>
@@ -110,11 +113,36 @@
 <body>
     @auth('web_driver')
         <nav class="navbar navbar-expand driver-navbar sticky-top">
-            <div class="container driver-container">
+            <div class="container-fluid px-3 px-md-4">
                 <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('driver.orders.index') }}">
-                    <i class="fa fa-truck"></i> Bluesky Driver
+                    <i class="fa fa-anchor"></i> <span class="d-none d-sm-inline">Bluesky Driver</span>
                 </a>
+                <ul class="navbar-nav flex-row align-items-center gap-1 me-auto ms-2">
+                    @if ($driverPermissions['delivery_orders'] ?? false)
+                        <li class="nav-item">
+                            <a class="nav-link px-2 {{ request()->routeIs('driver.orders.*') ? 'active-tab' : '' }}" href="{{ route('driver.orders.index') }}">
+                                <i class="fa fa-cubes"></i> <span class="d-none d-sm-inline">Deliveries</span>
+                            </a>
+                        </li>
+                    @endif
+                    @if ($driverPermissions['assigned_customers'] ?? false)
+                        <li class="nav-item">
+                            <a class="nav-link px-2 {{ request()->routeIs('driver.customers.*') ? 'active-tab' : '' }}" href="{{ route('driver.customers.index') }}">
+                                <i class="fa fa-users"></i> <span class="d-none d-sm-inline">Customers</span>
+                            </a>
+                        </li>
+                    @endif
+                </ul>
                 <ul class="navbar-nav ms-auto align-items-center">
+                    @if ($driverPermissions['vehicle'] ?? false)
+                        <li class="nav-item">
+                            <a class="nav-link px-2 d-flex align-items-center gap-1 {{ request()->routeIs('driver.vehicle.*') ? 'active-tab' : '' }}"
+                               href="{{ route('driver.vehicle.edit') }}" data-bs-toggle="tooltip" title="{{ __('Change vehicle') }}">
+                                <i class="fa fa-truck"></i>
+                                <span>{{ Auth::guard('web_driver')->user()->lorry_number ?: __('Vehicle') }}</span>
+                            </a>
+                        </li>
+                    @endif
                     @include('partials.language-switcher')
                     <li class="nav-item me-2 d-none d-sm-block">
                         <span class="nav-link">{{ Auth::guard('web_driver')->user()->name ?? Auth::guard('web_driver')->user()->username }}</span>

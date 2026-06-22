@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Driver;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Driver\Concerns\RecordsDriverPayments;
 use App\Order;
 use App\OrderPayment;
-use App\Services\OrderService;
 use App\Services\OrderStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Storage;
 
 class DeliveryOrderController extends Controller
 {
+    use RecordsDriverPayments;
+
     /** Statuses a driver may set (canonical order workflow values). */
     public static $driver_statuses = [
         'in_route' => 'In Route',
@@ -25,29 +27,6 @@ class DeliveryOrderController extends Controller
         'delivering' => 'in_route',
         'completed' => 'delivered',
     ];
-
-    /** Map driver-portal form values to canonical payment method keys. */
-    public static $payment_method_map = [
-        'cash' => 'cash',
-        'qr' => 'qr',
-        'transfer' => 'bank-transfer',
-        'credit' => 'credit-term',
-    ];
-
-    /**
-     * Payment methods a driver may record.
-     */
-    public static $payment_methods = [
-        'cash' => 'Cash',
-        'qr' => 'QR',
-        'transfer' => 'Bank Transfer',
-        'credit' => 'Credit Term',
-    ];
-
-    /**
-     * Methods that require a payment proof upload.
-     */
-    public static $proof_required_methods = ['qr', 'transfer'];
 
     /**
      * Assigned delivery order list for the logged-in driver.
@@ -94,8 +73,8 @@ class DeliveryOrderController extends Controller
         return view('driver.orders.show', [
             'order' => $order,
             'driverStatuses' => self::$driver_statuses,
-            'paymentMethods' => self::$payment_methods,
-            'proofRequiredMethods' => self::$proof_required_methods,
+            'paymentMethods' => self::$driverPaymentMethods,
+            'proofRequiredMethods' => self::$driverProofRequiredMethods,
         ]);
     }
 
@@ -128,45 +107,7 @@ class DeliveryOrderController extends Controller
      */
     public function recordPayment(Request $request, $id)
     {
-        $order = $this->findAssignedOrder($id);
-
-        if (!$order->canRecordAdminPayment()) {
-            return back()->with('error', $order->isCodCustomer()
-                ? 'COD payment can only be recorded when the order is in route or delivered.'
-                : 'Payment cannot be recorded for this order in its current status.');
-        }
-
-        $data = $request->validate([
-            'payment_method' => ['required', 'in:' . implode(',', array_keys(self::$payment_methods))],
-            'paid_amount' => ['required', 'numeric', 'min:0.01'],
-            'payment_proof' => [
-                'nullable',
-                'required_if:payment_method,' . implode(',', self::$proof_required_methods),
-                'file',
-                'mimes:jpg,jpeg,png,pdf',
-                'max:4096',
-            ],
-        ], [
-            'payment_proof.required_if' => 'Payment proof is required for QR and bank transfer payments.',
-        ]);
-
-        $method = self::$payment_method_map[$data['payment_method']] ?? $data['payment_method'];
-
-        try {
-            app(OrderService::class)->recordPayment(
-                $order,
-                $method,
-                (float) $data['paid_amount'],
-                $request->file('payment_proof'),
-                null,
-                null,
-                Auth::guard('web_driver')->id()
-            );
-        } catch (\InvalidArgumentException $e) {
-            return back()->withInput()->with('error', $e->getMessage());
-        }
-
-        return back()->with('success', 'Payment recorded successfully.');
+        return $this->recordDriverPayment($request, $this->findAssignedOrder($id));
     }
 
     /**

@@ -62,6 +62,7 @@ class Kernel extends HttpKernel
         'auth_member' => \App\Http\Middleware\AuthenticateMember::class,
         'member.permission' => \App\Http\Middleware\CheckMemberPermission::class,
         'driver.permission' => \App\Http\Middleware\CheckDriverPermission::class,
+        'driver.lorry_available' => \App\Http\Middleware\EnsureLorryNotAssigned::class,
         'driver_bootstrap' => \App\Http\Middleware\DriverBootstrap::class,
         'bootstrap' => \App\Http\Middleware\MemberBootstrap::class,
         'public_bootstrap' => \App\Http\Middleware\PublicBootstrap::class,

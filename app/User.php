@@ -191,4 +191,20 @@ class User extends Authenticatable
 
         return true;
     }
+
+    /**
+     * Orders (invoices) placed by this customer.
+     */
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'user_id', 'id');
+    }
+
+    /**
+     * The delivery driver this customer is permanently assigned to.
+     */
+    public function defaultDriver()
+    {
+        return $this->belongsTo(Driver::class, 'default_driver_id', 'id');
+    }
 }
