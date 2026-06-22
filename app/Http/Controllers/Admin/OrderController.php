@@ -9,13 +9,14 @@ use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use App\Exports\AdminOrderExport;
 use Illuminate\Http\Request;
-use App\OrderProduct;
 use Carbon\Carbon;
 use App\System;
 use App\Helper;
 use ZipArchive;
 use App\Order;
 use App\OrderPayment;
+use App\OrderProduct;
+use App\OrderProductOption;
 use App\Services\OrderService;
 use App\Services\OrderStatusService;
 use App\User;
@@ -101,42 +102,53 @@ class OrderController extends Controller
         $orders = $orders->orderBy('id', 'desc')->with('customer')->paginate(15);
         $minPrice = Order::min('total_price');
         $maxPrice = Order::max('total_price');
+
+        $orderIds = $orders->pluck('id');
+        $orderProductsByOrder = collect();
+        $optionsByOrderProduct = collect();
+
+        if ($orderIds->isNotEmpty()) {
+            $orderProductsByOrder = DB::table('order_products')
+                ->select(
+                    'order_products.*',
+                    'products.sku'
+                )
+                ->leftJoin('products', 'products.id', '=', 'order_products.product_id')
+                ->whereIn('order_products.order_id', $orderIds)
+                ->where('order_products.status', OrderProduct::$status['active'])
+                ->orderBy('order_products.id')
+                ->get()
+                ->groupBy('order_id');
+
+            $orderProductIds = $orderProductsByOrder->flatten(1)->pluck('id');
+
+            if ($orderProductIds->isNotEmpty()) {
+                $optionsByOrderProduct = DB::table('order_product_options')
+                    ->select('order_product_id', 'option', 'option_item')
+                    ->whereIn('order_product_id', $orderProductIds)
+                    ->where('status', OrderProductOption::$status['active'])
+                    ->orderBy('id')
+                    ->get()
+                    ->groupBy('order_product_id');
+            }
+        }
                             
         foreach ($orders as $key => $value) {
             $orders[$key]->invoice_url = url('/') . '/' . Order::$path.'/' . $value->id . '/invoice-' . $value->id . '.pdf';
             $orders[$key]->invoice_download_url = url('download/') . Order::$path . '/' . $value->id . '/invoice-' . $value->id . '.pdf';
             $orders[$key]->delivery_order_url = url('/') . '/' . Order::$path . '/' . $value->id.'/delivery-order-' . $value->id . '.pdf';
-            
-            
-            // $orders[$key]->order_products = DB::table('order_products')
-            //     ->leftJoin('products', 'products.id', '=', 'order_products.product_id')
-            //     ->where('order_id', $value->id)
-            //     ->select(DB::raw("GROUP_CONCAT(CONCAT(products.name, ': ', IFNULL(CONCAT(order_products.weight, 'KG'), '')) SEPARATOR '<br />') as product_info"))
-            //     ->value('product_info');
-            // $orders[$key]->order_qtys = DB::table('order_products')
-            //     ->leftJoin('products', 'products.id', '=', 'order_products.product_id')
-            //     ->where('order_id', $value->id)
-            //     ->select(DB::raw("GROUP_CONCAT(CONCAT('Qty: ', IFNULL(CONCAT(order_products.quantity), '0')) SEPARATOR '<br />') as product_info"))
-            //     ->value('product_info');
-            
-            $order_products = DB::table('order_products')->where('status', 'active')->where('order_id', $value->id)->get();
-            
-            $ord_prod = null;
-            $ord_qty = null;
-            for ($i=0; $i < count($order_products); $i++) {
-                if ($order_products[$i]->quantity != null && $order_products[$i]->product_weight != null) {
-                    $ord_prod .= $order_products[$i]->product_name . ': ' . ($order_products[$i]->quantity * $order_products[$i]->product_weight) . 'KG';
-                } else {
-                    $ord_prod .= $order_products[$i]->product_name . ': ' . $order_products[$i]->weight . 'KG';
-                }
-                $ord_qty .= ('Qty:' . ($order_products[$i]->quantity ?? '-'));
-                if ($i + 1 != count($order_products)) {
-                    $ord_prod .= '<br>';
-                    $ord_qty .= '<br>';
-                }
+
+            $orderProducts = $orderProductsByOrder->get($value->id, collect());
+            $orders[$key]->order_products = OrderProduct::formatAdminListHtml(
+                $orderProducts,
+                $optionsByOrderProduct->all()
+            );
+
+            $qtyLines = [];
+            foreach ($orderProducts as $orderProduct) {
+                $qtyLines[] = __('orders.qty') . ': ' . ($orderProduct->quantity ?? '-');
             }
-            $orders[$key]->order_products = $ord_prod;
-            $orders[$key]->order_qtys = $ord_qty;
+            $orders[$key]->order_qtys = implode('<br>', $qtyLines);
         }
 
         $statuses = collect(Order::$status)->mapWithKeys(function ($value, $key) {

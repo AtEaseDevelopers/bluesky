@@ -53,8 +53,6 @@
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ route('admin.products') }}">{{ __('ui.nav.manage_products') }}</a></li>
                             <li><a class="dropdown-item" href="{{ route('admin.products.create') }}">{{ __('ui.nav.add_product') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.products-import.index') }}">{{ __('ui.nav.import_products') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ url('/admin/product-daily-prices') }}">{{ __('ui.nav.daily_prices') }}</a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">

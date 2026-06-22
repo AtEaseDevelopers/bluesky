@@ -1,5 +1,13 @@
 @extends('layouts.admin')
 @section('title', __('orders.manage'))
+@section('css')
+    <style>
+        #orderTable .order-products-col {
+            min-width: 280px;
+            width: 280px;
+        }
+    </style>
+@endsection
 @section('content')
 
     <div class="row mb-5">
@@ -187,7 +195,7 @@
                                     <th>{{ __('orders.order_id') }}</th>
                                     <th>{{ __('orders.order_at') }}</th>
                                     <th>{{ __('orders.customer') }}</th>
-                                    <th>{{ __('orders.products') }}</th>
+                                    <th class="order-products-col">{{ __('orders.products') }}</th>
                                     <th>{{ __('orders.quantity') }}</th>
                                     <th>{{ __('orders.area') }}</th>
                                     <th>{{ __('orders.billing_address') }}</th>
@@ -260,7 +268,7 @@
                                                 @endif
                                             @endif
                                         </td>
-                                        <td class="white-space-nowrap">{!! $order->order_products !!}</td>
+                                        <td class="order-products-col">{!! $order->order_products !!}</td>
                                         <td class="white-space-nowrap">{!! $order->order_qtys !!}</td>
                                         <td>{{ $order->area }}</td>
                                         <td>{!! $order->billing_address !!}</td>
