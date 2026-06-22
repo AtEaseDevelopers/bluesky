@@ -31,6 +31,11 @@ class Role extends Model
 
     public function portalLabel(): string
     {
-        return config("permissions.portals.{$this->portal}.label", ucfirst($this->portal));
+        $key = "permissions.portals.{$this->portal}.label";
+        $label = __($key);
+
+        return $label !== $key
+            ? $label
+            : config("permissions.portals.{$this->portal}.label", ucfirst($this->portal));
     }
 }

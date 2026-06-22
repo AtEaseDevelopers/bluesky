@@ -2,164 +2,134 @@
 
 namespace App\Exports;
 
+use App\Services\DailySalesReportService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Events\AfterSheet;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
-use DB;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Events\AfterSheet;
 
 class DailySaleReport implements FromCollection, WithHeadings, WithEvents, WithColumnWidths
 {
-    protected $i;
-    protected $orders;
+    protected int $i = 2;
+
+    protected Collection $orders;
+
+    protected array $paymentSummary;
+
+    public function __construct(
+        protected Request $request,
+        protected DailySalesReportService $reportService
+    ) {
+        $this->orders = $this->reportService->salesLines($this->request);
+        $this->paymentSummary = $this->reportService->paymentCollectionSummary($this->request);
+    }
 
     public function registerEvents(): array
     {
         return [
-            AfterSheet::class    => function (AfterSheet $event) {
+            AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet;
 
-                $total_sales_count = 0;
-                $total_quantity_sold = 0;
-                $total_sales = 0;
-                $col_no = 1;
-                $pre_order_id = null;
+                $totalSalesCount = 0;
+                $totalQuantitySold = 0;
+                $totalSales = 0.0;
+                $colNo = 1;
+                $preOrderId = null;
+                $no = $this->i;
 
-                foreach ($this->orders as $key => $order) {
+                foreach ($this->orders as $order) {
                     $no = $this->i;
 
-                    if ($pre_order_id == $order->id) {
+                    if ($preOrderId == $order->id) {
                         $sheet->setCellValue('A' . $no, '');
                         $sheet->setCellValue('B' . $no, '');
                         $sheet->setCellValue('C' . $no, '');
+                        $sheet->setCellValue('D' . $no, '');
                     } else {
-                        $total_sales_count++;
-                        $sheet->setCellValue('A' . $no, $col_no++);
+                        $totalSalesCount++;
+                        $sheet->setCellValue('A' . $no, $colNo++);
                         $sheet->setCellValue('B' . $no, $order->created_at);
                         $sheet->setCellValue('C' . $no, $order->name);
+                        $sheet->setCellValue('D' . $no, __('order.status.' . $order->status));
                     }
 
-                    $sheet->setCellValue('D' . $no, $order->product_name);
-                    $sheet->setCellValue('E' . $no, $order->sku);
-                    $sheet->setCellValue('F' . $no, '');
+                    $sheet->setCellValue('E' . $no, $order->product_name);
+                    $sheet->setCellValue('F' . $no, $order->sku);
                     $sheet->setCellValue('G' . $no, $order->quantity);
                     $sheet->setCellValue('H' . $no, $order->unit_price);
                     $sheet->setCellValue('I' . $no, $order->price);
-                    $sheet->setCellValue('J' . $no, $order->payment_method);
+                    $sheet->setCellValue('J' . $no, $this->reportService->paymentMethodLabel($order->payment_method));
 
-                    if ($pre_order_id == $order->id) {
+                    if ($preOrderId == $order->id) {
                         $sheet->setCellValue('K' . $no, '');
                         $sheet->setCellValue('L' . $no, '');
                         $sheet->setCellValue('M' . $no, '');
                         $sheet->setCellValue('N' . $no, '');
                     } else {
                         $sheet->setCellValue('K' . $no, $order->area);
-                        $sheet->setCellValue('L' . $no, $order->billing_address);
-                        $sheet->setCellValue('M' . $no, $order->shipping_address);
+                        $sheet->setCellValue(
+                            'L' . $no,
+                            trim($order->billing_address . ' ' . $order->billing_city . ' ' . $order->billing_postcode . ' ' . $order->billing_state)
+                        );
+                        $sheet->setCellValue(
+                            'M' . $no,
+                            trim($order->shipping_address . ' ' . $order->shipping_city . ' ' . $order->shipping_postcode . ' ' . $order->shipping_state)
+                        );
                         $sheet->setCellValue('N' . $no, $order->updated_at);
                     }
 
                     $this->i++;
-
-                    $total_quantity_sold += $order->quantity;
-                    $total_sales += $order->price;
-                    $pre_order_id = $order->id;
+                    $totalQuantitySold += $order->quantity;
+                    $totalSales += (float) $order->price;
+                    $preOrderId = $order->id;
                 }
 
-                $no = $no + 3;
+                $no = max($no, 1) + 3;
 
                 $sheet->setCellValue('A' . $no, 'TOTAL SALES COUNT:');
-                $sheet->setCellValue('B' . $no, $total_sales_count);
-
+                $sheet->setCellValue('B' . $no, $totalSalesCount);
                 $sheet->setCellValue('F' . $no, 'TOTAL QUANTITY SOLD:');
-                $sheet->setCellValue('G' . $no, $total_quantity_sold);
-
+                $sheet->setCellValue('G' . $no, $totalQuantitySold);
                 $sheet->setCellValue('H' . $no, 'TOTAL SALES:');
-                $sheet->setCellValue('I' . $no, $total_sales);
+                $sheet->setCellValue('I' . $no, $totalSales);
 
-                // Make row bold
+                $no += 3;
+                $sheet->setCellValue('A' . $no, 'Payment Collection Summary');
+                $event->sheet->getDelegate()->getStyle('A' . $no)->getFont()->setBold(true);
+                $no++;
+
+                $sheet->setCellValue('A' . $no, 'Payment Method');
+                $sheet->setCellValue('B' . $no, 'Payment Count');
+                $sheet->setCellValue('C' . $no, 'Total Collected (RM)');
+                $event->sheet->getDelegate()->getStyle('A' . $no . ':C' . $no)->getFont()->setBold(true);
+                $no++;
+
+                foreach ($this->reportService->summaryCategoryLabels() as $key => $label) {
+                    $sheet->setCellValue('A' . $no, $label);
+                    $sheet->setCellValue('B' . $no, $this->paymentSummary[$key]['count'] ?? 0);
+                    $sheet->setCellValue('C' . $no, number_format($this->paymentSummary[$key]['total'] ?? 0, 2, '.', ''));
+                    $no++;
+                }
+
+                $sheet->setCellValue('A' . $no, $this->paymentSummary['grand_total']['label'] ?? 'Grand Total');
+                $sheet->setCellValue('B' . $no, $this->paymentSummary['grand_total']['count'] ?? 0);
+                $sheet->setCellValue('C' . $no, number_format($this->paymentSummary['grand_total']['total'] ?? 0, 2, '.', ''));
+                $event->sheet->getDelegate()->getStyle('A' . $no . ':C' . $no)->getFont()->setBold(true);
+
                 $event->sheet->getDelegate()->getStyle('A1:N1')->getFont()->setBold(true);
-
-                // Set BG color
-                $event->sheet->getDelegate()->getStyle('A1:N1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('dee0bb');
-
-                // Set Font color
+                $event->sheet->getDelegate()->getStyle('A1:N1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB('dee0bb');
                 $event->sheet->getDelegate()->getStyle('A1:N1')->getFont()->getColor()->setARGB('000000');
-            }
+            },
         ];
     }
 
-    public function collection()
+    public function collection(): Collection
     {
-        $this->i = 2;
-
-        $request = request();
-        $orderId = $request->id;
-        $fdate = $request->fdate;
-        $tdate = $request->tdate;
-        $status = $request->status;
-        $driver = $request->driver;
-        $customer = $request->customer;
-        $area = $request->area;
-
-        // format current date or from and to date
-        $today = now()->toDateString();
-        $startDate = $fdate ?: $today;
-        $endDate = $tdate ?: $today;
-        $startDate = min($startDate, $endDate);
-
-        $this->orders = DB::table('order_products')
-            ->join('orders', 'orders.id', '=', 'order_products.order_id')
-            ->join('users', 'users.id', '=', 'orders.user_id')
-            ->join('products', 'products.id', '=', 'order_products.product_id')
-            ->select(
-                'orders.id',
-                'orders.created_at',
-                'users.name',
-                'order_products.product_name',
-                'products.sku',
-                'order_products.quantity',
-                'order_products.unit_price',
-                'order_products.price',
-                'orders.payment_method',
-                'orders.area',
-                DB::raw(
-                    "CONCAT_WS(' ', orders.billing_address, orders.billing_city, orders.billing_postcode, orders.billing_state) AS billing_address"
-                ),
-                DB::raw(
-                    "CONCAT_WS(' ', orders.shipping_address, orders.shipping_city, orders.shipping_postcode, orders.shipping_state) AS shipping_address"
-                ),
-                'orders.updated_at',
-            )
-            ->whereBetween('orders.created_at', [$startDate, $endDate . " 23:59:59"])
-            ->when(
-                    $orderId, function ($q) use ($orderId) {
-                        return $q->where('orders.id', $orderId);
-                }
-            )
-            ->when(
-                $status, function ($q) use ($status) {
-                    return $q->where('orders.status', $status);
-                }
-            )
-            ->when(
-                $driver, function ($q) use ($driver) {
-                    return $q->where('orders.driver_id', $driver);
-                }
-            )
-            ->when(
-                $customer, function ($q) use ($customer) {
-                    return $q->where('orders.user_id', $customer);
-                }
-            )
-            ->when(
-                $area, function ($q) use ($area) {
-                    return $q->where('orders.area', $area);
-                }
-            )
-            ->get();
-
         return $this->orders;
     }
 
@@ -170,9 +140,9 @@ class DailySaleReport implements FromCollection, WithHeadings, WithEvents, WithC
                 'No',
                 'Order At',
                 'Customer',
+                'Order Status',
                 'Item Name',
                 'Item SKU',
-                'Item Category',
                 'Item Quantity',
                 'Item Unit Price',
                 'Item Total Price',
@@ -181,7 +151,7 @@ class DailySaleReport implements FromCollection, WithHeadings, WithEvents, WithC
                 'Billing Address',
                 'Shipping Address',
                 'Last Updated At',
-            ]
+            ],
         ];
     }
 
@@ -190,17 +160,17 @@ class DailySaleReport implements FromCollection, WithHeadings, WithEvents, WithC
         return [
             'A' => 5,
             'B' => 20,
-            'C' => 15,
-            'D' => 25,
-            'E' => 15,
+            'C' => 20,
+            'D' => 15,
+            'E' => 25,
             'F' => 15,
             'G' => 15,
             'H' => 15,
             'I' => 15,
             'J' => 15,
             'K' => 15,
-            'L' => 15,
-            'M' => 20,
+            'L' => 25,
+            'M' => 25,
             'N' => 20,
         ];
     }

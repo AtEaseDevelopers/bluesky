@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'All Admin')
+@section('title', __('admins.manage'))
 @section('css')
 
     <link href="{{ asset(path: 'assets/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" type="text/css">
@@ -11,9 +11,9 @@
             <div class="card shadow no-border">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-                        <h5 class="card-title">Admin Users</h5>
+                        <h5 class="card-title">{{ __('admins.manage') }}</h5>
                         <a href="{{ route('admin.admins.create') }}" class="btn btn-primary">
-                            Add New Admin
+                            {{ __('admins.add') }}
                         </a>
                     </div>
                     <hr>
@@ -21,14 +21,14 @@
                         <table id="admin-table" class="table table-bordered w-100">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Options</th>
-                                    <th>Name</th>
-                                    <th>Username</th>
-                                    <th>Email</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Created At</th>
+                                    <th>{{ __('admins.id') }}</th>
+                                    <th>{{ __('admins.options') }}</th>
+                                    <th>{{ __('admins.name') }}</th>
+                                    <th>{{ __('admins.username') }}</th>
+                                    <th>{{ __('admins.email') }}</th>
+                                    <th>{{ __('admins.role') }}</th>
+                                    <th>{{ __('admins.status') }}</th>
+                                    <th>{{ __('admins.created_at') }}</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -42,22 +42,22 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Delete Admin</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">{{ __('admins.delete_admin') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure to delete this admin?</p>
+                    <p>{{ __('admins.delete_confirm') }}</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                        aria-label="Close">Close</button>
+                        aria-label="{{ __('ui.close') }}">{{ __('ui.close') }}</button>
                     <form action="" method="POST" id="delete-form" class="form-wrapper">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-primary">
-                            Delete
+                            {{ __('ui.delete') }}
                             <div class="spinner-border spinner-border-sm d-none" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                                <span class="visually-hidden">{{ __('inventory.loading') }}</span>
                             </div>
                         </button>
                     </form>
@@ -71,13 +71,18 @@
     <script src="{{ asset('assets/datatables/js/jquery.dataTables.min.js') }}"></script>
     <script src="{{ asset('assets/datatables/js/dataTables.bootstrap4.min.js') }}"></script>
     <script>
+        const adminStatusMessages = {
+            active: @json(__('admins.status_changed_active')),
+            inactive: @json(__('admins.status_changed_inactive')),
+        };
+
         $(document).on('change', '.toggle-status', function() {
             const isChecked = $(this).is(':checked');
             const adminId = $(this).data('id');
             const newStatus = isChecked ? 'active' : 'inactive';
 
             $.ajax({
-                "url": appUrl + '/admin/update-admin-status',
+                url: appUrl + '/admin/update-admin-status',
                 method: 'POST',
                 data: {
                     _token: csrfToken,
@@ -86,11 +91,11 @@
                 },
                 success: function(res) {
                     if (res.success) {
-                        showToast(`Status changed to ${newStatus}`, 'success');
+                        showToast(adminStatusMessages[newStatus], 'success');
                     }
                 },
                 error: function() {
-                    showToast('Error updating status', 'danger');
+                    showToast(@json(__('admins.status_update_error')), 'danger');
                 }
             });
         });
@@ -117,24 +122,25 @@
         }
 
         $('#admin-table').DataTable({
-            "processing": true,
-            "serverSide": true,
-            "responsive": true,
+            processing: true,
+            serverSide: true,
+            responsive: true,
+            language: @json(__('drivers.datatable')),
             order: [
                 [0, "asc"]
             ],
             columnDefs: [{
-                'visible': false,
-                'targets': [0]
+                visible: false,
+                targets: [0]
             }],
-            "ajax": {
-                "url": appUrl + '/admin/fetch-admins',
-                "dataType": "json",
-                "type": "POST",
-                "data": {
+            ajax: {
+                url: appUrl + '/admin/fetch-admins',
+                dataType: "json",
+                type: "POST",
+                data: {
                     _token: csrfToken,
                 },
-                "error": function(xhr, error, thrown) {
+                error: function(xhr, error, thrown) {
                     try {
                         var errorMessage = JSON.parse(xhr.responseText).message;
                         console.log("Error:", errorMessage);
@@ -143,36 +149,36 @@
                     }
                 }
             },
-            "columns": [{
-                    "data": "id",
+            columns: [{
+                    data: "id",
                     orderable: false
                 },
                 {
-                    "data": "options",
+                    data: "options",
                     orderable: false
                 },
                 {
-                    "data": "admin_name",
+                    data: "admin_name",
                     orderable: true
                 },
                 {
-                    "data": "admin_username",
+                    data: "admin_username",
                     orderable: true
                 },
                 {
-                    "data": "admin_email",
+                    data: "admin_email",
                     orderable: true
                 },
                 {
-                    "data": "admin_role",
+                    data: "admin_role",
                     orderable: true
                 },
                 {
-                    "data": "admin_status",
+                    data: "admin_status",
                     orderable: false
                 },
                 {
-                    "data": "created_at",
+                    data: "created_at",
                     orderable: true
                 },
             ]

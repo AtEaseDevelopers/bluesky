@@ -79,6 +79,35 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                     }
                 );
 
+                // product
+                Route::get('/products', 'ProductController@index')->name('products');
+                Route::get('/products/export', 'ProductController@export');
+                Route::get('/products-import', 'ProductController@import')->name('products-import.index');
+                Route::post('/products-import', 'ProductController@import_store')->name('products-import.store');
+
+                Route::get('/product/add', 'AddProductController@showForm')->name('products.create');
+                Route::post('/product/add', 'AddProductController@addProduct')->name('products.store');
+
+                Route::get('/product/edit/{product}', 'EditProductController@showForm')->name('products.edit');
+                Route::post('/product/edit/{product}', 'EditProductController@editProduct')->name('products.update');
+                Route::get('/product/remove/{product}', 'EditProductController@removeProduct');
+
+                // Product Daily Price
+                Route::get('/product-daily-prices', 'ProductDailyPriceController@index');
+                Route::get('/product-daily-price/add', 'AddProductDailyPriceController@showForm');
+                Route::get('/product-daily-price/add/{product_daily_price_id}', 'AddProductDailyPriceController@showForm');
+                Route::get('/product-daily-price/add/{date}/{duplicate_to_date}', 'AddProductDailyPriceController@showForm');
+                Route::post('/product-daily-price/add/{date}', 'AddProductDailyPriceController@addProductDailyPriceBatch');
+                Route::post('/product-daily-price/add', 'AddProductDailyPriceController@addProductDailyPrice');
+                Route::get('/product-daily-price/remove/{product_daily_price}', 'RemoveProductDailyPriceController@removeProductDailyPrice');
+
+                Route::resource('product-categories', ProductCategoriesController::class);
+                Route::controller(ProductCategoriesController::class)->group(
+                    function () {
+                        Route::post('/fetch-product-categories', 'fetch_categories');
+                    }
+                );
+
                 Route::resource('admins', AdminController::class);
                     Route::controller(AdminController::class)->group(
                         function () {
@@ -90,6 +119,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 // customer
                 Route::get('/customers', 'CustomerController@index')->name('customers');
                 Route::get('/customers/export', 'CustomerController@export')->name('customers.export');
+                Route::post('/customers/sync-autocount', 'CustomerController@syncAutoCount')->name('customers.sync-autocount');
                 Route::get('/customer/add', 'AddCustomerController@showForm')->name('customers.create');
                 Route::post('/customer/add', 'AddCustomerController@addCustomer')->name('customers.store');
                 Route::get('/customer/invite', 'CustomerInviteController@create')->name('customers.invite');
@@ -103,6 +133,13 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::post('/delete-customer-visibility-product', 'CustomerController@deleteCustomerProduct');
                 Route::post('/get-products-for-category', 'AddCustomerController@getProductsForCategory');
                 Route::post('/customer/{customer}/credit-adjust', 'CustomerCreditController@adjust')->name('customers.credit.adjust');
+
+                Route::resource('customer-categories', CustomerCategoryController::class);
+                Route::controller(CustomerCategoryController::class)->group(
+                    function () {
+                        Route::post('/fetch-customer-categories', 'fetch_categories');
+                    }
+                );
 
                 Route::resource('lorry', 'LorryController');
                 Route::post('/get-lorry', 'LorryController@get_lorry');
@@ -118,6 +155,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                     Route::post('/order/{orderId}/payments/{paymentId}/reject', 'reject')->name('orders.payments.reject');
                     Route::get('/orders/{order}/payment-proof/{filename}', 'viewProof')->name('orders.payment-proof');
                     Route::post('/order/{id}/sync-autocount', 'syncAutoCount')->name('orders.sync-autocount');
+                    Route::post('/orders/sync-autocount', 'syncAutoCountBulk')->name('orders.sync-autocount-bulk');
                 });
 
                 Route::resource('delivery-slots', 'DeliverySlotController');

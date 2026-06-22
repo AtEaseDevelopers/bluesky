@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\AutoCountSyncLog;
 use App\Order;
+use App\User;
 
 class AutoCountSyncService
 {
@@ -62,5 +63,81 @@ class AutoCountSyncService
         ]);
 
         return $log;
+    }
+
+    /**
+     * @param  array<int|string>  $orderIds
+     * @return array{synced: int, skipped: int, errors: array<int, string>}
+     */
+    public function syncOrders(array $orderIds, ?int $adminId = null): array
+    {
+        $synced = 0;
+        $skipped = 0;
+        $errors = [];
+
+        foreach (array_unique($orderIds) as $orderId) {
+            try {
+                $order = Order::findOrFail($orderId);
+                $log = $this->syncIfEligible($order, $adminId);
+
+                if (in_array($log->sync_status, ['pending_sync', 'synced', 'synced_successfully'], true)) {
+                    $synced++;
+                } else {
+                    $skipped++;
+                    if ($log->response_message) {
+                        $errors[] = __('orders.js.sync_autocount_order_skipped', [
+                            'order' => $order->id,
+                            'reason' => $log->response_message,
+                        ]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                $skipped++;
+                $errors[] = $e->getMessage();
+            }
+        }
+
+        return compact('synced', 'skipped', 'errors');
+    }
+
+    /**
+     * Integration endpoint to be wired when AutoCount credentials are available.
+     */
+    public function syncCustomer(User $user, ?int $adminId = null): User
+    {
+        if (!$user->hasCompletedRegistration()) {
+            throw new \InvalidArgumentException('Customer must complete registration before AutoCount sync.');
+        }
+
+        $user->update([
+            'autocount_sync_status' => 'pending_sync',
+            'autocount_synced_at' => null,
+        ]);
+
+        return $user->fresh();
+    }
+
+    /**
+     * @param  array<int|string>  $customerIds
+     * @return array{synced: int, skipped: int, errors: array<int, string>}
+     */
+    public function syncCustomers(array $customerIds, ?int $adminId = null): array
+    {
+        $synced = 0;
+        $skipped = 0;
+        $errors = [];
+
+        foreach (array_unique($customerIds) as $customerId) {
+            try {
+                $user = User::findOrFail($customerId);
+                $this->syncCustomer($user, $adminId);
+                $synced++;
+            } catch (\Throwable $e) {
+                $skipped++;
+                $errors[] = $e->getMessage();
+            }
+        }
+
+        return compact('synced', 'skipped', 'errors');
     }
 }

@@ -2,10 +2,10 @@
     <table class="table table-bordered align-middle">
         <thead>
             <tr>
-                <th>Role</th>
-                <th>Description</th>
-                <th>Type</th>
-                <th style="width: 140px;">Actions</th>
+                <th>{{ __('roles.role') }}</th>
+                <th>{{ __('roles.description') }}</th>
+                <th>{{ __('roles.type') }}</th>
+                <th style="width: 140px;">{{ __('roles.actions') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -18,20 +18,20 @@
                     <td>{{ $role->description ?: '—' }}</td>
                     <td>
                         @if ($role->is_superadmin)
-                            <span class="badge bg-dark">Superadmin</span>
+                            <span class="badge bg-dark">{{ __('roles.type_labels.superadmin') }}</span>
                         @elseif ($role->is_system)
-                            <span class="badge bg-secondary">System</span>
+                            <span class="badge bg-secondary">{{ __('roles.type_labels.system') }}</span>
                         @else
-                            <span class="badge bg-primary">Custom</span>
+                            <span class="badge bg-primary">{{ __('roles.type_labels.custom') }}</span>
                         @endif
                     </td>
                     <td>
-                        <a href="{{ route('admin.roles.edit', $role->slug) }}" class="btn btn-sm btn-primary">
+                        <a href="{{ route('admin.roles.edit', $role->slug) }}" class="btn btn-sm btn-primary" title="{{ __('ui.edit') }}">
                             <i class="fa fa-edit"></i>
                         </a>
                         @if (!$role->is_system)
                             <button type="button" class="btn btn-sm btn-danger btn-delete-role"
-                                data-action="{{ route('admin.roles.destroy', $role->slug) }}">
+                                data-action="{{ route('admin.roles.destroy', $role->slug) }}" title="{{ __('ui.delete') }}">
                                 <i class="fa fa-trash"></i>
                             </button>
                         @endif
@@ -39,7 +39,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" class="text-muted">No roles yet.</td>
+                    <td colspan="4" class="text-muted">{{ __('roles.no_roles') }}</td>
                 </tr>
             @endforelse
         </tbody>

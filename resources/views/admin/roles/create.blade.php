@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'Add Role')
+@section('title', __('roles.add'))
 @section('content')
 
     @include('admin.roles.partials.form', [

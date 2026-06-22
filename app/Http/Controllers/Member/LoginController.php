@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Member;
 
 use App\Http\Controllers\Controller;
+use App\Services\LocaleService;
 use App\User;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class LoginController extends Controller
         return view('login');
     }
 
-    public function login(Request $request)
+    public function login(Request $request, LocaleService $localeService)
     {
         $data = $this->validateLogin($request);
         if (isset($data['error']) && $data['error']) {
@@ -41,6 +42,9 @@ class LoginController extends Controller
                 Auth::guard('web')->logout();
                 return back()->with('error', 'Your account is not active. Please contact us for assistance.')->withInput();
             }
+
+            $localeService->syncSessionFromUser($user);
+
             return redirect(route('member.products'));
         } else {
             // Authentication failed

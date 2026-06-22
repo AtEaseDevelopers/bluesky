@@ -314,4 +314,37 @@ class Order extends Model
             'invoice_price_permission' => true,
         ];
     }
+
+    public function autocountSyncStatusKey(): string
+    {
+        return $this->autocount_sync_status ?: 'pending';
+    }
+
+    public function paymentDueStatusKey(): string
+    {
+        if ($this->status === self::$status['cancelled'] || $this->isCodCustomer()) {
+            return 'not_applicable';
+        }
+
+        if ($this->isFullyPaid()) {
+            return 'paid';
+        }
+
+        if (!$this->payment_due_date) {
+            return 'not_set';
+        }
+
+        $dueDate = $this->payment_due_date->toDateString();
+        $today = now()->toDateString();
+
+        if ($dueDate > $today) {
+            return 'not_due';
+        }
+
+        if ($dueDate === $today) {
+            return 'due_today';
+        }
+
+        return 'overdue';
+    }
 }

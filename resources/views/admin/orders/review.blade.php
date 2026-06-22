@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'Review Order #' . $order->id)
+@section('title', $order->status === Order::$status['pending'] ? __('orders.review_title_pending', ['id' => $order->id]) : __('orders.review_title_adjust', ['id' => $order->id]))
 @section('content')
 
     <div class="row mb-4">
@@ -8,11 +8,11 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h5 class="card-title mb-0">
-                            {{ $order->status === Order::$status['pending'] ? 'Review Pending Order' : 'Adjust Order' }} #{{ $order->id }}
+                            {{ $order->status === Order::$status['pending'] ? __('orders.review_title_pending', ['id' => $order->id]) : __('orders.review_title_adjust', ['id' => $order->id]) }}
                         </h5>
-                        <a href="{{ route('admin.orders.summary', $order->id) }}" class="btn btn-secondary">Back</a>
+                        <a href="{{ route('admin.orders.summary', $order->id) }}" class="btn btn-secondary">{{ __('ui.back') }}</a>
                     </div>
-                    <p><strong>Customer:</strong> {{ $customerName }}</p>
+                    <p><strong>{{ __('orders.customer_label') }}</strong> {{ $customerName }}</p>
                     <hr>
 
                     <form action="{{ route('admin.orders.review.store', $order->id) }}" method="POST" class="form-wrapper" id="review-form">
@@ -21,12 +21,12 @@
                             <table class="table table-bordered" id="review-items-table">
                                 <thead>
                                     <tr>
-                                        <th>Product</th>
-                                        <th>Unit Price (RM)</th>
-                                        <th>Est. Qty</th>
-                                        <th>Actual Qty</th>
-                                        <th>Actual Weight (kg)</th>
-                                        <th class="text-end">Line Total (RM)</th>
+                                        <th>{{ __('orders.product') }}</th>
+                                        <th>{{ __('orders.unit_price') }}</th>
+                                        <th>{{ __('orders.est_qty') }}</th>
+                                        <th>{{ __('orders.actual_qty') }}</th>
+                                        <th>{{ __('orders.actual_weight') }}</th>
+                                        <th class="text-end">{{ __('orders.line_total') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -49,12 +49,12 @@
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <td colspan="5" class="text-end"><strong>Subtotal</strong></td>
+                                        <td colspan="5" class="text-end"><strong>{{ __('orders.subtotal') }}</strong></td>
                                         <td class="text-end"><strong id="review-subtotal">0.00</strong></td>
                                     </tr>
                                     <tr>
                                         <td colspan="5" class="text-end">
-                                            <label for="delivery_fee" class="mb-0"><strong>Delivery Fee (RM)</strong> <span class="text-danger">*</span></label>
+                                            <label for="delivery_fee" class="mb-0"><strong>{{ __('orders.delivery_fee_rm') }}</strong> <span class="text-danger">*</span></label>
                                         </td>
                                         <td>
                                             <input type="number" step="0.01" min="0" name="delivery_fee" id="delivery_fee" class="form-control text-end"
@@ -62,7 +62,7 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td colspan="5" class="text-end"><strong>Amount Adjustment (RM)</strong></td>
+                                        <td colspan="5" class="text-end"><strong>{{ __('orders.amount_adjustment') }}</strong></td>
                                         <td>
                                             @if ($canAdjustAmount)
                                                 <input type="number" step="0.01" name="amount_adjustment" id="amount_adjustment" class="form-control text-end"
@@ -75,30 +75,30 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td colspan="5" class="text-end"><strong>Grand Total (RM)</strong></td>
+                                        <td colspan="5" class="text-end"><strong>{{ __('orders.grand_total_rm') }}</strong></td>
                                         <td class="text-end"><strong id="review-grand-total">0.00</strong></td>
                                     </tr>
                                 </tfoot>
                             </table>
-                            <small class="text-muted">Enter 0 for delivery fee if none applies. Set delivery fee here together with quantity adjustments.</small>
+                            <small class="text-muted">{{ __('orders.delivery_fee_hint') }}</small>
                         </div>
 
                         <div class="row">
                             @if ($isCreditCustomer)
                                 <div class="col-md-4">
                                     <div class="mb-4">
-                                        <label class="mb-2">Payment Due Date</label>
+                                        <label class="mb-2">{{ __('orders.payment_due_date') }}</label>
                                         <input type="date" name="payment_due_date" class="form-control"
                                             value="{{ old('payment_due_date', optional($order->payment_due_date)->format('Y-m-d')) }}">
-                                        <small class="text-muted">Credit customer only. Defaults to 30 days from today if left blank when sending to customer.</small>
+                                        <small class="text-muted">{{ __('orders.payment_due_date_credit_default') }}</small>
                                     </div>
                                 </div>
                             @endif
                             <div class="col-md-4">
                                 <div class="mb-4">
-                                    <label class="mb-2">Assign Driver</label>
+                                    <label class="mb-2">{{ __('orders.assign_driver') }}</label>
                                     <select name="driver_id" class="form-select">
-                                        <option value="">None</option>
+                                        <option value="">{{ __('orders.none') }}</option>
                                         @foreach ($drivers as $id => $lorry)
                                             <option value="{{ $id }}" {{ $order->driver_id == $id ? 'selected' : '' }}>{{ $lorry }}</option>
                                         @endforeach
@@ -107,18 +107,18 @@
                             </div>
                             <div class="col-md-8">
                                 <div class="mb-4">
-                                    <label class="mb-2">Adjustment Remark</label>
+                                    <label class="mb-2">{{ __('orders.adjustment_remark') }}</label>
                                     <input type="text" name="adjustment_remark" class="form-control" value="{{ old('adjustment_remark', $order->adjustment_remark) }}">
                                 </div>
                             </div>
                         </div>
 
                         <div class="d-flex justify-content-end gap-2">
-                            <button type="submit" name="send_to_customer" value="0" class="btn btn-secondary">Save Adjustments</button>
+                            <button type="submit" name="send_to_customer" value="0" class="btn btn-secondary">{{ __('orders.save_adjustments') }}</button>
                             @if ($order->status === Order::$status['pending'])
-                                <button type="submit" name="send_to_customer" value="1" class="btn btn-primary">Send to Customer Reviewing</button>
+                                <button type="submit" name="send_to_customer" value="1" class="btn btn-primary">{{ __('orders.send_to_customer_review') }}</button>
                             @else
-                                <button type="submit" name="send_to_customer" value="1" class="btn btn-primary">Save & Update Customer Invoice</button>
+                                <button type="submit" name="send_to_customer" value="1" class="btn btn-primary">{{ __('orders.save_update_customer_invoice') }}</button>
                             @endif
                         </div>
                     </form>

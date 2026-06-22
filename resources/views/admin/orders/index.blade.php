@@ -1,29 +1,29 @@
 @extends('layouts.admin')
-@section('title', 'Manage Orders')
+@section('title', __('orders.manage'))
 @section('content')
 
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="card shadow no-border mb-0">
                 <div class="card-body">
-                    <h5 class="mb-4">Filter Orders</h5>
+                    <h5 class="mb-4">{{ __('orders.filter') }}</h5>
                     <form method="GET" class="form-wrapper">
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="filterId">ID</label>
-                                    <input type="text" class="form-control" name="id" id="filterId" value="{{ $input['id'] ?? '' }}" placeholder="Search ID">
+                                    <label class="mb-2" for="filterId">{{ __('orders.id') }}</label>
+                                    <input type="text" class="form-control" name="id" id="filterId" value="{{ $input['id'] ?? '' }}" placeholder="{{ __('orders.search_id') }}">
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="filterFromDate">Order Date From</label>
+                                    <label class="mb-2" for="filterFromDate">{{ __('orders.order_date_from') }}</label>
                                     <input type="date" class="form-control" name="fdate" id="filterFromDate" value="{{ $input['fdate'] ?? '' }}">
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="filterToDate">Order Date To</label>
+                                    <label class="mb-2" for="filterToDate">{{ __('orders.order_date_to') }}</label>
                                     <input type="date" class="form-control" name="tdate" id="filterToDate" value="{{ $input['tdate'] ?? '' }}">
                                 </div>
                             </div>
@@ -31,9 +31,9 @@
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="customerCategory">Customer</label>
+                                    <label class="mb-2" for="customerCategory">{{ __('orders.customer') }}</label>
                                     <select class="form-select" name="customer" id="filterCustomer">
-                                        <option value="">All</option>
+                                        <option value="">{{ __('ui.all') }}</option>
                                         @foreach($customers_list as $cust)
                                             <option value="{{ $cust->id }}" {{ ($input['customer'] ?? '') == $cust->id? " selected" : "" }}>
                                                 {{ $cust->name }}
@@ -44,9 +44,9 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="area">Select Area</label>
+                                    <label class="mb-2" for="area">{{ __('orders.select_area') }}</label>
                                     <select class="form-select @error('area') is-invalid @enderror"  id="area" name="area">
-                                        <option value="">Choose...</option>
+                                        <option value="">{{ __('orders.choose') }}</option>
                                         @foreach ($areaList as $area)
                                             <option value="{{ $area }}" {{ ($input['area'] ?? '') == $area ? 'selected' : '' }}>
                                                 {{ $area }}
@@ -55,19 +55,11 @@
                                     </select>
                                 </div>
                             </div>
-                            <!--
-                            <div class="form-group col-md-4">
-                                <label class="mb-2" for="filterPrice">Price Range</label>
-                                <div id="priceRangeSlider"></div>
-                                <span id="priceRangeValue">{{ $input['min_price'] }} - {{ $input['max_price'] }}</span>
-                                <input type="hidden" name="price_range" id="priceRangeInput">
-                            </div>
-                            -->
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="filterStatus">Status</label>
+                                    <label class="mb-2" for="filterStatus">{{ __('orders.status') }}</label>
                                     <select class="form-select" name="status" id="filterStatus">
-                                        <option value="">All</option>
+                                        <option value="">{{ __('ui.all') }}</option>
                                         @foreach($status_options as $status)
                                         <option value="{{ $status }}"{{ ($input['status'] ?? '') == $status? " selected" : "" }}>{{ trans('order.status.'.$status) }}</option>
                                         @endforeach
@@ -76,9 +68,9 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="filterPaymentStatus">Payment Status</label>
+                                    <label class="mb-2" for="filterPaymentStatus">{{ __('orders.payment_status') }}</label>
                                     <select class="form-select" name="payment_status" id="filterPaymentStatus">
-                                        <option value="">All</option>
+                                        <option value="">{{ __('ui.all') }}</option>
                                         @foreach($payment_status_options as $paymentStatus)
                                             <option value="{{ $paymentStatus }}" {{ ($input['payment_status'] ?? '') == $paymentStatus ? 'selected' : '' }}>
                                                 {{ __('order.payment_status.' . $paymentStatus) }}
@@ -91,9 +83,9 @@
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="lorry">Select Lorry</label>
+                                    <label class="mb-2" for="lorry">{{ __('orders.select_lorry') }}</label>
                                     <select class="form-select" id="lorry" name="lorry">
-                                        <option value="">Choose...</option>
+                                        <option value="">{{ __('orders.choose') }}</option>
                                         @foreach ($drivers as $id => $lorry)
                                             <option value="{{ $id }}" {{ ($input['lorry'] ?? '') == $id ? 'selected' : '' }}>
                                                 {{ $lorry }}
@@ -104,12 +96,10 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="orderby">Order By</label>
+                                    <label class="mb-2" for="orderby">{{ __('orders.order_by') }}</label>
                                     <select class="form-select" name="orderby" id="orderby">
-                                        <option value="desc" {{ ($input['orderby'] ?? '') === 'desc'? " selected" : "" }}>Latest First</option>
-                                        <option value="asc" {{ ($input['orderby'] ?? '') === 'asc'? " selected" : "" }}>Oldest First</option>
-                                        {{-- <option value="do_no_asc" {{ ($input['orderby'] ?? '') === 'do_no_asc'? " selected" : "" }}>DO No Latest First</option> --}}
-                                        {{-- <option value="do_no_desc" {{ ($input['orderby'] ?? '') === 'do_no_desc'? " selected" : "" }}>DO No Oldest First</option> --}}
+                                        <option value="desc" {{ ($input['orderby'] ?? '') === 'desc'? " selected" : "" }}>{{ __('orders.latest_first') }}</option>
+                                        <option value="asc" {{ ($input['orderby'] ?? '') === 'asc'? " selected" : "" }}>{{ __('orders.oldest_first') }}</option>
                                     </select>
                                 </div>
                             </div>
@@ -117,12 +107,12 @@
                                 <div class="form-group mb-4">
                                     <div id="priceRange" class="row col-12">
                                         <div class="form-group col-md-6">
-                                            <label class="mb-2" for="filterPriceFrom">Price Range From</label>
-                                            <input type="number" class="form-control" name="min_price" id="filterPriceFrom" value="{{ $input['min_price'] }}" step="0.01" placeholder="Min">
+                                            <label class="mb-2" for="filterPriceFrom">{{ __('orders.price_from') }}</label>
+                                            <input type="number" class="form-control" name="min_price" id="filterPriceFrom" value="{{ $input['min_price'] }}" step="0.01" placeholder="{{ __('orders.min') }}">
                                         </div>
                                         <div class="form-group col-md-6">
-                                            <label class="mb-2" for="filterPriceTo">Price Range To</label>
-                                            <input type="number" class="form-control" name="max_price" id="filterPriceTo" value="{{ $input['max_price'] }}" step="0.01" placeholder="Max">
+                                            <label class="mb-2" for="filterPriceTo">{{ __('orders.price_to') }}</label>
+                                            <input type="number" class="form-control" name="max_price" id="filterPriceTo" value="{{ $input['max_price'] }}" step="0.01" placeholder="{{ __('orders.max') }}">
                                         </div>
                                     </div>
                                     <input type="hidden" name="price_range" id="priceRangeInput">
@@ -131,8 +121,8 @@
                         </div>
                         <div class="row">
                             <div class="col-12">
-                                <button type="submit" class="btn btn-primary me-3">Search</button>
-                                <a href="{{ route('admin.orders') }}">Clear Search</a>
+                                <button type="submit" class="btn btn-primary me-3">{{ __('ui.search') }}</button>
+                                <a href="{{ route('admin.orders') }}">{{ __('ui.clear_search') }}</a>
                             </div>
                         </div>
                     </form>
@@ -147,27 +137,30 @@
                 <div>
                     @if (Auth::guard('web_admin')->user()->canAccessModule('orders'))
                         <a href="{{ route('admin.orders.create') }}" class="btn btn-primary">
-                            <i class="fa fa-plus" aria-hidden="true"></i> Add New Order
+                            <i class="fa fa-plus" aria-hidden="true"></i> {{ __('orders.add') }}
                         </a>
                     @endif
                     <button type="button" class="btn btn-primary d-none" id="change-order-statuses" data-bs-toggle="modal" data-bs-target="#order-statuses">
-                        Change Order Status
+                        {{ __('orders.change_order_status') }}
                     </button>
                     <button type="button" class="btn btn-primary d-none" id="change-order-lorry" data-bs-toggle="modal" data-bs-target="#assign-lorry">
-                        Change Lorry
+                        {{ __('orders.change_lorry') }}
                     </button>
                 </div>
                 <div class="d-flex">
+                    <button type="button" id="syncAutoCountBtn" class="btn btn-outline-secondary me-1">
+                        {{ __('orders.sync_autocount') }}
+                    </button>
                     <form action="{{ route('admin.orders.export') . $query_params }}">
                         <input type="hidden" class="orders_id" name="orders_id">
                         <button type="submit" class="btn btn-success btn-download-excel me-1">
-                            <i class="fa fa-file-excel-o" aria-hidden="true"></i> Export to Excel
+                            <i class="fa fa-file-excel-o" aria-hidden="true"></i> {{ __('ui.export_excel') }}
                         </button>
                     </form>
                     <button class="btn btn-success status-action-button me-1" data-to_status="completed" data-status="{{ __('order.status.completed') }}" style="display: none;">
-                        Change Status To {{ __('order.status.completed') }}
+                        {{ __('orders.change_status_to', ['status' => __('order.status.completed')]) }}
                     </button>
-                    <button class="btn btn-success status-action-button download-zip me-1" data-to_status="completed" data-status="{{ __('order.status.completed') }}" title="Download selected Invoice & DO as zip" style="display: none;">
+                    <button class="btn btn-success status-action-button download-zip me-1" data-to_status="completed" data-status="{{ __('order.status.completed') }}" title="{{ __('orders.download_selected_zip') }}" style="display: none;">
                         <i class="fa fa-download"></i>
                     </button>
                 </div>
@@ -179,7 +172,7 @@
         <div class="col-md-12">
             <div class="card shadow no-border mb-0">
                 <div class="card-body">
-                    <h5 class="mb-4">Orders</h5>
+                    <h5 class="mb-4">{{ __('orders.list') }}</h5>
                     <div class="table-responsive">
                         <table id="orderTable" class="table table-bordered">
                             <thead>
@@ -190,24 +183,22 @@
                                             <label class="form-check-label" for="order_checkall"> </label>
                                         </div>
                                     </th>
-                                    <th>Option</th>
-                                    <th>Order ID</th>
-                                    {{-- <th>DO No</th> --}}
-                                    <th>Order At</th>
-                                    <th>Customer</th>
-                                    <!--<th>Weight</th>-->
-                                    <th>Products</th>
-                                    <th>Quantity</th>
-                                    <!--<th>Total Price</th>-->
-                                    <!--<th>Payment Method</th>-->
-                                    <th>Area</th>
-                                    <th>Billing Address</th>
-                                    <th>Shipping Address</th>
-                                    <th>Lorry</th>
-                                    <th>Status</th>
-                                    <th>Payment</th>
-                                    <th>Payment Due</th>
-                                    <th>Last Updated At</th>
+                                    <th>{{ __('orders.option') }}</th>
+                                    <th>{{ __('orders.order_id') }}</th>
+                                    <th>{{ __('orders.order_at') }}</th>
+                                    <th>{{ __('orders.customer') }}</th>
+                                    <th>{{ __('orders.products') }}</th>
+                                    <th>{{ __('orders.quantity') }}</th>
+                                    <th>{{ __('orders.area') }}</th>
+                                    <th>{{ __('orders.billing_address') }}</th>
+                                    <th>{{ __('orders.shipping_address') }}</th>
+                                    <th>{{ __('orders.lorry') }}</th>
+                                    <th>{{ __('orders.status') }}</th>
+                                    <th>{{ __('orders.payment') }}</th>
+                                    <th>{{ __('orders.payment_due') }}</th>
+                                    <th>{{ __('orders.payment_due_status') }}</th>
+                                    <th>{{ __('orders.invoice_sync_status') }}</th>
+                                    <th>{{ __('orders.last_updated_at') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -225,38 +216,37 @@
                                         <td>
                                             <div class="btn-group">
                                                 <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    Action
+                                                    {{ __('orders.action') }}
                                                 </button>
                                                 <ul class="dropdown-menu">
                                                     <li>
-                                                        <a class="dropdown-item" href="{{ route('admin.orders.summary', $order->id) }}">Order Summary</a>
+                                                        <a class="dropdown-item" href="{{ route('admin.orders.summary', $order->id) }}">{{ __('orders.order_summary') }}</a>
                                                     </li>
                                                     @if (Order::canAdjustQuantities($order->status))
                                                         <li>
-                                                            <a class="dropdown-item" href="{{ route('admin.orders.review', $order->id) }}">Adjust Order</a>
+                                                            <a class="dropdown-item" href="{{ route('admin.orders.review', $order->id) }}">{{ __('orders.adjust_order') }}</a>
                                                         </li>
                                                     @endif
                                                     @if ($order->canShowInvoice())
                                                         <li>
-                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.invoice', $order->id) }}">View Invoice</a>
+                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.invoice', $order->id) }}">{{ __('orders.view_invoice') }}</a>
                                                         </li>
                                                     @endif
                                                     @if ($order->canShowDeliveryOrder())
                                                         <li>
-                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">View DO</a>
+                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">{{ __('orders.view_do') }}</a>
                                                         </li>
                                                     @endif
                                                     <li>
-                                                        <a class="dropdown-item btn-change-lorry" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-lorry="{{ $order->driver_id }}" data-bs-toggle="modal" data-bs-target="#change-lorry">Change Lorry</a>
+                                                        <a class="dropdown-item btn-change-lorry" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-lorry="{{ $order->driver_id }}" data-bs-toggle="modal" data-bs-target="#change-lorry">{{ __('orders.change_lorry') }}</a>
                                                     </li>
                                                     <li>
-                                                        <a class="dropdown-item btn-add-order-weight" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-bs-toggle="modal" data-bs-target="#add-weight">Order Weight</a>
+                                                        <a class="dropdown-item btn-add-order-weight" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-bs-toggle="modal" data-bs-target="#add-weight">{{ __('orders.order_weight') }}</a>
                                                     </li>
                                                 </ul>
                                             </div>
                                         </td>
                                         <td>{{ $order->id }}</td>
-                                        {{-- <td>{{ $order->do_no }}</td> --}}
                                         <td>{{ $order->created_at }}</td>
                                         <td>
                                             @if ($customer)
@@ -264,23 +254,20 @@
                                                     {{ $customer->name }}
                                                 </a>
                                             @else
-                                                {{ $order->walk_in_name ?: ($order->attn_name ?: 'Walk-in / Public') }}
+                                                {{ $order->walk_in_name ?: ($order->attn_name ?: __('orders.walk_in_public')) }}
                                                 @if ($order->is_general)
-                                                    <span class="badge bg-info text-dark">General</span>
+                                                    <span class="badge bg-info text-dark">{{ __('orders.general') }}</span>
                                                 @endif
                                             @endif
                                         </td>
-                                        <!--<td>{{ $order->order_weight ?? 0 }}KG</td>-->
                                         <td class="white-space-nowrap">{!! $order->order_products !!}</td>
                                         <td class="white-space-nowrap">{!! $order->order_qtys !!}</td>
-                                        <!--<td>RM {{ $order->total_price }}</td>-->
-                                        <!--<td>{{ __('user.payment_method.'.$order->payment_method) }}</td>-->
                                         <td>{{ $order->area }}</td>
                                         <td>{!! $order->billing_address !!}</td>
                                         <td>{!! $order->shipping_address !!}</td>
                                         <td>
                                             @if ($order->driver_id)
-                                                {!! isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '<span class="text-danger">Lorry Deleted</span>' !!}
+                                                {!! isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '<span class="text-danger">' . e(__('orders.lorry_deleted')) . '</span>' !!}
                                             @else
                                                 -
                                             @endif
@@ -307,13 +294,42 @@
                                                 -
                                             @endif
                                         </td>
+                                        <td class="text-center">
+                                            @php
+                                                $paymentDueStatusKey = $order->paymentDueStatusKey();
+                                                $paymentDueStatusClass = match ($paymentDueStatusKey) {
+                                                    'paid' => 'bg-success',
+                                                    'overdue', 'due_today' => 'bg-danger',
+                                                    'not_due' => 'bg-warning text-dark',
+                                                    'not_set' => 'bg-secondary',
+                                                    default => 'bg-light text-dark',
+                                                };
+                                            @endphp
+                                            <span class="badge {{ $paymentDueStatusClass }}">
+                                                {{ __('orders.payment_due_status_labels.' . $paymentDueStatusKey) }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            @php
+                                                $syncStatusKey = $order->autocountSyncStatusKey();
+                                                $syncStatusClass = match ($syncStatusKey) {
+                                                    'synced', 'synced_successfully' => 'bg-success',
+                                                    'pending_sync' => 'bg-warning text-dark',
+                                                    'skipped' => 'bg-secondary',
+                                                    default => 'bg-light text-dark',
+                                                };
+                                            @endphp
+                                            <span class="badge {{ $syncStatusClass }}">
+                                                {{ __('orders.autocount_sync_status.' . $syncStatusKey) }}
+                                            </span>
+                                        </td>
                                         <td>{{ $order->updated_at }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="15">
+                                    <td colspan="17">
                                         {{ $orders->appends(request()->query())->links('pagination::bootstrap-4') }}
                                     </td>
                                 </tr>
@@ -329,17 +345,17 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="pdfModalLabel">PDF Preview</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="pdfModalLabel">{{ __('orders.pdf_preview') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
                 <div class="modal-body p-0">
                     <iframe id="pdfFrame" style="width: 100%; height: 80vh; border: none;"></iframe>
                 </div>
                 <div class="modal-footer">
                     <a id="downloadLink" class="btn btn-primary" href="#" download>
-                        <i class="fa fa-download"></i> Download PDF
+                        <i class="fa fa-download"></i> {{ __('orders.download_pdf') }}
                     </a>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('ui.close') }}</button>
                 </div>
             </div>
         </div>
@@ -349,21 +365,21 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Order Status</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">{{ __('orders.order_status') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
                 <form action="{{ route('admin.change-order-status') }}" method="POST" class="form-wrapper">
                     @csrf
                     <input type="hidden" class="orders_id" name="orders_id">
                     <div class="modal-body">
                         <div class="alert alert-warning d-none" id="order_weight-wrapper">
-                            <strong>Orders for which the product weight has not yet been added will not be updated.</strong>
+                            <strong>{{ __('orders.weight_not_added_warning') }}</strong>
                         </div>
                         <div class="mb-4">
-                            <label for="status" class="mb-2">Order Status</label>
+                            <label for="status" class="mb-2">{{ __('orders.order_status') }}</label>
                             <span class="text-danger"> *</span>
                             <select class="form-select" id="order_status" name="status" required>
-                                <option value="">Choose...</option>
+                                <option value="">{{ __('orders.choose') }}</option>
                                 @foreach ($statuses as $key => $value)
                                     <option value="{{ $key }}">
                                         {{ $value }}
@@ -373,11 +389,11 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}">{{ __('ui.close') }}</button>
                         <button type="submit" class="btn btn-primary">
-                            Change Status
+                            {{ __('orders.change_status') }}
                             <div class="spinner-border spinner-border-sm d-none" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                                <span class="visually-hidden">{{ __('orders.loading') }}</span>
                             </div>
                         </button>
                     </div>
@@ -390,18 +406,18 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Change Lorry</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">{{ __('orders.change_lorry') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
                 <form action="{{ route('admin.change-order-lorry') }}" method="POST" class="form-wrapper">
                     @csrf
                     <input type="hidden" class="orders_id" name="orders_id">
                     <div class="modal-body">
                         <div class="mb-4">
-                            <label class="mb-2">Change Lorry</label>
+                            <label class="mb-2">{{ __('orders.change_lorry') }}</label>
                             <span class="text-danger"> *</span>
                             <select class="form-select" id="order_driver_id" name="driver_id" required>
-                                <option value="">Choose...</option>
+                                <option value="">{{ __('orders.choose') }}</option>
                                 @foreach ($drivers as $id => $driver)
                                     <option value="{{ $id }}">
                                         {{ $driver }}
@@ -411,11 +427,11 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}">{{ __('ui.close') }}</button>
                         <button type="submit" class="btn btn-primary">
-                            Submit
+                            {{ __('ui.submit') }}
                             <div class="spinner-border spinner-border-sm d-none" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                                <span class="visually-hidden">{{ __('orders.loading') }}</span>
                             </div>
                         </button>
                     </div>
@@ -428,19 +444,19 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Products Weight</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">{{ __('orders.products_weight') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
                 <form action="{{ route('admin.update-order-products-weight') }}" method="POST" class="form-wrapper">
                     @csrf
                     <input type="hidden" class="orders_id" name="orders_id">
                     <div class="modal-body"></div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}">{{ __('ui.close') }}</button>
                         <button type="submit" class="btn btn-primary">
-                            Submit
+                            {{ __('ui.submit') }}
                             <div class="spinner-border spinner-border-sm d-none" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                                <span class="visually-hidden">{{ __('orders.loading') }}</span>
                             </div>
                         </button>
                     </div>
@@ -453,18 +469,18 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Assign Lorry</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">{{ __('orders.assign_lorry') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
                 <form action="{{ route('admin.assign-order-driver') }}" method="POST" class="form-wrapper">
                     @csrf
                     <input type="hidden" class="orders_id" name="orders_id">
                     <div class="modal-body">
                         <div class="mb-4">
-                            <label class="mb-2" for="order_driver_id">Assign Lorry</label>
+                            <label class="mb-2" for="order_driver_id">{{ __('orders.assign_lorry') }}</label>
                             <span class="text-danger"> *</span>
                             <select class="form-select" id="order_driver_id" name="driver_id" required>
-                                <option value="">Choose...</option>
+                                <option value="">{{ __('orders.choose') }}</option>
                                 @foreach ($drivers as $id => $driver)
                                     <option value="{{ $id }}">
                                         {{ $driver }}
@@ -474,11 +490,11 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}">{{ __('ui.close') }}</button>
                         <button type="submit" class="btn btn-primary">
-                            Submit
+                            {{ __('ui.submit') }}
                             <div class="spinner-border spinner-border-sm d-none" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                                <span class="visually-hidden">{{ __('orders.loading') }}</span>
                             </div>
                         </button>
                     </div>
@@ -487,32 +503,33 @@
         </div>
     </div>
 
+    <form id="syncAutoCountForm" action="{{ route('admin.orders.sync-autocount-bulk') }}" method="POST" class="d-none">
+        @csrf
+    </form>
+
 @endsection
 @section('script')
 
     <script src="{{ asset('assets/js/sweetalert.min.js') }}"></script>
     <script>
+        var ordersJs = @json(__('orders.js'));
+
         $(document).ready(function() {
 
             $('#filterCustomer').select2();
 
-            // Handle click on .view-pdf buttons
             $(".view-pdf").click(function(e) {
                 e.preventDefault();
 
-                // Get the PDF URL from the link's href (remove #toolbar=0 for download)
                 var pdfUrl = $(this).attr("href").replace('#toolbar=0', '');
                 var downloadUrl = $(this).data('url').replace('#toolbar=0', '');
 
-                // Set the PDF source in the iframe
                 $("#pdfFrame").attr("src", $(this).attr("href"));
                 $("#downloadLink").attr("href", downloadUrl + '/download');
 
-                // Show the PDF modal
                 $("#pdfModal").modal("show");
             });
 
-            // Clean up when modal is closed
             $("#pdfModal").on('hidden.bs.modal', function() {
                 $("#pdfFrame").attr("src", '');
             });
@@ -526,34 +543,42 @@
                 if (selectedOrders.length == 0) {
                     e.preventDefault();
                     Swal.fire({
-                        title: 'Select Order',
-                        text: 'Please select the orders to download an Excel sheet!',
+                        title: ordersJs.select_order,
+                        text: ordersJs.select_order_export,
                         icon: 'warning',
                         showCancelButton: true,
                     })
                 }
             });
 
-            // Update range values dynamically
-            // var min_price = parseFloat("{{ $input['min_price'] }}");
-            // var max_price = parseFloat("{{ $input['max_price'] }}");
-            // var from_price = parseFloat("{{ $input['from_price'] }}");
-            // var to_price = parseFloat("{{ $input['to_price'] }}");
-            // $("#priceRangeSlider").slider({
-            //     range: true, // Enable two handles
-            //     min: min_price,
-            //     max: max_price,
-            //     values: [from_price, to_price], // Initial range values
-            //     slide: function (event, ui) {
-            //         $("#priceRangeValue").text(ui.values[0] + " - " + ui.values[1]);
-            //         $("#priceRangeInput").val(ui.values[0] + "," + ui.values[1]);
-            //     }
-            // });
+            $("#syncAutoCountBtn").on('click', function() {
+                var selectedOrders = [];
+                $("input[name='selected_orders[]']:checked").each(function() {
+                    selectedOrders.push($(this).val());
+                });
 
-            // // Initialize the displayed range and input field
-            // var initialRange = $("#priceRangeSlider").slider("option", "values");
-            // $("#priceRangeValue").text(initialRange[0] + " - " + initialRange[1]);
-            // $("#priceRangeInput").val(initialRange[0] + "," + initialRange[1]);
+                if (selectedOrders.length === 0) {
+                    Swal.fire({
+                        title: ordersJs.select_order,
+                        text: ordersJs.select_order_sync,
+                        icon: 'warning',
+                    });
+                    return;
+                }
+
+                var form = $("#syncAutoCountForm");
+                form.find('input[name="order_ids[]"]').remove();
+
+                selectedOrders.forEach(function(orderId) {
+                    form.append($('<input>', {
+                        type: 'hidden',
+                        name: 'order_ids[]',
+                        value: orderId,
+                    }));
+                });
+
+                form.submit();
+            });
 
             $("#filterPriceFrom,#filterPriceTo").change(function(e){
                 $("#priceRangeInput").val($("#filterPriceFrom").val() + "," + $("#filterPriceTo").val());
@@ -585,7 +610,6 @@
                     selectedOrders.push($(this).val());
                 });
 
-                // for download zip file
                 if($(this).hasClass('download-zip')){
                     var field_name = 'order_ids[]';
                     var queryParameters = selectedOrders.join('&'+ field_name +'=');
@@ -597,7 +621,7 @@
 
                 $.ajax({
                     type: "POST",
-                    url: "{{ url('/admin/order/batch-update-status') }}", // Use the URL from the data attribute
+                    url: "{{ url('/admin/order/batch-update-status') }}",
                     data: {
                         _token: "{{ csrf_token() }}",
                         order_ids: selectedOrders,
@@ -606,16 +630,15 @@
                     success: function (response) {
                         data = $.parseJSON(response);
                         if(data.success){
-                            Swal.fire('Order Updated', 'The order status has been updated successfully', 'success').then(function(){
+                            Swal.fire(ordersJs.order_updated, ordersJs.order_status_updated, 'success').then(function(){
                                 window.location.reload();
                             });
                         }else{
-                            Swal.fire('Error', 'An error occurred while updating the order status', 'error');
+                            Swal.fire(ordersJs.error, ordersJs.order_status_error, 'error');
                         }
                     },
                     error: function (error) {
-                        // Handle errors, e.g., show an error message
-                        Swal.fire('Error', 'An error occurred while updating the order status', 'error');
+                        Swal.fire(ordersJs.error, ordersJs.order_status_error, 'error');
                     }
                 });
             });

@@ -53,14 +53,14 @@ class InventoryController extends Controller
             Auth::guard('web_admin')->id()
         );
 
-        return redirect(route('admin.inventory.movements'))->with('success', 'Stock in recorded successfully.');
+        return redirect(route('admin.inventory.movements'))->with('success', __('inventory.stock_in_success'));
     }
 
     public function stockOutCreate()
     {
         return view('admin.inventory.stock-out.create', [
             'products' => $this->activeProducts(),
-            'reasons' => StockMovement::$stock_out_reasons,
+            'reasons' => StockMovement::stockOutReasonLabels(),
         ]);
     }
 
@@ -77,8 +77,8 @@ class InventoryController extends Controller
         ]);
 
         $reason = $data['reason'] === 'other'
-            ? 'Other: ' . ($data['reason_other'] ?? '')
-            : (StockMovement::$stock_out_reasons[$data['reason']] ?? $data['reason']);
+            ? __('inventory.stock_out_reasons.other') . ': ' . ($data['reason_other'] ?? '')
+            : (StockMovement::stockOutReasonLabels()[$data['reason']] ?? $data['reason']);
 
         try {
             $this->stockService->stockOut(
@@ -94,13 +94,13 @@ class InventoryController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        return redirect(route('admin.inventory.movements'))->with('success', 'Stock out recorded successfully.');
+        return redirect(route('admin.inventory.movements'))->with('success', __('inventory.stock_out_success'));
     }
 
     public function movements()
     {
         return view('admin.inventory.movements.index', [
-            'movement_types' => StockMovement::$movement_types,
+            'movement_types' => StockMovement::movementTypeLabels(),
         ]);
     }
 
@@ -161,9 +161,9 @@ class InventoryController extends Controller
 
             $data[] = [
                 'id' => $record->id,
-                'options' => '<a href="' . route('admin.inventory.stock-in.create') . '?product_id=' . $record->id . '" class="btn btn-sm btn-success me-1" title="Stock In"><i class="fa fa-plus"></i></a>'
-                    . '<a href="' . route('admin.inventory.stock-out.create') . '?product_id=' . $record->id . '" class="btn btn-sm btn-warning me-1" title="Stock Out"><i class="fa fa-minus"></i></a>'
-                    . '<button type="button" class="btn btn-sm btn-primary btn-edit-stock" title="Edit stock details"'
+                'options' => '<a href="' . route('admin.inventory.stock-in.create') . '?product_id=' . $record->id . '" class="btn btn-sm btn-success me-1" title="' . e(__('inventory.stock_in_action')) . '"><i class="fa fa-plus"></i></a>'
+                    . '<a href="' . route('admin.inventory.stock-out.create') . '?product_id=' . $record->id . '" class="btn btn-sm btn-warning me-1" title="' . e(__('inventory.stock_out')) . '"><i class="fa fa-minus"></i></a>'
+                    . '<button type="button" class="btn btn-sm btn-primary btn-edit-stock" title="' . e(__('inventory.edit_stock_action')) . '"'
                     . ' data-product-id="' . $record->id . '"'
                     . ' data-name="' . e($record->name) . '"'
                     . ' data-sku="' . e($record->sku ?: '-') . '"'
@@ -287,13 +287,13 @@ class InventoryController extends Controller
                 'id' => $record->id,
                 'movement_date' => date('d-m-Y', strtotime($record->movement_date)),
                 'product_name' => $record->product_name,
-                'movement_type' => StockMovement::$movement_types[$record->movement_type] ?? $record->movement_type,
+                'movement_type' => StockMovement::movementTypeLabel($record->movement_type),
                 'quantity_before' => number_format((float) $record->quantity_before, 3),
                 'quantity_change' => '<span class="' . ($change >= 0 ? 'text-success' : 'text-danger') . '">' . $changeFormatted . '</span>',
                 'quantity_after' => number_format((float) $record->quantity_after, 3),
                 'weight' => $record->weight !== null ? number_format((float) $record->weight, 3) . ' kg' : '-',
                 'reason' => $record->reason ?: '-',
-                'admin_name' => $record->admin_name ?: 'System',
+                'admin_name' => $record->admin_name ?: __('inventory.system'),
                 'remarks' => $record->remarks ?: '-',
             ];
         }

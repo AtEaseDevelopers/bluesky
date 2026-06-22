@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ $htmlLang ?? 'en' }}">
 
 <head>
     <meta charset="UTF-8">
@@ -115,12 +115,13 @@
                     <i class="fa fa-truck"></i> Bluesky Driver
                 </a>
                 <ul class="navbar-nav ms-auto align-items-center">
+                    @include('partials.language-switcher')
                     <li class="nav-item me-2 d-none d-sm-block">
                         <span class="nav-link">{{ Auth::guard('web_driver')->user()->name ?? Auth::guard('web_driver')->user()->username }}</span>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('driver.logout') }}">
-                            <i class="fa fa-sign-out"></i> Logout
+                            <i class="fa fa-sign-out"></i> {{ __('ui.logout') }}
                         </a>
                     </li>
                 </ul>

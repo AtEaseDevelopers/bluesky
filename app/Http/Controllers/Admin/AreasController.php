@@ -33,7 +33,7 @@ class AreasController extends Controller
             ]
         );
 
-        return redirect(route('admin.areas.index'))->with('success', "Area has been added successfully.");
+        return redirect(route('admin.areas.index'))->with('success', __('areas.added_success'));
     }
 
     public function edit($id)
@@ -56,12 +56,12 @@ class AreasController extends Controller
             ]
         );
 
-        return redirect(route('admin.areas.index'))->with('success', "Area has been updated successfully.");
+        return redirect(route('admin.areas.index'))->with('success', __('areas.updated_success'));
     }
 
     public function destroy($id)
     {
-        return redirect(route('admin.areas.index'))->with('success', "Area has been deleted successfully.");
+        return redirect(route('admin.areas.index'))->with('success', __('areas.deleted_success'));
     }
 
     public function fetch_areas(Request $request)

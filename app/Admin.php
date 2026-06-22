@@ -17,7 +17,7 @@ class Admin extends Authenticatable
     public const STATUS_INACTIVE = 'inactive';
 
     protected $fillable = [
-        'name', 'email', 'username', 'password', 'role', 'status',
+        'name', 'email', 'username', 'password', 'role', 'status', 'locale',
     ];
 
     protected $hidden = [

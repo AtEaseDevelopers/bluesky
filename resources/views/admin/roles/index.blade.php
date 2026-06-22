@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'Manage Roles')
+@section('title', __('roles.manage'))
 @section('content')
 
     <div class="row mb-4">
@@ -8,14 +8,14 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
                         <div>
-                            <h5 class="card-title mb-1">Manage Roles</h5>
-                            <p class="text-muted mb-0">Create roles and choose what each role can access. Superadmin always has full access.</p>
+                            <h5 class="card-title mb-1">{{ __('roles.manage') }}</h5>
+                            <p class="text-muted mb-0">{{ __('roles.manage_help') }}</p>
                         </div>
-                        <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">Add New Role</a>
+                        <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">{{ __('roles.add') }}</a>
                     </div>
 
                     @if ($superadminRole)
-                        <h6 class="mb-3">Superadmin</h6>
+                        <h6 class="mb-3">{{ __('roles.superadmin') }}</h6>
                         @include('admin.roles.partials.role-table', ['roles' => collect([$superadminRole])])
                     @endif
 
@@ -26,7 +26,7 @@
                                 $roles = $roles->where('is_superadmin', false)->values();
                             }
                         @endphp
-                        <h6 class="mt-4 mb-3">{{ $portalMeta['label'] ?? ucfirst($portalKey) }}</h6>
+                        <h6 class="mt-4 mb-3">{{ __('permissions.portals.' . $portalKey . '.label') }}</h6>
                         @include('admin.roles.partials.role-table', ['roles' => $roles])
                     @endforeach
                 </div>
@@ -38,18 +38,18 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Delete Role</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">{{ __('roles.delete_role') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to delete this role?</p>
+                    <p>{{ __('roles.delete_confirm') }}</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('ui.cancel') }}</button>
                     <form action="" method="POST" id="delete-role-form">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="btn btn-danger">Delete</button>
+                        <button type="submit" class="btn btn-danger">{{ __('ui.delete') }}</button>
                     </form>
                 </div>
             </div>

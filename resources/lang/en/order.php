@@ -31,4 +31,14 @@ return [
         'invoice2' => 'Invoice W/O Price',
         'delivery-order' => 'Delivery Order',
     ],
+    'payment_methods' => [
+        'cash' => 'Cash',
+        'qr' => 'QR',
+        'bank-transfer' => 'Bank Transfer',
+        'e-wallet' => 'E-Wallet',
+        'payment-gateway' => 'Payment Gateway',
+        'credit-term' => 'Credit Term',
+        'customer-credit' => 'Customer Credit',
+        'cod' => 'COD',
+    ],
 ];

@@ -600,8 +600,8 @@ class OrderService
         }
 
         $customer = $order->customer;
-        if ($customer && ($customer->customer_type ?? 'cod') === 'credit') {
-            return now()->addDays(30)->toDateString();
+        if ($customer && $customer->isCreditCustomer()) {
+            return now()->addDays($customer->paymentTermDays())->toDateString();
         }
 
         return null;

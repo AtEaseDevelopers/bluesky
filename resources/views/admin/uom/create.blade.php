@@ -1,21 +1,21 @@
 @extends('layouts.admin')
-@section('title', 'Add New UOM')
+@section('title', __('uom.add'))
 @section('content')
 
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card shadow no-border">
                 <div class="card-body">
-                    <h5 class="card-title">Add New UOM</h5>
+                    <h5 class="card-title">{{ __('uom.add') }}</h5>
                     <hr>
                     <form action="{{ route('admin.uom.store') }}" method="POST" class="form-wrapper">
                         @csrf
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="remark">UOM Name</label>
+                                    <label class="mb-2" for="uom_name">{{ __('uom.uom_name') }}</label>
                                     <span class="text-danger"> *</span>
-                                    <input type="text" class="form-control @error('uom_name') is-invalid @enderror" name="uom_name" id="uom_name" placeholder="Enter uom name" value="{{ old('uom_name') }}">
+                                    <input type="text" class="form-control @error('uom_name') is-invalid @enderror" name="uom_name" id="uom_name" placeholder="{{ __('uom.placeholder.uom_name') }}" value="{{ old('uom_name') }}">
                                     @error('uom_name')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $message }}</strong>
@@ -23,11 +23,11 @@
                                     @enderror
                                 </div>
                                 <div class="d-flex justify-content-end">
-                                    <a href="{{ route('admin.uom.index') }}" class="btn btn-secondary me-2 mb-1">Back</a>
+                                    <a href="{{ route('admin.uom.index') }}" class="btn btn-secondary me-2 mb-1">{{ __('ui.back') }}</a>
                                     <button type="submit" class="btn btn-primary mb-1">
-                                        Save
+                                        {{ __('ui.save') }}
                                         <div class="spinner-border spinner-border-sm d-none" role="status">
-                                            <span class="visually-hidden">Loading...</span>
+                                            <span class="visually-hidden">{{ __('inventory.loading') }}</span>
                                         </div>
                                     </button>
                                 </div>

@@ -58,7 +58,7 @@ class AdminController extends Controller
             'status' => $data['admin_status'],
         ]);
 
-        return redirect(route('admin.admins.index'))->with('success', 'Admin user has been added successfully.');
+        return redirect(route('admin.admins.index'))->with('success', __('admins.added_success'));
     }
 
     public function edit($id)
@@ -89,7 +89,7 @@ class AdminController extends Controller
         ]);
 
         if ((int) Auth::guard('web_admin')->id() === (int) $admin->id && $data['admin_status'] === Admin::STATUS_INACTIVE) {
-            return back()->withInput()->with('error', 'You cannot deactivate your own account.');
+            return back()->withInput()->with('error', __('admins.cannot_deactivate_self'));
         }
 
         $update = [
@@ -106,7 +106,7 @@ class AdminController extends Controller
 
         $admin->update($update);
 
-        return redirect(route('admin.admins.index'))->with('success', 'Admin user has been updated successfully.');
+        return redirect(route('admin.admins.index'))->with('success', __('admins.updated_success'));
     }
 
     public function destroy($id)
@@ -116,12 +116,12 @@ class AdminController extends Controller
         $admin = Admin::findOrFail(decrypt($id));
 
         if ((int) Auth::guard('web_admin')->id() === (int) $admin->id) {
-            return redirect(route('admin.admins.index'))->with('error', 'You cannot delete your own account.');
+            return redirect(route('admin.admins.index'))->with('error', __('admins.cannot_delete_self'));
         }
 
         $admin->delete();
 
-        return redirect(route('admin.admins.index'))->with('success', 'Admin user has been deleted successfully.');
+        return redirect(route('admin.admins.index'))->with('success', __('admins.deleted_success'));
     }
 
     public function fetch_admins(Request $request)
@@ -192,7 +192,7 @@ class AdminController extends Controller
         ]);
 
         if ((int) Auth::guard('web_admin')->id() === (int) $request->admin_id && $request->status === Admin::STATUS_INACTIVE) {
-            return response()->json(['success' => false, 'message' => 'You cannot deactivate your own account.'], 422);
+            return response()->json(['success' => false, 'message' => __('admins.cannot_deactivate_self')], 422);
         }
 
         Admin::find($request->admin_id)->update(['status' => $request->status]);

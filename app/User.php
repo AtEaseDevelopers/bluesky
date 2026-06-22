@@ -22,6 +22,7 @@ class User extends Authenticatable
         'category', 
         'customer_type',
         'credit_balance',
+        'payment_term_days',
         'attn_name', 
         'attn_contact', 
         'area', 
@@ -46,7 +47,10 @@ class User extends Authenticatable
         'invoice_price_permission',
         'default_driver_id',
         'sql_customer_code',
-        'fax_no'
+        'autocount_sync_status',
+        'autocount_synced_at',
+        'fax_no',
+        'locale',
     ];
 
     /**
@@ -68,6 +72,7 @@ class User extends Authenticatable
         'credit_balance' => 'decimal:2',
         'registration_token_expires_at' => 'datetime',
         'registration_completed_at' => 'datetime',
+        'autocount_synced_at' => 'datetime',
     ];
 
     public static $attribute_rules = [
@@ -109,6 +114,36 @@ class User extends Authenticatable
     public function isCodCustomer(): bool
     {
         return !$this->isCreditCustomer();
+    }
+
+    public static function paymentTermOptions(): array
+    {
+        $options = __('customers.payment_term_options');
+
+        return is_array($options) ? $options : [];
+    }
+
+    public function paymentTermDays(): int
+    {
+        if (!$this->isCreditCustomer()) {
+            return 0;
+        }
+
+        $days = (int) ($this->payment_term_days ?? 30);
+
+        return $days > 0 ? $days : 30;
+    }
+
+    public function paymentTermLabel(): string
+    {
+        if (!$this->isCreditCustomer()) {
+            return __('customers.payment_term_not_applicable');
+        }
+
+        $options = static::paymentTermOptions();
+        $days = $this->paymentTermDays();
+
+        return $options[$days] ?? __('customers.payment_term_days_count', ['count' => $days]);
     }
 
     public function generateRegistrationToken(int $expiryDays = 7): string

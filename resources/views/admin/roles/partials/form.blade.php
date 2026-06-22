@@ -7,7 +7,7 @@
     <div class="col-lg-10">
         <div class="card shadow no-border">
             <div class="card-body">
-                <h5 class="card-title">{{ $isEdit ? 'Edit Role' : 'Add New Role' }}</h5>
+                <h5 class="card-title">{{ $isEdit ? __('roles.edit') : __('roles.add') }}</h5>
                 <hr>
 
                 <form action="{{ $action }}" method="POST">
@@ -19,7 +19,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-4">
-                                <label class="mb-2" for="name">Role Name</label>
+                                <label class="mb-2" for="name">{{ __('roles.role_name') }}</label>
                                 <span class="text-danger">*</span>
                                 <input type="text" name="name" id="name" class="form-control @error('name') is-invalid @enderror"
                                     value="{{ old('name', $role->name ?? '') }}" {{ ($role && $role->is_system && $role->is_superadmin) ? 'readonly' : '' }} required>
@@ -28,7 +28,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-4">
-                                <label class="mb-2" for="portal">Portal</label>
+                                <label class="mb-2" for="portal">{{ __('roles.portal') }}</label>
                                 <span class="text-danger">*</span>
                                 @if ($isEdit)
                                     <input type="text" class="form-control" value="{{ $role->portalLabel() }}" readonly>
@@ -36,7 +36,7 @@
                                     <select name="portal" id="portal" class="form-select @error('portal') is-invalid @enderror" required>
                                         @foreach ($portals as $portalKey => $portalMeta)
                                             <option value="{{ $portalKey }}" {{ $selectedPortal === $portalKey ? 'selected' : '' }}>
-                                                {{ $portalMeta['label'] ?? ucfirst($portalKey) }}
+                                                {{ __('permissions.portals.' . $portalKey . '.label') }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -46,20 +46,21 @@
                         </div>
                         <div class="col-12">
                             <div class="mb-4">
-                                <label class="mb-2" for="description">Description</label>
+                                <label class="mb-2" for="description">{{ __('roles.description') }}</label>
                                 <textarea name="description" id="description" rows="2" class="form-control">{{ old('description', $role->description ?? '') }}</textarea>
                             </div>
                         </div>
                     </div>
 
                     @if ($role && $role->is_superadmin)
-                        <div class="alert alert-info">Superadmin always has full access. Permissions cannot be restricted.</div>
+                        <div class="alert alert-info">{{ __('roles.superadmin_notice') }}</div>
                     @else
-                        <h6 class="mb-3">Permissions</h6>
+                        <h6 class="mb-3">{{ __('roles.permissions') }}</h6>
                         @if ($isEdit)
                             @include('admin.roles.partials.permission-table', [
                                 'permissions' => $permissions,
                                 'allowed' => $allowed,
+                                'portalKey' => $role->portal,
                             ])
                         @else
                             @foreach ($portals as $portalKey => $portalMeta)
@@ -67,7 +68,7 @@
                                     @include('admin.roles.partials.permission-table', [
                                         'permissions' => $portalPermissions[$portalKey] ?? [],
                                         'allowed' => [],
-                                        'inputPrefix' => '',
+                                        'portalKey' => $portalKey,
                                     ])
                                 </div>
                             @endforeach
@@ -75,9 +76,9 @@
                     @endif
 
                     <div class="d-flex justify-content-between mt-4">
-                        <a href="{{ route('admin.roles.index') }}" class="btn btn-secondary">Back</a>
+                        <a href="{{ route('admin.roles.index') }}" class="btn btn-secondary">{{ __('ui.back') }}</a>
                         @if (!$role || !$role->is_superadmin)
-                            <button type="submit" class="btn btn-primary">{{ $isEdit ? 'Save Role' : 'Create Role' }}</button>
+                            <button type="submit" class="btn btn-primary">{{ $isEdit ? __('roles.save') : __('roles.create') }}</button>
                         @endif
                     </div>
                 </form>

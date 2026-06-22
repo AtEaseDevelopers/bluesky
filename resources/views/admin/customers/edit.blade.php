@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'Edit Customer')
+@section('title', __('customers.edit'))
 @section('css')
 
     <link rel="stylesheet" href="{{ asset('assets/css/select2.min.css') }}" />
@@ -14,14 +14,14 @@
                 <div class="card shadow no-border mb-4">
                     <div class="card-body">
                         <!-- GENERAL INFO SECTION -->
-                        <h5 class="card-title">General Info</h5>
+                        <h5 class="card-title">{{ __('customers.general_info') }}</h5>
                         <hr>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="name">Customer Name</label>
+                                    <label class="mb-2" for="name">{{ __('customers.customer_name') }}</label>
                                     <span class="text-danger"> *</span>
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror" name="name" id="name" value="{{ old('name') ?: $customer->name }}" placeholder="Enter customer name" required>
+                                    <input type="text" class="form-control @error('name') is-invalid @enderror" name="name" id="name" value="{{ old('name') ?: $customer->name }}" placeholder="{{ __('customers.enter_customer_name') }}" required>
                                     @error('name')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $message }}</strong>
@@ -31,9 +31,9 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="email">Customer Email</label>
+                                    <label class="mb-2" for="email">{{ __('customers.customer_email') }}</label>
                                     <input type="text" class="form-control @error('email') is-invalid @enderror" name="email" id="email"
-                                        value="{{ old('email') ?: $customer->email }}" placeholder="Enter customer email">
+                                        value="{{ old('email') ?: $customer->email }}" placeholder="{{ __('customers.enter_customer_email') }}">
                                     @error('email')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $message }}</strong>
@@ -44,9 +44,9 @@
                         </div>
                           <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="billing_address">Billing Address</label>
+                                    <label class="mb-2" for="billing_address">{{ __('customers.billing_address') }}</label>
                                     <span class="text-danger"> *</span>
-                                    <textarea class="form-control @error('billing_address') is-invalid @enderror" name="billing_address" id="billing_address" rows="3" placeholder="Enter billing address" required>{{ old('billing_address') ?: $customer->billing_address }}</textarea>
+                                    <textarea class="form-control @error('billing_address') is-invalid @enderror" name="billing_address" id="billing_address" rows="3" placeholder="{{ __('customers.enter_billing_address') }}" required>{{ old('billing_address') ?: $customer->billing_address }}</textarea>
                                     @error('billing_address')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $message }}</strong>
@@ -95,8 +95,8 @@
                             <!--</div>-->
                             <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="shipping_address">Shipping Address</label>
-                                    <textarea class="form-control @error('shipping_address') is-invalid @enderror" name="shipping_address" id="shipping_address" rows="3" placeholder="Enter shipping address">{{ old('shipping_address') ?: $customer->shipping_address }}</textarea>
+                                    <label class="mb-2" for="shipping_address">{{ __('customers.shipping_address') }}</label>
+                                    <textarea class="form-control @error('shipping_address') is-invalid @enderror" name="shipping_address" id="shipping_address" rows="3" placeholder="{{ __('customers.enter_shipping_address') }}">{{ old('shipping_address') ?: $customer->shipping_address }}</textarea>
                                     @error('shipping_address')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $message }}</strong>
@@ -107,7 +107,7 @@
 
                         <!-- ADVANCED INFO SECTION -->
                         <div class="d-flex justify-content-between align-items-center mt-4">
-                            <h5 class="card-title mb-0">Advanced Info</h5>
+                            <h5 class="card-title mb-0">{{ __('customers.advanced_info') }}</h5>
                             <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#advancedInfoCollapse" aria-expanded="false" aria-controls="advancedInfoCollapse">
                                 <i class="fa fa-chevron-down" aria-hidden="true"></i>
                             </button>
@@ -117,8 +117,8 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="customerCategory">Category</label>
-                                    <input list="categoryOptions" class="form-control @error('category') is-invalid @enderror" name="category" id="customerCategory" value="{{ old('category') ?: $customer->category }}" placeholder="Enter customer category (optional)">
+                                    <label class="mb-2" for="customerCategory">{{ __('customers.category') }}</label>
+                                    <input list="categoryOptions" class="form-control @error('category') is-invalid @enderror" name="category" id="customerCategory" value="{{ old('category') ?: $customer->category }}" placeholder="{{ __('customers.enter_category_optional') }}">
                                     <datalist id="categoryOptions">
                                         @foreach ($category_list as $category)
                                             <option value="{{ $category->category }}"></option>
@@ -133,14 +133,20 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="customer_type">Customer Type</label>
+                                    <label class="mb-2" for="customer_type">{{ __('customers.customer_type') }}</label>
                                     <select name="customer_type" id="customer_type" class="form-select">
-                                        <option value="cod" {{ old('customer_type', $customer->customer_type ?? 'cod') === 'cod' ? 'selected' : '' }}>COD</option>
-                                        <option value="credit" {{ old('customer_type', $customer->customer_type ?? 'cod') === 'credit' ? 'selected' : '' }}>Credit</option>
+                                        <option value="cod" {{ old('customer_type', $customer->customer_type ?? 'cod') === 'cod' ? 'selected' : '' }}>{{ __('customers.customer_type_cod') }}</option>
+                                        <option value="credit" {{ old('customer_type', $customer->customer_type ?? 'cod') === 'credit' ? 'selected' : '' }}>{{ __('customers.customer_type_credit') }}</option>
                                     </select>
-                                    <small class="text-muted d-block">COD — pays in full on delivery; no credit balance.</small>
-                                    <small class="text-muted d-block">Credit — payment terms, credit balance, and payment due dates on orders.</small>
+                                    <small class="text-muted d-block">{{ __('customers.customer_type_cod_help') }}</small>
+                                    <small class="text-muted d-block">{{ __('customers.customer_type_credit_help') }}</small>
                                 </div>
+                            </div>
+                            <div class="col-md-6">
+                                @include('admin.customers.partials.payment-term-field', [
+                                    'customerType' => old('customer_type', $customer->customer_type ?? 'cod'),
+                                    'selectedPaymentTermDays' => old('payment_term_days', $customer->payment_term_days ?? 30),
+                                ])
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
@@ -170,7 +176,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="attn_name">Attn. Name</label>
+                                    <label class="mb-2" for="attn_name">{{ __('customers.attn_name') }}</label>
                                     <input type="text" class="form-control @error('attn_name') is-invalid @enderror" name="attn_name" id="attn_name" value="{{ old('attn_name') ?: $customer->attn_name }}" placeholder="Enter Attn. Name (optional)">
                                     @error('attn_name')
                                         <span class="text-danger" role="alert">
@@ -181,7 +187,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="attn_contact">Attn. Contact</label>
+                                    <label class="mb-2" for="attn_contact">{{ __('customers.attn_contact') }}</label>
                                     <input type="text" class="form-control @error('attn_contact') is-invalid @enderror" name="attn_contact" id="attn_contact" value="{{ old('attn_contact') ?: $customer->attn_contact }}" placeholder="Enter Attn. Contact (optional)">
                                     @error('attn_contact')
                                         <span class="text-danger" role="alert">
@@ -194,7 +200,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="fax_no">Fax No.</label>
+                                    <label class="mb-2" for="fax_no">{{ __('customers.fax_no') }}</label>
                                     <input type="text" class="form-control @error('fax_no') is-invalid @enderror" name="fax_no" id="fax_no" value="{{ old('fax_no') ?: $customer->fax_no }}" placeholder="Enter Fax Number (optional)">
                                     @error('fax_no')
                                         <span class="text-danger" role="alert">
@@ -205,9 +211,9 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="default_driver_id">Select Lorry</label>
+                                    <label class="mb-2" for="default_driver_id">{{ __('customers.select_lorry') }}</label>
                                     <select id="default_driver_id" class="form-select @error('default_driver_id') is-invalid @enderror" name="default_driver_id">
-                                        <option value="">Choose...</option>
+                                        <option value="">{{ __('customers.choose') }}</option>
                                         @foreach ($drivers as $driver)
                                             <option value="{{ $driver->id }}" {{ $customer->default_driver_id == $driver->id ? 'selected' : '' }}>
                                                 {{ $driver->lorry_number }}
@@ -223,9 +229,9 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="area_id">Select Area</label>
+                                    <label class="mb-2" for="area_id">{{ __('customers.select_area') }}</label>
                                     <select class="form-select @error('area_id') is-invalid @enderror" id="area_id" name="area_id">
-                                        <option value="">Choose...</option>
+                                        <option value="">{{ __('customers.choose') }}</option>
                                         @foreach ($areas as $area)
                                             <option value="{{ $area->id }}" {{ $customer->area == $area->id ? 'selected' : '' }}>
                                                 {{ $area->area_name }}
@@ -239,7 +245,7 @@
 
                         <!-- VISIBILITY & PERMISSIONS SECTION -->
                         <div class="d-flex justify-content-between align-items-center mt-4">
-                            <h5 class="card-title mb-0">Visibility & Permissions</h5>
+                            <h5 class="card-title mb-0">{{ __('customers.visibility_permissions') }}</h5>
                             <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#visibilityPermissionsCollapse" aria-expanded="false" aria-controls="visibilityPermissionsCollapse">
                                 <i class="fa fa-chevron-down" aria-hidden="true"></i>
                             </button>
@@ -247,9 +253,9 @@
                         <hr>                        <div class="collapse" id="visibilityPermissionsCollapse">                        <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="">Products Visibility</label>
+                                    <label class="mb-2" for="">{{ __('customers.products_visibility') }}</label>
                                     <a type="button" class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                                        <i class="fa fa-plus" aria-hidden="true"></i> Add Customer Products
+                                        <i class="fa fa-plus" aria-hidden="true"></i> {{ __('customers.add_customer_products') }}
                                     </a>
                                 </div>
                             </div>
@@ -257,59 +263,59 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="attn_contact">Product Price Permission</label>
+                                    <label class="mb-2" for="attn_contact">{{ __('customers.price_permission') }}</label>
                                     <div class="d-flex mt-2">
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="hide">
                                                 <input class="form-check-input" type="radio" name="price_permission" id="hide" value="0" {{ $customer->price_permission == 0 ? 'checked' : '' }}>
-                                                Hide Price
+                                                {{ __('customers.hide_price') }}
                                             </label>
                                         </div>
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="unhide">
                                                 <input class="form-check-input" type="radio" name="price_permission" id="unhide" value="1" {{ $customer->price_permission == 1 ? 'checked' : '' }}>
-                                                Unhide Price
+                                                {{ __('customers.unhide_price') }}
                                             </label>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="mb-4">
-                                    <label class="mb-2" for="attn_contact">Invoice Visibility</label>
+                                    <label class="mb-2" for="attn_contact">{{ __('customers.invoice_visibility') }}</label>
                                     <div class="d-flex mt-2">
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="hide_invoice">
                                                 <input class="form-check-input" type="radio" name="invoice_visibility" id="hide_invoice" value="0" {{ $customer->invoice_visibility == 0 ? 'checked' : '' }}>
-                                                Hide Invoice
+                                                {{ __('customers.hide_invoice') }}
                                             </label>
                                         </div>
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="unhide_invoice">
                                                 <input class="form-check-input" type="radio" name="invoice_visibility" id="unhide_invoice" value="1" {{ $customer->invoice_visibility == 1 ? 'checked' : '' }}>
-                                                Unhide Invoice
+                                                {{ __('customers.unhide_invoice') }}
                                             </label>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="mb-4">
-                                    <label class="mb-2" for="attn_contact">Invoice Product Price Visibility</label>
+                                    <label class="mb-2" for="attn_contact">{{ __('customers.invoice_price_visibility') }}</label>
                                     <div class="d-flex mt-2">
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="invoice_price_hide">
                                                 <input class="form-check-input" type="radio" name="invoice_price_permission" id="invoice_price_hide" value="0" {{ $customer->invoice_price_permission == 0 ? 'checked' : '' }}>
-                                                Hide Product Price
+                                                {{ __('customers.hide_product_price') }}
                                             </label>
                                         </div>
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="invoice_price_unhide">
                                                 <input class="form-check-input" type="radio" name="invoice_price_permission" id="invoice_price_unhide" value="1" {{ $customer->invoice_price_permission == 1 ? 'checked' : '' }}>
-                                                Unhide Product Price
+                                                {{ __('customers.unhide_product_price') }}
                                             </label>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="mb-4">
-                                    <label class="mb-2" for="remark">Remark</label>
-                                    <textarea class="form-control @error('remark') is-invalid @enderror" name="remark" id="remark" placeholder="Enter customer remark">{{ old('remark') ?: $customer->remark }}</textarea>
+                                    <label class="mb-2" for="remark">{{ __('customers.remark') }}</label>
+                                    <textarea class="form-control @error('remark') is-invalid @enderror" name="remark" id="remark" placeholder="{{ __('customers.enter_remark') }}">{{ old('remark') ?: $customer->remark }}</textarea>
                                     @error('remark')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $message }}</strong>
@@ -389,13 +395,13 @@
             <div class="col-md-4">
                 <div class="card shadow no-border mb-4">
                     <div class="card-body">
-                        <h5 class="card-title">Customer Products</h5>
+                        <h5 class="card-title">{{ __('customers.customer_products') }}</h5>
                         <hr>
                         <div id="product_bag-item"></div>
                         <div class="d-flex justify-content-end mt-4">
-                            <a href="{{ route('admin.customers') }}" class="btn btn-secondary px-4 me-2 mb-1">Back</a>
+                            <a href="{{ route('admin.customers') }}" class="btn btn-secondary px-4 me-2 mb-1">{{ __('ui.back') }}</a>
                             <button type="submit" class="btn btn-primary px-4 mb-1">
-                                Save
+                                {{ __('ui.save') }}
                                 <div class="spinner-border spinner-border-sm d-none" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
@@ -412,25 +418,25 @@
             @if ($customer->isCreditCustomer())
             <div class="card shadow no-border mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">Credit Balance</h5>
+                    <h5 class="card-title">{{ __('customers.credit_balance') }}</h5>
                     <hr>
                     @php
                         $creditBalance = (float) ($customer->credit_balance ?? 0);
                     @endphp
                     <div class="d-flex align-items-center flex-wrap gap-3 mb-4">
                         <div>
-                            <p class="mb-1 text-muted">Current Balance</p>
+                            <p class="mb-1 text-muted">{{ __('customers.current_balance') }}</p>
                             <h3 class="mb-0 {{ $creditBalance >= 0 ? 'text-success' : 'text-danger' }}">
                                 RM {{ number_format($creditBalance, 2) }}
                             </h3>
                         </div>
                         <div>
                             @if ($creditBalance > 0)
-                                <span class="badge bg-success">Credit available — auto-applied on next order</span>
+                                <span class="badge bg-success">{{ __('customers.credit_available') }}</span>
                             @elseif ($creditBalance < 0)
-                                <span class="badge bg-danger">Outstanding balance</span>
+                                <span class="badge bg-danger">{{ __('customers.outstanding_balance') }}</span>
                             @else
-                                <span class="badge bg-secondary">No credit balance</span>
+                                <span class="badge bg-secondary">{{ __('customers.no_credit_balance') }}</span>
                             @endif
                         </div>
                     </div>
@@ -439,31 +445,31 @@
                         @csrf
                         <div class="row">
                             <div class="col-md-4">
-                                <label class="mb-2" for="credit_amount">Adjustment (RM)</label>
-                                <input type="number" step="0.01" class="form-control" name="amount" id="credit_amount" placeholder="e.g. 50 or -20" required>
-                                <small class="text-muted">Positive adds credit, negative reduces.</small>
+                                <label class="mb-2" for="credit_amount">{{ __('customers.adjustment_rm') }}</label>
+                                <input type="number" step="0.01" class="form-control" name="amount" id="credit_amount" placeholder="{{ __('customers.adjustment_placeholder') }}" required>
+                                <small class="text-muted">{{ __('customers.adjustment_help') }}</small>
                             </div>
                             <div class="col-md-8">
-                                <label class="mb-2" for="credit_notes">Reason</label>
-                                <input type="text" class="form-control" name="notes" id="credit_notes" placeholder="Reason for adjustment" required>
+                                <label class="mb-2" for="credit_notes">{{ __('customers.reason') }}</label>
+                                <input type="text" class="form-control" name="notes" id="credit_notes" placeholder="{{ __('customers.reason_placeholder') }}" required>
                             </div>
                         </div>
                         <div class="mt-3">
-                            <button type="submit" class="btn btn-primary btn-sm">Apply Adjustment</button>
+                            <button type="submit" class="btn btn-primary btn-sm">{{ __('customers.apply_adjustment') }}</button>
                         </div>
                     </form>
 
-                    <h6 class="mb-3">Credit Adjustment Log</h6>
+                    <h6 class="mb-3">{{ __('customers.credit_log') }}</h6>
                     <div class="table-responsive">
                         <table class="table table-bordered table-sm">
                             <thead>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Type</th>
-                                    <th>Amount</th>
-                                    <th>Balance After</th>
-                                    <th>Order</th>
-                                    <th>Notes</th>
+                                    <th>{{ __('customers.date') }}</th>
+                                    <th>{{ __('customers.type') }}</th>
+                                    <th>{{ __('customers.amount') }}</th>
+                                    <th>{{ __('customers.balance_after') }}</th>
+                                    <th>{{ __('customers.order') }}</th>
+                                    <th>{{ __('customers.notes') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -480,7 +486,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-muted">No credit movements yet.</td>
+                                        <td colspan="6" class="text-muted">{{ __('customers.no_credit_movements') }}</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -492,8 +498,8 @@
             @if (!$customer->hasCompletedRegistration())
             <div class="card shadow no-border mb-4">
                 <div class="card-body">
-                    <h5 class="card-title">Customer Registration Link</h5>
-                    <p class="text-muted">This customer has not registered yet. Send the link below so they can create their portal account.</p>
+                    <h5 class="card-title">{{ __('customers.registration_link_title') }}</h5>
+                    <p class="text-muted">{{ __('customers.registration_link_help') }}</p>
                     @php $registrationUrl = $customer->registrationUrl(); @endphp
                     @if ($registrationUrl)
                         <div class="mb-2">
@@ -502,21 +508,21 @@
                         </div>
                         <input type="text" class="form-control mb-2" id="registrationLink" value="{{ $registrationUrl }}" readonly>
                         <div class="d-flex gap-2 flex-wrap">
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText(document.getElementById('registrationLink').value)">Copy Link</button>
-                            <a href="{{ route('admin.customers.generate-registration-link', $customer->id) }}" class="btn btn-sm btn-primary">Generate New Link</a>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText(document.getElementById('registrationLink').value)">{{ __('customers.copy_link') }}</button>
+                            <a href="{{ route('admin.customers.generate-registration-link', $customer->id) }}" class="btn btn-sm btn-primary">{{ __('customers.generate_new_link') }}</a>
                         </div>
                         @if ($customer->registration_token_expires_at)
-                            <small class="text-muted d-block mt-2">Expires {{ $customer->registration_token_expires_at->format('d M Y') }}</small>
+                            <small class="text-muted d-block mt-2">{{ __('customers.expires', ['date' => $customer->registration_token_expires_at->format('d M Y')]) }}</small>
                         @endif
                     @else
-                        <a href="{{ route('admin.customers.generate-registration-link', $customer->id) }}" class="btn btn-sm btn-primary">Generate Registration Link</a>
+                        <a href="{{ route('admin.customers.generate-registration-link', $customer->id) }}" class="btn btn-sm btn-primary">{{ __('customers.generate_registration_link') }}</a>
                     @endif
                 </div>
             </div>
             @else
             <div class="card shadow no-border mb-4">
                 <div class="card-body">
-                    <div class="alert alert-success mb-0">Portal registration completed on {{ $customer->registration_completed_at->format('d M Y') }}.</div>
+                    <div class="alert alert-success mb-0">{{ __('customers.registration_completed_alert', ['date' => $customer->registration_completed_at->format('d M Y')]) }}</div>
                 </div>
             </div>
             @endif
@@ -524,15 +530,15 @@
             <div class="card shadow no-border">
                 <div class="card-body">
                     <div class="mb-4">
-                        <h5 class="card-title">Reset Password</h5>
+                        <h5 class="card-title">{{ __('customers.reset_password') }}</h5>
                     </div>
                     <form action="{{ route('admin.customer.update-password') }}" method="POST" class="form-wrapper">
                         @csrf
                         <input type="hidden" name="id" value="{{ encrypt($customer->id) }}">
                         <div class="mb-4">
-                            <label class="mb-2" for="new_password">New Password</label>
+                            <label class="mb-2" for="new_password">{{ __('customers.new_password') }}</label>
                             <span class="text-danger"> *</span>
-                            <input type="password" class="form-control @error('new_password') is-invalid @enderror" name="new_password" id="new_password" placeholder="Enter new password" required>
+                            <input type="password" class="form-control @error('new_password') is-invalid @enderror" name="new_password" id="new_password" placeholder="{{ __('customers.enter_new_password') }}" required>
                             @error('new_password')
                                 <span class="text-danger" role="alert">
                                     <strong>{{ $message }}</strong>
@@ -541,7 +547,7 @@
                         </div>
                         <div class="d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary">
-                                Reset Password
+                                {{ __('customers.reset_password') }}
                                 <div class="spinner-border spinner-border-sm d-none" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
@@ -566,6 +572,14 @@
         const productIds = selected_products.map(product => product.product_id);
 
         $(document).ready(function() {
+            function syncPaymentTermField() {
+                const isCredit = $('#customer_type').val() === 'credit';
+                $('#payment_term_wrap').toggleClass('d-none', !isCredit);
+            }
+
+            $('#customer_type').on('change', syncPaymentTermField);
+            syncPaymentTermField();
+
             $('#payment_method').select2({
                 placeholder: 'Select a payment method'
             });

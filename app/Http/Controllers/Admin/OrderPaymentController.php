@@ -139,4 +139,31 @@ class OrderPaymentController extends Controller
 
         return back()->with('success', 'Invoice queued for AutoCount sync.');
     }
+
+    public function syncAutoCountBulk(Request $request)
+    {
+        $request->validate([
+            'order_ids' => 'required|array|min:1',
+            'order_ids.*' => 'integer|exists:orders,id',
+        ]);
+
+        $result = app(\App\Services\AutoCountSyncService::class)->syncOrders(
+            $request->input('order_ids', []),
+            Auth::guard('web_admin')->id()
+        );
+
+        if ($result['synced'] === 0) {
+            $message = $result['errors'][0] ?? __('orders.js.sync_autocount_none');
+
+            return back()->with('error', $message);
+        }
+
+        $message = __('orders.js.sync_autocount_success', ['count' => $result['synced']]);
+
+        if ($result['skipped'] > 0) {
+            $message .= ' ' . __('orders.js.sync_autocount_skipped', ['count' => $result['skipped']]);
+        }
+
+        return back()->with('success', $message);
+    }
 }

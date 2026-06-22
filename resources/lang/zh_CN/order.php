@@ -1,0 +1,42 @@
+<?php
+
+return [
+    'status' => [
+        'pending' => '待处理',
+        'customer_reviewing' => '客户审核中',
+        'in_route' => '配送中',
+        'delivered' => '已送达',
+        'cancelled' => '已取消',
+        'paid_completed' => '已送达',
+        'processing' => '处理中',
+        'delivering' => '配送中',
+        'completed' => '已送达',
+    ],
+    'payment_status' => [
+        'unpaid' => '未付款',
+        'pending' => '待确认',
+        'partial' => '未付清',
+        'paid' => '已付款',
+        'payment_due' => '到期应付',
+    ],
+    'order_type' => [
+        'registered' => '注册客户',
+        'walk_in' => 'Walk-in',
+        'public' => '公开链接订单',
+    ],
+    'file' => [
+        'invoice' => '发票',
+        'invoice2' => '无价格发票',
+        'delivery-order' => '送货单',
+    ],
+    'payment_methods' => [
+        'cash' => '现金',
+        'qr' => '二维码',
+        'bank-transfer' => '银行转账',
+        'e-wallet' => '电子钱包',
+        'payment-gateway' => '支付网关',
+        'credit-term' => '账期',
+        'customer-credit' => '客户信用',
+        'cod' => '货到付款',
+    ],
+];

@@ -11,10 +11,10 @@
                 <div class="card-body">
                     <div class="mb-5">
                         <h3>{{ env('APP_NAME') }}</h3>
-                        <p>Sign-in to your user account.</p>
+                        <p>{{ __('ui.auth.sign_in_user') }}</p>
                         @if (session('error'))
                             <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                                <strong>Warning!</strong> {{ session('error') }}
+                                <strong>{{ __('ui.alert.warning') }}</strong> {{ session('error') }}
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         @endif
@@ -22,7 +22,7 @@
                     <form action="{{ route('login.submit') }}" method="POST" class="form-wrapper">
                         @csrf
                         <div class="form-group mb-4">
-                            <label class="mb-2" for="email">Email</label>
+                            <label class="mb-2" for="email">{{ __('ui.auth.email') }}</label>
                             <span class="text-danger"> *</span>
                             <input type="email" class="form-control @error('email') is-invalid @enderror" autofocus name="email" id="email" value="{{ old('email')? : '' }}" placeholder="Enter your email">
                             @error ('email')
@@ -32,7 +32,7 @@
                             @enderror
                         </div>
                         <div class="form-group mb-4">
-                            <label class="mb-2" for="password">Password</label>
+                            <label class="mb-2" for="password">{{ __('ui.auth.password') }}</label>
                             <span class="text-danger"> *</span>
                             <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" id="password" placeholder="Enter your password">
                             @error ('password')
@@ -43,7 +43,7 @@
                         </div>
                         <div class="form-group mb-3">
                             <button type="submit" class="btn btn-primary w-100">
-                                Login
+                                {{ __('ui.auth.sign_in') }}
                                 <div class="spinner-border spinner-border-sm d-none" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>

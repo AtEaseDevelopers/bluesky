@@ -37,6 +37,34 @@ class StockMovement extends Model
         'other' => 'Other',
     ];
 
+    public static function movementTypeLabels(): array
+    {
+        $labels = [];
+        foreach (array_keys(self::$movement_types) as $key) {
+            $labels[$key] = __('inventory.movement_types.' . $key);
+        }
+
+        return $labels;
+    }
+
+    public static function stockOutReasonLabels(): array
+    {
+        $labels = [];
+        foreach (array_keys(self::$stock_out_reasons) as $key) {
+            $labels[$key] = __('inventory.stock_out_reasons.' . $key);
+        }
+
+        return $labels;
+    }
+
+    public static function movementTypeLabel(string $type): string
+    {
+        $key = 'inventory.movement_types.' . $type;
+        $label = __($key);
+
+        return $label !== $key ? $label : (self::$movement_types[$type] ?? $type);
+    }
+
     public function product()
     {
         return $this->belongsTo(Product::class);

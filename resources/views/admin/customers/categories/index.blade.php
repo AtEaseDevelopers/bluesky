@@ -5,11 +5,6 @@
     <link href="{{ asset('assets/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" type="text/css">
 
 @endsection
-@section('css')
-
-    <link href="{{ asset(path: 'assets/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" type="text/css">
-
-@endsection
 @section('content')
 
     <div class="row mb-4">

@@ -22,14 +22,16 @@
 @endsection
 @section('content')
 
+    @include('partials.language-switcher-buttons')
+
     <div class="row">
         <div class="col-12 col-md-8 col-lg-6 mx-auto">
             <div class="login-hero mb-4 mt-2">
                 <div class="d-flex align-items-center gap-2 mb-3" style="font-weight:700; letter-spacing:.05em; text-transform:uppercase; font-size:.8rem; opacity:.85;">
                     <i class="fa fa-truck"></i> Bluesky Live Seafood
                 </div>
-                <h1 class="display-font">Driver Portal</h1>
-                <p>Sign in to view your delivery orders and record payments.</p>
+                <h1 class="display-font">{{ __('ui.auth.driver_portal') }}</h1>
+                <p>{{ __('ui.auth.driver_sign_in_help') }}</p>
             </div>
 
             <div class="card driver-card">
@@ -37,7 +39,7 @@
                     <form action="{{ route('driver.login.submit') }}" method="POST">
                         @csrf
                         <div class="mb-3">
-                            <label class="form-label" for="username">Username</label>
+                            <label class="form-label" for="username">{{ __('ui.auth.username') }}</label>
                             <input type="text" class="form-control form-control-lg @error('username') is-invalid @enderror"
                                 name="username" id="username" value="{{ old('username') }}" autofocus
                                 placeholder="Enter your username">
@@ -46,7 +48,7 @@
                             @enderror
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" for="password">Password</label>
+                            <label class="form-label" for="password">{{ __('ui.auth.password') }}</label>
                             <input type="password" class="form-control form-control-lg @error('password') is-invalid @enderror"
                                 name="password" id="password" placeholder="Enter your password">
                             @error('password')
@@ -54,7 +56,7 @@
                             @enderror
                         </div>
                         <button type="submit" class="btn btn-brand btn-lg w-100 mt-2">
-                            <i class="fa fa-sign-in me-1"></i> Login
+                            <i class="fa fa-sign-in me-1"></i> {{ __('ui.auth.sign_in') }}
                         </button>
                     </form>
                 </div>

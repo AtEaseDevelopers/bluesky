@@ -15,19 +15,19 @@
             <ul class="navbar-nav me-auto my-2 my-lg-0 navbar-nav-scroll">
                 @if ($user->canAccessModule('dashboard'))
                     <li class="nav-item">
-                        <a class="nav-link {{ $currentRoute === 'admin.dashboard' ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">Dashboard</a>
+                        <a class="nav-link {{ $currentRoute === 'admin.dashboard' ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">{{ __('ui.nav.dashboard') }}</a>
                     </li>
                 @endif
                 @if ($user->canAccessModule('customers'))
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
-                            Customers
+                            {{ __('ui.nav.customers') }}
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('admin.customers') }}">Manage Customers</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.customers.invite') }}">Invite Customer</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.customers.create') }}">Add New Customer</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.customers') }}">{{ __('ui.nav.manage_customers') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.customers.invite') }}">{{ __('ui.nav.invite_customer') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.customers.create') }}">{{ __('ui.nav.add_customer') }}</a></li>
                         </ul>
                     </li>
                 @endif
@@ -35,12 +35,12 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
-                            Orders
+                            {{ __('ui.nav.orders') }}
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('admin.orders') }}">Manage Orders</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.orders.create') }}">Add New Order</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.delivery-slots.index') }}">Delivery Slots</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.orders') }}">{{ __('ui.nav.manage_orders') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.orders.create') }}">{{ __('ui.nav.add_order') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.delivery-slots.index') }}">{{ __('ui.nav.delivery_slots') }}</a></li>
                         </ul>
                     </li>
                 @endif
@@ -48,13 +48,25 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
-                            Inventory
+                            {{ __('ui.nav.products') }}
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('admin.inventory.index') }}">Stock Balance</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.inventory.stock-in.create') }}">Stock In</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.inventory.stock-out.create') }}">Stock Out</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.inventory.movements') }}">Movement Log</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.products') }}">{{ __('ui.nav.manage_products') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.products.create') }}">{{ __('ui.nav.add_product') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.products-import.index') }}">{{ __('ui.nav.import_products') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url('/admin/product-daily-prices') }}">{{ __('ui.nav.daily_prices') }}</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ __('ui.nav.inventory') }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ route('admin.inventory.index') }}">{{ __('ui.nav.stock_balance') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.inventory.stock-in.create') }}">{{ __('ui.nav.stock_in') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.inventory.stock-out.create') }}">{{ __('ui.nav.stock_out') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.inventory.movements') }}">{{ __('ui.nav.movement_log') }}</a></li>
                         </ul>
                     </li>
                 @endif
@@ -62,54 +74,57 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
-                            Reports
+                            {{ __('ui.nav.reports') }}
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ route('admin.daily-sales-report') }}">Daily Sales Report</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.do-report') }}">DO Report</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.daily-sales-report') }}">{{ __('ui.nav.daily_sales_report') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.do-report') }}">{{ __('ui.nav.do_report') }}</a></li>
                         </ul>
                     </li>
                 @endif
                 @if ($user->canAccessModule('drivers'))
                     <li class="nav-item">
-                        <a class="nav-link {{ str_starts_with($currentRoute ?? '', 'admin.lorry.') ? 'active' : '' }}" href="{{ route('admin.lorry.index') }}">Drivers / Lorry</a>
+                        <a class="nav-link {{ str_starts_with($currentRoute ?? '', 'admin.lorry.') ? 'active' : '' }}" href="{{ route('admin.lorry.index') }}">{{ __('ui.nav.drivers_lorry') }}</a>
                     </li>
                 @endif
                 @if ($user->canAccessModule('settings'))
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
-                            Settings
+                            {{ __('ui.nav.settings') }}
                         </a>
                         <ul class="dropdown-menu">
                             @if ($user->canManageAdminUsers())
-                                <li><a class="dropdown-item" href="{{ route('admin.admins.index') }}">Admin Users</a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.admins.index') }}">{{ __('ui.nav.admin_users') }}</a></li>
                             @endif
                             @if ($user->canManageRolePermissions())
-                                <li><a class="dropdown-item" href="{{ route('admin.roles.index') }}">Manage Roles</a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.roles.index') }}">{{ __('ui.nav.manage_roles') }}</a></li>
                             @endif
                             @if ($user->canManageAdminUsers() && $user->canManageRolePermissions())
                                 <li><hr class="dropdown-divider"></li>
                             @endif
-                            <li><a class="dropdown-item" href="{{ route('admin.areas.index') }}">Areas</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.uom.index') }}">UOM</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.order-field-settings.edit') }}">Order Field Settings</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.areas.index') }}">{{ __('ui.nav.areas') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.uom.index') }}">{{ __('ui.nav.uom') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.product-categories.index') }}">{{ __('ui.nav.product_categories') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.customer-categories.index') }}">{{ __('ui.nav.customer_categories') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.order-field-settings.edit') }}">{{ __('ui.nav.order_field_settings') }}</a></li>
                         </ul>
                     </li>
                 @endif
             </ul>
-            <ul class="navbar-nav d-flex">
+            <ul class="navbar-nav d-flex align-items-center">
+                @include('partials.language-switcher')
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button"
                         data-bs-toggle="dropdown" aria-expanded="false">
-                        Hi, {{ $user->name }}
+                        {{ __('ui.nav.greeting', ['name' => $user->name]) }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><span class="dropdown-item-text text-muted small">{{ $user->roleLabel() }}</span></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{{ route('admin.profile') }}">My Profile</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.profile') }}">{{ __('ui.profile') }}</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{{ route('admin.logout') }}">Logout</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.logout') }}">{{ __('ui.logout') }}</a></li>
                     </ul>
                 </li>
             </ul>

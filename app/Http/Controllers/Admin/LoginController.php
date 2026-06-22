@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\LocaleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -39,7 +40,7 @@ class LoginController extends Controller
      *
      * @return \Illuminate\Contracts\Support\Renderable
      */
-    public function login(Request $request)
+    public function login(Request $request, LocaleService $localeService)
     {
         $data = $this->validateLogin($request);
         if (isset($data['error']) && $data['error']){
@@ -57,6 +58,8 @@ class LoginController extends Controller
 
                 return back()->with('error', 'Your account is inactive. Please contact a superadmin.')->withInput();
             }
+
+            $localeService->syncSessionFromUser($admin);
 
             return redirect(route('admin.dashboard'));
         } else {

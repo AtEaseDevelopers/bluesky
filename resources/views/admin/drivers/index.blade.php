@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'Manage Lorry')
+@section('title', __('drivers.manage'))
 @section('css')
 
     <link href="{{ asset('assets/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" type="text/css">
@@ -12,22 +12,22 @@
             <div class="card shadow no-border">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-                        <h5>Lorry</h5>
+                        <h5>{{ __('drivers.list') }}</h5>
                         <a href="{{ route('admin.lorry.create') }}" class="btn btn-primary">
-                            Add New Lorry
+                            {{ __('drivers.add') }}
                         </a>
                     </div>
                     <div class="table-responsive">
                         <table id="datatable-data" class="table table-bordered w-100">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Options</th>
-                                    <th>Name</th>
-                                    <th>Username</th>
-                                    <th>Lorry Number</th>
-                                    <th>Status</th>
-                                    <th>Created At</th>
+                                    <th>{{ __('drivers.id') }}</th>
+                                    <th>{{ __('drivers.options') }}</th>
+                                    <th>{{ __('drivers.name') }}</th>
+                                    <th>{{ __('drivers.username') }}</th>
+                                    <th>{{ __('drivers.lorry_number') }}</th>
+                                    <th>{{ __('drivers.status') }}</th>
+                                    <th>{{ __('drivers.created_at') }}</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -42,21 +42,21 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Delete Driver</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">{{ __('drivers.delete_driver') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure to delete this driver?</p>
+                    <p>{{ __('drivers.delete_confirm') }}</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}">{{ __('ui.close') }}</button>
                     <form action="" method="POST" id="delete-form" class="form-wrapper">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-primary">
-                            Delete
+                            {{ __('ui.delete') }}
                             <div class="spinner-border spinner-border-sm d-none" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                                <span class="visually-hidden">{{ __('inventory.loading') }}</span>
                             </div>
                         </button>
                     </form>
@@ -74,51 +74,52 @@
         $(document).ready(function() {
             $('#datatable-data').DataTable({
                 dom: '<"row d-flex justify-content-between"<"col ps-0"l><"col-md-6 text-center pro-tips py-2"><"col pe-0"f>>t<"row mt-3"<"col-md-6"i><"col-md-6"p>r>',
-                "processing": true,
+                processing: true,
                 scrollX: true,
-                "serverSide": true,
-                "responsive": false,
+                serverSide: true,
+                responsive: false,
                 order: [
                     [0, "desc"]
                 ],
                 columnDefs: [{
-                    'visible': false,
-                    'targets': [0]
+                    visible: false,
+                    targets: [0]
                 }],
-                "ajax": {
-                    "url": appUrl + '/admin/get-lorry',
-                    "dataType": "json",
-                    "type": "POST",
-                    "data": {
+                language: @json(__('drivers.datatable')),
+                ajax: {
+                    url: appUrl + '/admin/get-lorry',
+                    dataType: "json",
+                    type: "POST",
+                    data: {
                         _token: csrfToken
                     }
                 },
-                "columns": [{
-                        "data": "id",
+                columns: [{
+                        data: "id",
                         orderable: false
                     },
                     {
-                        "data": "options",
+                        data: "options",
                         orderable: false
                     },
                     {
-                        "data": "name",
+                        data: "name",
                         orderable: true
                     },
                     {
-                        "data": "username",
+                        data: "username",
                         orderable: true
                     },
                     {
-                        "data": "lorry_number",
+                        data: "lorry_number",
                         orderable: true
                     },
                     {
-                        "data": "is_active",
+                        data: "is_active",
                         orderable: true
                     },
                     {
-                        "data": "created_at",
+                        data: "created_at",
                         orderable: true
                     },
                 ]

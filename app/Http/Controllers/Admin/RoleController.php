@@ -57,7 +57,7 @@ class RoleController extends Controller
 
         return redirect()
             ->route('admin.roles.edit', $role->slug)
-            ->with('success', 'Role created successfully.');
+            ->with('success', __('roles.created_success'));
     }
 
     public function show(Role $role)
@@ -94,7 +94,7 @@ class RoleController extends Controller
 
         return redirect()
             ->route('admin.roles.edit', $role->slug)
-            ->with('success', 'Role updated successfully.');
+            ->with('success', __('roles.updated_success'));
     }
 
     public function destroy(Role $role, RolePermissionService $service)
@@ -107,7 +107,7 @@ class RoleController extends Controller
             return redirect()->route('admin.roles.index')->with('error', $e->getMessage());
         }
 
-        return redirect()->route('admin.roles.index')->with('success', 'Role deleted successfully.');
+        return redirect()->route('admin.roles.index')->with('success', __('roles.deleted_success'));
     }
 
     private function portalPermissionOptions(): array

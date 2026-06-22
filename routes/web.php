@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 
+Route::get('/locale/{locale}', 'LocaleController@switch')->name('locale.switch');
+
 $adminUrl = config('app.admin_url');
 
 // if ((request()->isSecure()? "https://" : "http://") . request()->getHost() == $adminUrl) {

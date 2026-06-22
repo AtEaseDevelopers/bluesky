@@ -33,7 +33,7 @@ class UomController extends Controller
             ]
         );
 
-        return redirect(route('admin.uom.index'))->with('success', "UOM has been added successfully.");
+        return redirect(route('admin.uom.index'))->with('success', __('uom.added_success'));
     }
 
     public function edit($id)
@@ -56,12 +56,12 @@ class UomController extends Controller
             ]
         );
 
-        return redirect(route('admin.uom.index'))->with('success', "UOM has been updated successfully.");
+        return redirect(route('admin.uom.index'))->with('success', __('uom.updated_success'));
     }
 
     public function destroy($id)
     {
-        return redirect(route('admin.uom.index'))->with('success', "UOM has been deleted successfully.");
+        return redirect(route('admin.uom.index'))->with('success', __('uom.deleted_success'));
     }
 
     public function fetch_uom(Request $request)

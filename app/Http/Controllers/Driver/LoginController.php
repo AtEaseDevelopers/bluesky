@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Driver;
 
 use App\Driver;
 use App\Http\Controllers\Controller;
+use App\Services\LocaleService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -25,7 +26,7 @@ class LoginController extends Controller
     /**
      * Handle a driver login attempt.
      */
-    public function login(Request $request)
+    public function login(Request $request, LocaleService $localeService)
     {
         $data = $request->validate([
             'username' => ['required', 'string'],
@@ -44,6 +45,7 @@ class LoginController extends Controller
 
         Auth::guard('web_driver')->login($driver);
         $request->session()->regenerate();
+        $localeService->syncSessionFromUser($driver);
 
         return redirect(route('driver.orders.index'));
     }

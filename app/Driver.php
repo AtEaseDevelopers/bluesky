@@ -18,6 +18,7 @@ class Driver extends Authenticatable
         'api_token',
         'is_active',
         'role_slug',
+        'locale',
     ];
 
     protected $hidden = [

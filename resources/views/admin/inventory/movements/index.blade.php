@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'Stock Movement Log')
+@section('title', __('inventory.movement_log'))
 @section('css')
     <link href="{{ asset('assets/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" type="text/css">
 @endsection
@@ -10,18 +10,18 @@
             <div class="card shadow no-border">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-                        <h5 class="card-title">Stock Movement Log</h5>
+                        <h5 class="card-title">{{ __('inventory.movement_log') }}</h5>
                         <div class="d-flex gap-2">
-                            <a href="{{ route('admin.inventory.index') }}" class="btn btn-secondary">Stock Balance</a>
-                            <a href="{{ route('admin.inventory.stock-in.create') }}" class="btn btn-success">Stock In</a>
-                            <a href="{{ route('admin.inventory.stock-out.create') }}" class="btn btn-warning">Stock Out</a>
+                            <a href="{{ route('admin.inventory.index') }}" class="btn btn-secondary">{{ __('inventory.stock_balance') }}</a>
+                            <a href="{{ route('admin.inventory.stock-in.create') }}" class="btn btn-success">{{ __('inventory.stock_in') }}</a>
+                            <a href="{{ route('admin.inventory.stock-out.create') }}" class="btn btn-warning">{{ __('inventory.stock_out') }}</a>
                         </div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-4">
-                            <label class="mb-2" for="filter_type">Movement Type</label>
+                            <label class="mb-2" for="filter_type">{{ __('inventory.movement_type') }}</label>
                             <select id="filter_type" class="form-control">
-                                <option value="">All Types</option>
+                                <option value="">{{ __('inventory.all_types') }}</option>
                                 @foreach ($movement_types as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>
                                 @endforeach
@@ -33,17 +33,17 @@
                         <table id="stock-movements-table" class="table table-bordered w-100">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Date</th>
-                                    <th>Product</th>
-                                    <th>Type</th>
-                                    <th>Qty Before</th>
-                                    <th>Change</th>
-                                    <th>Qty After</th>
-                                    <th>Weight</th>
-                                    <th>Reason</th>
-                                    <th>User</th>
-                                    <th>Remarks</th>
+                                    <th>{{ __('inventory.id') }}</th>
+                                    <th>{{ __('inventory.date') }}</th>
+                                    <th>{{ __('inventory.product') }}</th>
+                                    <th>{{ __('inventory.movement_type') }}</th>
+                                    <th>{{ __('inventory.qty_before') }}</th>
+                                    <th>{{ __('inventory.change') }}</th>
+                                    <th>{{ __('inventory.qty_after') }}</th>
+                                    <th>{{ __('inventory.weight_kg') }}</th>
+                                    <th>{{ __('inventory.reason') }}</th>
+                                    <th>{{ __('inventory.user') }}</th>
+                                    <th>{{ __('inventory.remarks') }}</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>

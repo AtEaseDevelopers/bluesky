@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'All UOM')
+@section('title', __('uom.list'))
 @section('css')
 
     <link href="{{ asset('assets/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" type="text/css">
@@ -12,9 +12,9 @@
             <div class="card shadow no-border">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-                        <h5 class="card-title">All UOM</h5>
+                        <h5 class="card-title">{{ __('uom.list') }}</h5>
                         <a href="{{ route('admin.uom.create') }}" class="btn btn-primary">
-                            Add New UOM
+                            {{ __('uom.add') }}
                         </a>
                     </div>
                     <hr>
@@ -22,11 +22,11 @@
                         <table id="uom-table" class="table table-bordered w-100">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Options</th>
-                                    <th>UOM</th>
-                                    <th>Total Products</th>
-                                    <th>Created At</th>
+                                    <th>{{ __('uom.id') }}</th>
+                                    <th>{{ __('uom.options') }}</th>
+                                    <th>{{ __('uom.uom') }}</th>
+                                    <th>{{ __('uom.total_products') }}</th>
+                                    <th>{{ __('uom.created_at') }}</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -41,21 +41,21 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Delete Uom</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">{{ __('uom.delete_uom') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure to delete this uom?</p>
+                    <p>{{ __('uom.delete_confirm') }}</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}">{{ __('ui.close') }}</button>
                     <form action="" method="POST" id="delete-form" class="form-wrapper">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-primary">
-                            Delete
+                            {{ __('ui.delete') }}
                             <div class="spinner-border spinner-border-sm d-none" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                                <span class="visually-hidden">{{ __('inventory.loading') }}</span>
                             </div>
                         </button>
                     </form>
@@ -71,24 +71,25 @@
     <script src="{{ asset('assets/datatables/js/dataTables.bootstrap4.min.js') }}"></script>
     <script>
         $('#uom-table').DataTable({
-            "processing": true,
-            "serverSide": true,
-            "responsive": true,
+            processing: true,
+            serverSide: true,
+            responsive: true,
+            language: @json(__('drivers.datatable')),
             order: [
                 [0, "asc"]
             ],
             columnDefs: [{
-                'visible': false,
-                'targets': [0]
+                visible: false,
+                targets: [0]
             }],
-            "ajax": {
-                "url": appUrl + '/admin/fetch-uom',
-                "dataType": "json",
-                "type": "POST",
-                "data": {
+            ajax: {
+                url: appUrl + '/admin/fetch-uom',
+                dataType: "json",
+                type: "POST",
+                data: {
                     _token: csrfToken,
                 },
-                "error": function (xhr, error, thrown) {
+                error: function (xhr, error, thrown) {
                     try {
                         var errorMessage = JSON.parse(xhr.responseText).message;
                         console.log("Error:", errorMessage);
@@ -97,24 +98,24 @@
                     }
                 }
             },
-            "columns": [{
-                    "data": "id",
+            columns: [{
+                    data: "id",
                     orderable: false
                 },
                 {
-                    "data": "options",
+                    data: "options",
                     orderable: false
                 },
                 {
-                    "data": "uom_name",
+                    data: "uom_name",
                     orderable: true
                 },
                 {
-                    "data": "total_products",
+                    data: "total_products",
                     orderable: false
                 },
                 {
-                    "data": "created_at",
+                    data: "created_at",
                     orderable: true
                 },
             ]

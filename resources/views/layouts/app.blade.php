@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ $htmlLang ?? 'en' }}">
 
 <head>
 
@@ -19,7 +19,15 @@
 
 <body>
 
-    @if (!in_array(Route::currentRouteName(), ['login', 'admin.login']))
+    @if (in_array(Route::currentRouteName(), ['login', 'admin.login']))
+        <nav class="navbar navbar-expand-lg bg-body-tertiary">
+            <div class="container justify-content-end">
+                <ul class="navbar-nav">
+                    @include('partials.language-switcher')
+                </ul>
+            </div>
+        </nav>
+    @elseif (!in_array(Route::currentRouteName(), ['login', 'admin.login']))
         <nav class="navbar navbar-expand-lg bg-body-tertiary">
             <div class="container">
                 <a class="navbar-brand" href="/">
@@ -33,18 +41,19 @@
                     <ul class="navbar-nav me-auto my-2 my-lg-0 navbar-nav-scroll">
                     </ul>
                     <ul class="navbar-nav d-flex">
+                        @include('partials.language-switcher')
                         @if (Auth::guard('web')->user())
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Hi, {{ Auth::guard('web')->user()->name }}
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="/profile">My Profile</a></li>
-                                    <li><a class="dropdown-item" href="#">Change Password</a></li>
+                                    <li><a class="dropdown-item" href="/profile">{{ __('ui.profile') }}</a></li>
+                                    <li><a class="dropdown-item" href="#">{{ __('ui.change_password') }}</a></li>
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
-                                    <li><a class="dropdown-item" href="{{ route('logout') }}">Logout</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('logout') }}">{{ __('ui.logout') }}</a></li>
                                 </ul>
                             </li>
                         @elseif (Auth::user())
@@ -53,17 +62,17 @@
                                     Hi, {{ Auth::user()->name }}
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="#">My Profile</a></li>
-                                    <li><a class="dropdown-item" href="#">Change Password</a></li>
+                                    <li><a class="dropdown-item" href="#">{{ __('ui.profile') }}</a></li>
+                                    <li><a class="dropdown-item" href="#">{{ __('ui.change_password') }}</a></li>
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
-                                    <li><a class="dropdown-item" href="{{ route('admin.logout') }}">Logout</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('admin.logout') }}">{{ __('ui.logout') }}</a></li>
                                 </ul>
                             </li>
                         @else
                             <li class="nav-item">
-                                <a class="nav-link" href="{{ route('login') }}">Login</a>
+                                <a class="nav-link" href="{{ route('login') }}">{{ __('ui.login') }}</a>
                             </li>
                         @endif
                     </ul>

@@ -33,6 +33,7 @@ class CustomerInviteController extends Controller
     {
         $data = $request->validate([
             'customer_type' => 'required|in:cod,credit',
+            'payment_term_days' => 'nullable|integer|min:1|max:365',
             'category' => 'required|string|max:30',
             'area_id' => 'nullable|exists:areas,id',
             'default_driver_id' => 'nullable|exists:drivers,id',
@@ -59,6 +60,9 @@ class CustomerInviteController extends Controller
             'category' => $data['category'],
             'customer_type' => $data['customer_type'],
             'credit_balance' => 0,
+            'payment_term_days' => $data['customer_type'] === 'credit'
+                ? (int) ($data['payment_term_days'] ?? 30)
+                : null,
             'payment_method' => $paymentMethods,
             'area' => $data['area_id'] ?? null,
             'default_driver_id' => $data['default_driver_id'] ?? null,

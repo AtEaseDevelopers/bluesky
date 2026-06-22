@@ -46,7 +46,7 @@ class LorryController extends Controller
             'is_active' => $request->boolean('is_active', true),
         ]);
 
-        return redirect(route('admin.lorry.index'))->with('success', 'Driver added successfully.');
+        return redirect(route('admin.lorry.index'))->with('success', __('drivers.added_success'));
     }
 
     public function edit($id)
@@ -83,14 +83,14 @@ class LorryController extends Controller
 
         Driver::where('id', $driverId)->update($update);
 
-        return redirect(route('admin.lorry.index'))->with('success', 'Driver updated successfully.');
+        return redirect(route('admin.lorry.index'))->with('success', __('drivers.updated_success'));
     }
 
     public function destroy($id)
     {
         Driver::where('id', decrypt($id))->delete();
 
-        return redirect(route('admin.lorry.index'))->with('success', 'Driver deleted successfully.');
+        return redirect(route('admin.lorry.index'))->with('success', __('drivers.deleted_success'));
     }
 
     public function get_lorry(Request $request)
@@ -138,14 +138,14 @@ class LorryController extends Controller
                 $nestedData['username'] = $record->username ?: '-';
                 $nestedData['lorry_number'] = $record->lorry_number;
                 $nestedData['is_active'] = $record->is_active
-                    ? '<span class="badge bg-success">Active</span>'
-                    : '<span class="badge bg-secondary">Inactive</span>';
+                    ? '<span class="badge bg-success">' . e(__('drivers.status_labels.active')) . '</span>'
+                    : '<span class="badge bg-secondary">' . e(__('drivers.status_labels.inactive')) . '</span>';
                 $nestedData['created_at'] = date('m-d-Y', strtotime($record->created_at));
                 $nestedData['options'] = '
-                    <a href="' . route('admin.lorry.edit', encrypt($record->id)) . '" class="btn btn-sm btn-primary" title="Edit">
+                    <a href="' . route('admin.lorry.edit', encrypt($record->id)) . '" class="btn btn-sm btn-primary" title="' . e(__('ui.edit')) . '">
                         <i class="fa fa-edit"></i>
                     </a>
-                    <button type="button" class="btn btn-sm btn-danger btn-delete" title="Delete" data-action="' . route('admin.lorry.destroy', encrypt($record->id)) . '" data-bs-toggle="modal" data-bs-target="#delete">
+                    <button type="button" class="btn btn-sm btn-danger btn-delete" title="' . e(__('ui.delete')) . '" data-action="' . route('admin.lorry.destroy', encrypt($record->id)) . '" data-bs-toggle="modal" data-bs-target="#delete">
                         <i class="fa fa-trash"></i>
                     </button>
                 ';

@@ -34,18 +34,18 @@ class OrderFieldSettingController extends Controller
         $situationOptions = $this->parseList($data['situation_options']);
 
         if (empty($weightPresets)) {
-            return back()->withInput()->with('error', 'Enter at least one weight preset.');
+            return back()->withInput()->with('error', __('settings.weight_presets_required'));
         }
 
         if (empty($situationOptions)) {
-            return back()->withInput()->with('error', 'Enter at least one situation option.');
+            return back()->withInput()->with('error', __('settings.situation_options_required'));
         }
 
         OrderFieldSetting::setValue('weight_presets', json_encode($weightPresets));
         OrderFieldSetting::setValue('situation_options', json_encode($situationOptions));
         OrderFieldSetting::setValue('situation_label', trim($data['situation_label']));
 
-        return back()->with('success', 'Order field settings updated.');
+        return back()->with('success', __('settings.updated_success'));
     }
 
     private function parseList(string $value): array

@@ -40,13 +40,13 @@
             <ul class="navbar-nav me-auto my-2 my-lg-0 navbar-nav-scroll">
                 @if ($can('products'))
                     <li class="nav-item">
-                        <a class="nav-link {{ in_array($currentRoute, ['member.products', 'public.guest.index']) ? 'active' : '' }}" href="{{ $portal['products_url'] }}">Order Menu</a>
+                        <a class="nav-link {{ in_array($currentRoute, ['member.products', 'public.guest.index']) ? 'active' : '' }}" href="{{ $portal['products_url'] }}">{{ __('ui.nav.order_menu') }}</a>
                     </li>
                 @endif
                 @if (!$isGuest && ($portal['orders_url'] ?? null) && $can('orders'))
                     <li class="nav-item">
                         <a class="nav-link {{ in_array($currentRoute, ['member.orders', 'member.orders.summary', 'member.orders.review']) ? 'active' : '' }}" href="{{ $portal['orders_url'] }}">
-                            My Orders
+                            {{ __('ui.nav.my_orders') }}
                             @if ($pendingReviewCount > 0)
                                 <span class="badge bg-warning text-dark">{{ $pendingReviewCount }}</span>
                             @endif
@@ -54,14 +54,14 @@
                     </li>
                     @if ($user && $user->isCreditCustomer() && ($portal['bulk_payments_url'] ?? null) && $can('bulk_payments'))
                         <li class="nav-item">
-                            <a class="nav-link {{ $currentRoute === 'member.bulk-payments' ? 'active' : '' }}" href="{{ $portal['bulk_payments_url'] }}">Bulk Payment</a>
+                            <a class="nav-link {{ $currentRoute === 'member.bulk-payments' ? 'active' : '' }}" href="{{ $portal['bulk_payments_url'] }}">{{ __('ui.nav.bulk_payment') }}</a>
                         </li>
                     @endif
                 @endif
                 @if ($can('cart'))
                     <li class="nav-item">
                         <a class="nav-link {{ in_array($currentRoute, ['member.cart', 'public.guest.cart']) ? 'active' : '' }}" href="{{ $portal['cart_url'] }}">
-                            Cart <span class="badge badge-success">{{ $cartCount ?? 0 }}</span>
+                            {{ __('ui.nav.cart') }} <span class="badge badge-success">{{ $cartCount ?? 0 }}</span>
                         </a>
                     </li>
                 @endif
@@ -69,7 +69,7 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle {{ $currentRoute === 'member.policies.show' ? 'active' : '' }}"
                             href="javascript:void(0);" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Terms and Policies
+                            {{ __('ui.nav.terms_policies') }}
                         </a>
                         <ul class="dropdown-menu">
                             @foreach (\App\Http\Controllers\Member\PolicyController::PAGES as $slug => $label)
@@ -85,19 +85,24 @@
                 @endif
             </ul>
             @if (!$isGuest && $user)
-                <ul class="navbar-nav d-flex">
+                <ul class="navbar-nav d-flex align-items-center">
+                    @include('partials.language-switcher')
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="javascript:void(0);" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Hi, {{ $user->name }}
+                            {{ __('ui.nav.greeting', ['name' => $user->name]) }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             @if ($can('profile'))
-                                <li><a class="dropdown-item" href="{{ route('member.profile') }}">My Profile</a></li>
+                                <li><a class="dropdown-item" href="{{ route('member.profile') }}">{{ __('ui.profile') }}</a></li>
                                 <li><hr class="dropdown-divider"></li>
                             @endif
-                            <li><a class="dropdown-item" href="{{ route('logout') }}">Logout</a></li>
+                            <li><a class="dropdown-item" href="{{ route('logout') }}">{{ __('ui.logout') }}</a></li>
                         </ul>
                     </li>
+                </ul>
+            @else
+                <ul class="navbar-nav d-flex align-items-center">
+                    @include('partials.language-switcher')
                 </ul>
             @endif
         </div>

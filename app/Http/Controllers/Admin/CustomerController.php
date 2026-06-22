@@ -15,6 +15,7 @@ use App\ProductVisibility;
 use App\System;
 use App\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class CustomerController extends Controller
 {
@@ -32,6 +33,7 @@ class CustomerController extends Controller
         $area = $request['area'];
         $shipping_state = $request['shipping_state'];
         $status = $request['status'];
+        $customer_type = $request['customer_type'];
 
         $users = User::query()
             ->leftJoin('areas', 'areas.id', '=', 'users.area')
@@ -56,6 +58,14 @@ class CustomerController extends Controller
             })
             ->when(($status != null), function ($q) use ($status) {
                 return $q->where('users.status', $status);
+            })
+            ->when($customer_type === 'cod', function ($q) {
+                return $q->where(function ($q) {
+                    $q->where('users.customer_type', 'cod')->orWhereNull('users.customer_type');
+                });
+            })
+            ->when($customer_type === 'credit', function ($q) {
+                return $q->where('users.customer_type', 'credit');
             })
             ->paginate(15);
 
@@ -101,8 +111,45 @@ class CustomerController extends Controller
             $users->where('status', $filter_status);
         }
 
+        if ($filter_customer_type = $request->input('customer_type')) {
+            if ($filter_customer_type === 'cod') {
+                $users->where(function ($q) {
+                    $q->where('customer_type', 'cod')->orWhereNull('customer_type');
+                });
+            } elseif ($filter_customer_type === 'credit') {
+                $users->where('customer_type', 'credit');
+            }
+        }
+
         $header = ['No', 'Name', 'Email', 'Category', 'Shipping Address', 'Shipping Postcode', 'Shipping State', 'remark', 'Status', 'Created At']; // Adjust the header based on your data model
         return Excel::download(new AdminCustomerExport($users->get(), $header), Carbon::now()->format('YmdHis').'-Customer-List.xlsx');
+    }
+
+    public function syncAutoCount(Request $request)
+    {
+        $request->validate([
+            'customer_ids' => 'required|array|min:1',
+            'customer_ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $result = app(\App\Services\AutoCountSyncService::class)->syncCustomers(
+            $request->input('customer_ids', []),
+            Auth::guard('web_admin')->id()
+        );
+
+        if ($result['synced'] === 0) {
+            $message = $result['errors'][0] ?? __('customers.js.sync_autocount_none');
+
+            return back()->with('error', $message);
+        }
+
+        $message = __('customers.js.sync_autocount_success', ['count' => $result['synced']]);
+
+        if ($result['skipped'] > 0) {
+            $message .= ' ' . __('customers.js.sync_autocount_skipped', ['count' => $result['skipped']]);
+        }
+
+        return back()->with('success', $message);
     }
 
     public function deleteCustomerProduct(Request $request)

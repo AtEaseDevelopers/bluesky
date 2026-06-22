@@ -2,6 +2,7 @@
 return [
     'status' => [
         'active' => 'Active',
+        'inactive' => 'Inactive',
         'locked' => 'Locked',
         'terminated' => 'Terminated',
     ],

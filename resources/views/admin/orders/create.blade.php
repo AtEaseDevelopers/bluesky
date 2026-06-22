@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'Manage Orders')
+@section('title', __('orders.add'))
 @section('content')
 
     <form method="POST" action="{{ route('admin.orders.store') }}" enctype="multipart/form-data" class="form-wrapper">
@@ -9,40 +9,40 @@
             <div class="col-md-8">
                 <div class="card shadow no-border mb-0">
                     <div class="card-body">
-                        <h5 class="mb-4">Customer Details</h5>
+                        <h5 class="mb-4">{{ __('orders.customer_details') }}</h5>
 
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" name="is_walk_in" id="is_walk_in" value="1">
-                                    <label class="form-check-label" for="is_walk_in">Walk-in customer (no account)</label>
+                                    <label class="form-check-label" for="is_walk_in">{{ __('orders.walk_in_customer') }}</label>
                                 </div>
                             </div>
                         </div>
                         <div id="walk_in_fields" class="row d-none mb-3">
                             <div class="col-md-6">
-                                <label class="mb-2">Walk-in Name <span class="text-danger">*</span></label>
+                                <label class="mb-2">{{ __('orders.walk_in_name') }} <span class="text-danger">*</span></label>
                                 <input type="text" name="walk_in_name" id="walk_in_name" class="form-control" value="{{ old('walk_in_name') }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="mb-2">Walk-in Phone <span class="text-danger">*</span></label>
+                                <label class="mb-2">{{ __('orders.walk_in_phone') }} <span class="text-danger">*</span></label>
                                 <input type="text" name="walk_in_phone" id="walk_in_phone" class="form-control" value="{{ old('walk_in_phone') }}">
                             </div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="mb-2">Delivery Slot</label>
+                                <label class="mb-2">{{ __('orders.delivery_slot') }}</label>
                                 <select name="delivery_slot_id" class="form-select">
-                                    <option value="">None</option>
+                                    <option value="">{{ __('orders.none') }}</option>
                                     @foreach ($deliverySlots as $slot)
                                         <option value="{{ $slot->id }}">{{ $slot->slot_date->format('d-m-Y') }} — {{ $slot->time_label }}</option>
                                     @endforeach
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="mb-2">Assign Driver</label>
+                                <label class="mb-2">{{ __('orders.assign_driver') }}</label>
                                 <select name="driver_id" class="form-select">
-                                    <option value="">None</option>
+                                    <option value="">{{ __('orders.none') }}</option>
                                     @foreach ($drivers as $id => $lorry)
                                         <option value="{{ $id }}">{{ $lorry }}</option>
                                     @endforeach
@@ -52,10 +52,10 @@
                         <div class="row" id="order_customer_row">
                             <div class="col-md-6">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="order_customer">Customer</label>
+                                    <label class="mb-2" for="order_customer">{{ __('orders.customer') }}</label>
                                     <span class="text-danger"> *</span>
                                     <select class="form-select" name="customer" id="order_customer" onchange="init_customer_details()">
-                                        <option value="">Choose Customer...</option>
+                                        <option value="">{{ __('orders.choose_customer') }}</option>
                                         @foreach($customers_list as $customer)
                                             <option value="{{ $customer->id }}"{{ ($input['customer'] ?? '') == $customer->id? " selected" : "" }}>
                                                 {{ $customer->name }}
@@ -70,23 +70,23 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group mb-4">
-                                        <label class="mb-2" for="attn_name">Attn. Name</label>
-                                        <input type="text" class="form-control" name="attn_name" id="attn_name" value="{{ old('attn_name') }}" placeholder="Enter Attn. Name (optional)">
+                                        <label class="mb-2" for="attn_name">{{ __('orders.attn_name') }}</label>
+                                        <input type="text" class="form-control" name="attn_name" id="attn_name" value="{{ old('attn_name') }}" placeholder="{{ __('orders.attn_name_placeholder') }}">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-4">
-                                        <label class="mb-2" for="attn_contact">Attn. Contact</label>
-                                        <input type="text" class="form-control" name="attn_contact" id="attn_contact" value="{{ old('attn_contact') }}" placeholder="Enter Attn. Contact (optional)">
+                                        <label class="mb-2" for="attn_contact">{{ __('orders.attn_contact') }}</label>
+                                        <input type="text" class="form-control" name="attn_contact" id="attn_contact" value="{{ old('attn_contact') }}" placeholder="{{ __('orders.attn_contact_placeholder') }}">
                                     </div>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group mb-4">
-                                        <label class="mb-2" for="area">Select Area</label>
+                                        <label class="mb-2" for="area">{{ __('orders.select_area') }}</label>
                                         <select class="form-select @error('area') is-invalid @enderror"  id="area" name="area">
-                                            <option value="">Choose...</option>
+                                            <option value="">{{ __('orders.choose') }}</option>
                                             @foreach ($areaList as $area)
                                                 <option value="{{ $area }}" {{ old('area') == $area ? 'selected' : '' }}>
                                                     {{ $area }}
@@ -95,87 +95,34 @@
                                         </select>
                                     </div>
                                 </div>
-                                <!--<div class="col-md-6">-->
-                                <!--    <div class="mb-4">-->
-                                <!--        <label class="mb-2" for="billing_city">Billing City</label>-->
-                                <!--        <span class="text-danger"> *</span>-->
-                                <!--        <input type="text" class="form-control" name="billing_city" id="billing_city" value="{{ old('billing_city') }}" placeholder="Enter billing city">-->
-                                <!--    </div>-->
-                                <!--</div>-->
-                                <!--<div class="col-md-6">-->
-                                <!--    <div class="form-group mb-4">-->
-                                <!--        <label class="mb-2" for="billing_postcode">Billing Postcode</label>-->
-                                <!--        <span class="text-danger"> *</span>-->
-                                <!--        <input id="billing_postcode" name="billing_postcode" value="{{ old('billing_postcode') }}" class="form-control col-4" placeholder="Enter your billing postcode" required/>-->
-                                <!--    </div>-->
-                                <!--</div>-->
-                                <!--<div class="col-md-6">-->
-                                <!--    <div class="form-group mb-4">-->
-                                <!--        <label class="mb-2" for="billing_state">Billing State</label>-->
-                                <!--        <span class="text-danger"> *</span>-->
-                                <!--        <select id="billing_state" class="form-select" name="billing_state" required>-->
-                                <!--            <option value="">Choose Billing State</option>-->
-                                <!--            @foreach($shipping_state_options as $state)-->
-                                <!--                <option value="{{ $state }}"{{ old('billing_state') == $state? " selected" : "" }}>{{ $state }}</option>-->
-                                <!--            @endforeach-->
-                                <!--        </select>-->
-                                <!--    </div>-->
-                                <!--</div>-->
                                 <div class="col-md-12">
                                     <div class="form-group mb-4">
-                                        <label class="mb-2" for="billing_address">Billing Address</label>
+                                        <label class="mb-2" for="billing_address">{{ __('orders.billing_address') }}</label>
                                         <span class="text-danger"> *</span>
-                                        <textarea id="billing_address" name="billing_address" value="{{ old('billing_address') }}" class="form-control" rows="3" placeholder="Enter your billing address" required>{{ old('billing_address') }}</textarea>
+                                        <textarea id="billing_address" name="billing_address" value="{{ old('billing_address') }}" class="form-control" rows="3" placeholder="{{ __('orders.billing_address_placeholder') }}" required>{{ old('billing_address') }}</textarea>
                                     </div>
                                 </div>
                             </div>
                             <div class="row">
-                            </div>
-                            <!--<div class="row">-->
-                            <!--    <div class="col-md-6">-->
-                            <!--        <div class="mb-4">-->
-                            <!--            <label class="mb-2" for="shipping_city">Shipping City</label>-->
-                            <!--            <input type="text" class="form-control" name="shipping_city" id="shipping_city" value="{{ old('shipping_city') }}" placeholder="Enter shipping city">-->
-                            <!--        </div>-->
-                            <!--    </div>-->
-                            <!--    <div class="col-md-6">-->
-                            <!--        <div class="form-group mb-4">-->
-                            <!--            <label class="mb-2" for="shipping_postcode">Shipping Postcode</label>-->
-                            <!--            <input id="shipping_postcode" name="shipping_postcode" value="{{ old('shipping_postcode') }}" class="form-control col-4" placeholder="Enter your shipping postcode"/>-->
-                            <!--        </div>-->
-                            <!--    </div>-->
-                            <!--    <div class="col-md-6">-->
-                            <!--        <div class="form-group mb-4">-->
-                            <!--            <label class="mb-2" for="shipping_state">Shipping State</label>-->
-                            <!--            <select id="shipping_state" class="form-select" name="shipping_state">-->
-                            <!--                <option value="">Choose Shipping State</option>-->
-                            <!--                @foreach($shipping_state_options as $state)-->
-                            <!--                    <option value="{{ $state }}"{{ old('shipping_state') == $state? " selected" : "" }}>{{ $state }}</option>-->
-                            <!--                @endforeach-->
-                            <!--            </select>-->
-                            <!--        </div>-->
-                            <!--    </div>-->
                                 <div class="col-md-12">
                                     <div class="form-group mb-4">
-                                        <label class="mb-2" for="shipping_address">Shipping Address</label>
-                                        <textarea id="shipping_address" name="shipping_address" value="{{ old('shipping_address') }}" class="form-control" rows="3" placeholder="Enter your shipping address">{{ old('shipping_address') }}</textarea>
+                                        <label class="mb-2" for="shipping_address">{{ __('orders.shipping_address') }}</label>
+                                        <textarea id="shipping_address" name="shipping_address" value="{{ old('shipping_address') }}" class="form-control" rows="3" placeholder="{{ __('orders.shipping_address_placeholder') }}">{{ old('shipping_address') }}</textarea>
                                     </div>
                                 </div>
-                            <!--</div>-->
+                            </div>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group mb-4">
-                                        <label class="mb-2" for="payment_method">Payment Method</label>
-                                        <!--<span class="text-danger"> *</span>-->
+                                        <label class="mb-2" for="payment_method">{{ __('orders.payment_method') }}</label>
                                         <select id="payment_method" name="payment_method" class="form-select">
-                                            <option value="" selected>-- Select Payment Method --</option>
+                                            <option value="" selected>{{ __('orders.select_payment_method') }}</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-4" id="transferSlipGroup" style="display: none;">
-                                        <label class="mb-2" for="transfer_slip">Upload Transfer Slip</label>
-                                        <!--<span class="text-danger"> *</span>-->
+                                        <label class="mb-2" for="transfer_slip">{{ __('orders.upload_transfer_slip') }}</label>
                                         <input type="file" id="transfer_slip" name="transfer_slip" class="form-control" accept="image/*">
                                     </div>
                                 </div>
@@ -184,9 +131,9 @@
 
                         <div class="mb-4 d-none" id="add-product-info">
                             <button type="button" class="btn btn-outline-primary mb-4" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                                <i class="fa fa-plus" aria-hidden="true"></i> Add Products
+                                <i class="fa fa-plus" aria-hidden="true"></i> {{ __('orders.add_products') }}
                             </button>
-                            <div class="alert alert-info">Please add products to this order.</div>
+                            <div class="alert alert-info">{{ __('orders.add_products_hint') }}</div>
                         </div>
 
                         <div class="row mb-2">
@@ -194,13 +141,13 @@
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                                     <div>
                                         <button type="button" class="btn btn-outline-primary px-5 disabled" disabled>
-                                            Grand Total: RM <span id="total-price">0.00</span>
+                                            {{ __('orders.grand_total_rm') }} <span id="total-price">0.00</span>
                                         </button>
                                     </div>
                                     <div>
-                                        <a href="{{ route('admin.orders') }}" class="btn btn-secondary me-2 mb-1">Back</a>
-                                        <button type="submit" class="btns-order-action back d-none btn btn-primary me-2 mb-1">Back To Previous Step</button>
-                                        <button type="submit" class="btns-order-action next d-none btn btn-primary mb-1">Next Step</button>
+                                        <a href="{{ route('admin.orders') }}" class="btn btn-secondary me-2 mb-1">{{ __('ui.back') }}</a>
+                                        <button type="submit" class="btns-order-action back d-none btn btn-primary me-2 mb-1">{{ __('orders.back_previous_step') }}</button>
+                                        <button type="submit" class="btns-order-action next d-none btn btn-primary mb-1">{{ __('orders.next_step') }}</button>
                                     </div>
                                 </div>
                             </div>
@@ -211,7 +158,7 @@
             <div class="col-md-4">
                 <div class="card shadow no-border mb-0">
                     <div class="card-body">
-                        <h5>Order Products</h5>
+                        <h5>{{ __('orders.order_products') }}</h5>
                         <hr>
                         <div id="product_bag-item"></div>
                     </div>
@@ -230,8 +177,8 @@
         var step = 'customer_info';
         var payment_method_options = {!! json_encode($payment_method_options) !!};
         var selected_products = [];
-        var order_text = 'Create Order';
-        var order_subtext = 'Confirm to create this order? Kindly double check on the order.';
+        var order_text = @json(__('orders.js.create_order'));
+        var order_subtext = @json(__('orders.js.create_order_confirm'));
         
         document.addEventListener('DOMContentLoaded', function () {
             toggleTransferSlip();
@@ -241,11 +188,11 @@
             $('#order_customer').select2();
             
             $('#payment_method').select2({
-                placeholder: 'Select a payment method'
+                placeholder: @json(__('orders.select_payment_method_placeholder'))
             });
 
             $('#area').select2({
-                placeholder: 'Select an area'
+                placeholder: @json(__('orders.select_area_placeholder'))
             });
             
             $('#payment_method').on('change', function() {
@@ -286,7 +233,7 @@
             $('#id').val('');
 
             var paymentMethod = document.getElementById('payment_method');
-            paymentMethod.innerHTML = '<option value="cod" selected>COD</option>';
+            paymentMethod.innerHTML = '<option value="cod" selected>{{ __('order.payment_methods.cod') }}</option>';
 
             $('#customer_info').removeClass('d-none');
             $('form button.next').removeClass('d-none');
