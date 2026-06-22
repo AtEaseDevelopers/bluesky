@@ -191,4 +191,50 @@ class User extends Authenticatable
 
         return true;
     }
+
+    public function drivers()
+    {
+        return $this->belongsToMany(Driver::class, 'customer_drivers', 'user_id', 'driver_id')
+            ->withTimestamps()
+            ->orderBy('drivers.lorry_number');
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    public function assignedDriverIds(): array
+    {
+        $ids = $this->drivers()->pluck('drivers.id')->map(static fn ($id) => (int) $id)->all();
+
+        if (empty($ids) && $this->default_driver_id) {
+            return [(int) $this->default_driver_id];
+        }
+
+        if ($this->default_driver_id && in_array((int) $this->default_driver_id, $ids, true)) {
+            $defaultId = (int) $this->default_driver_id;
+
+            return array_values(array_unique(array_merge(
+                [$defaultId],
+                array_values(array_diff($ids, [$defaultId]))
+            )));
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @param  array<int|string>|null  $driverIds
+     */
+    public function syncDrivers(?array $driverIds): void
+    {
+        $driverIds = collect($driverIds ?? [])
+            ->filter(static fn ($id) => $id !== null && $id !== '')
+            ->map(static fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $this->drivers()->sync($driverIds);
+        $this->update(['default_driver_id' => $driverIds[0] ?? null]);
+    }
 }

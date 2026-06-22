@@ -209,22 +209,13 @@
                                     @enderror
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="default_driver_id">{{ __('customers.select_lorry') }}</label>
-                                    <select id="default_driver_id" class="form-select @error('default_driver_id') is-invalid @enderror" name="default_driver_id">
-                                        <option value="">{{ __('customers.choose') }}</option>
-                                        @foreach ($drivers as $driver)
-                                            <option value="{{ $driver->id }}" {{ $customer->default_driver_id == $driver->id ? 'selected' : '' }}>
-                                                {{ $driver->lorry_number }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('default_driver_id')
-                                        <span class="text-danger" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                    @enderror
+                                    <label class="mb-2">{{ __('customers.assigned_drivers_lorry') }}</label>
+                                    @include('admin.customers.partials.driver-picker', [
+                                        'drivers' => $drivers,
+                                        'selectedDriverIds' => old('driver_ids', $assigned_driver_ids ?? []),
+                                    ])
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -582,10 +573,6 @@
 
             $('#payment_method').select2({
                 placeholder: 'Select a payment method'
-            });
-
-            $('#default_driver_id').select2({
-                placeholder: 'Select a default driver'
             });
 
             $('#area').select2({

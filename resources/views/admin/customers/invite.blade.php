@@ -61,17 +61,14 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="default_driver_id">{{ __('customers.default_driver_lorry') }}</label>
-                                    <select name="default_driver_id" id="default_driver_id" class="form-select">
-                                        <option value="">{{ __('customers.optional') }}</option>
-                                        @foreach ($drivers as $driver)
-                                            <option value="{{ $driver->id }}" {{ old('default_driver_id') == $driver->id ? 'selected' : '' }}>
-                                                {{ $driver->name ? $driver->name . ' (' . $driver->lorry_number . ')' : $driver->lorry_number }}
-                                            </option>
-                                        @endforeach
-                                    </select>
+                                    <label class="mb-2">{{ __('customers.assigned_drivers_lorry') }}</label>
+                                    @include('admin.customers.partials.driver-picker', [
+                                        'drivers' => $drivers,
+                                        'selectedDriverIds' => old('driver_ids', []),
+                                        'showDriverName' => true,
+                                    ])
                                 </div>
                             </div>
                             <div class="col-md-12">

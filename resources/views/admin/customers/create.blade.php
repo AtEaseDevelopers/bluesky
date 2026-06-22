@@ -281,19 +281,13 @@
                                     @enderror
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="default_driver_id">{{ __('customers.select_lorry') }}</label>
-                                    <select class="form-select @error('default_driver_id') is-invalid @enderror"
-                                        id="default_driver_id" name="default_driver_id">
-                                        <option value="">{{ __('customers.choose') }}</option>
-                                        @foreach ($drivers as $driver)
-                                            <option value="{{ $driver->id }}"
-                                                {{ old('default_driver_id') ? 'selected' : '' }}>
-                                                {{ $driver->lorry_number }}
-                                            </option>
-                                        @endforeach
-                                    </select>
+                                    <label class="mb-2">{{ __('customers.assigned_drivers_lorry') }}</label>
+                                    @include('admin.customers.partials.driver-picker', [
+                                        'drivers' => $drivers,
+                                        'selectedDriverIds' => old('driver_ids', []),
+                                    ])
                                 </div>
                             </div>
                         </div>
@@ -485,10 +479,6 @@
 
             $('#payment_method').select2({
                 placeholder: 'Select a payment method'
-            });
-
-            $('#default_driver_id').select2({
-                placeholder: 'Select a default driver'
             });
 
             $('#area').select2({
