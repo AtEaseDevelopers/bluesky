@@ -36,11 +36,11 @@ class LoginController extends Controller
         $driver = Driver::where('username', $data['username'])->first();
 
         if (!$driver || !Hash::check($data['password'], $driver->password)) {
-            return back()->with('error', 'Invalid username or password.')->withInput($request->only('username'));
+            return back()->with('error', __('driver_portal.auth.invalid_credentials'))->withInput($request->only('username'));
         }
 
         if (!$driver->is_active) {
-            return back()->with('error', 'Your driver account is inactive. Please contact your administrator.')->withInput($request->only('username'));
+            return back()->with('error', __('driver_portal.auth.inactive'))->withInput($request->only('username'));
         }
 
         Auth::guard('web_driver')->login($driver);

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Driver') | {{ env('APP_NAME') }}</title>
+    <title>@yield('title', __('ui.nav.driver_app')) | {{ env('APP_NAME') }}</title>
     <link rel="icon" type="image/x-icon" href="{{ asset('assets/images/favicon.png') }}" />
     <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/font-awesome.min.css') }}">
@@ -115,20 +115,20 @@
         <nav class="navbar navbar-expand driver-navbar sticky-top">
             <div class="container-fluid px-3 px-md-4">
                 <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('driver.orders.index') }}">
-                    <i class="fa fa-anchor"></i> <span class="d-none d-sm-inline">Bluesky Driver</span>
+                    <i class="fa fa-anchor"></i> <span class="d-none d-sm-inline">{{ __('ui.nav.driver_app') }}</span>
                 </a>
                 <ul class="navbar-nav flex-row align-items-center gap-1 me-auto ms-2">
                     @if ($driverPermissions['delivery_orders'] ?? false)
                         <li class="nav-item">
                             <a class="nav-link px-2 {{ request()->routeIs('driver.orders.*') ? 'active-tab' : '' }}" href="{{ route('driver.orders.index') }}">
-                                <i class="fa fa-cubes"></i> <span class="d-none d-sm-inline">Deliveries</span>
+                                <i class="fa fa-cubes"></i> <span class="d-none d-sm-inline">{{ __('driver_portal.nav.deliveries') }}</span>
                             </a>
                         </li>
                     @endif
                     @if ($driverPermissions['assigned_customers'] ?? false)
                         <li class="nav-item">
                             <a class="nav-link px-2 {{ request()->routeIs('driver.customers.*') ? 'active-tab' : '' }}" href="{{ route('driver.customers.index') }}">
-                                <i class="fa fa-users"></i> <span class="d-none d-sm-inline">Customers</span>
+                                <i class="fa fa-users"></i> <span class="d-none d-sm-inline">{{ __('driver_portal.nav.customers') }}</span>
                             </a>
                         </li>
                     @endif
@@ -137,9 +137,9 @@
                     @if ($driverPermissions['vehicle'] ?? false)
                         <li class="nav-item">
                             <a class="nav-link px-2 d-flex align-items-center gap-1 {{ request()->routeIs('driver.vehicle.*') ? 'active-tab' : '' }}"
-                               href="{{ route('driver.vehicle.edit') }}" data-bs-toggle="tooltip" title="{{ __('Change vehicle') }}">
+                               href="{{ route('driver.vehicle.edit') }}" data-bs-toggle="tooltip" title="{{ __('driver_portal.nav.change_vehicle') }}">
                                 <i class="fa fa-truck"></i>
-                                <span>{{ Auth::guard('web_driver')->user()->lorry_number ?: __('Vehicle') }}</span>
+                                <span>{{ Auth::guard('web_driver')->user()->lorry_number ?: __('driver_portal.nav.vehicle') }}</span>
                             </a>
                         </li>
                     @endif

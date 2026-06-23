@@ -134,14 +134,14 @@ class CustomerController extends Controller
     public static function paymentPill(Order $invoice): array
     {
         if ($invoice->isFullyPaid()) {
-            return ['label' => 'Paid', 'class' => 'pill-paid'];
+            return ['label' => __('driver_portal.payment.paid'), 'class' => 'pill-paid'];
         }
 
         if ((float) $invoice->paid_amount > 0) {
-            return ['label' => 'Partial', 'class' => 'pill-partial'];
+            return ['label' => __('driver_portal.payment.partial'), 'class' => 'pill-partial'];
         }
 
-        return ['label' => 'Unpaid', 'class' => 'pill-unpaid'];
+        return ['label' => __('driver_portal.payment.unpaid'), 'class' => 'pill-unpaid'];
     }
 
     /**
@@ -152,15 +152,19 @@ class CustomerController extends Controller
     {
         switch ($invoice->paymentDueStatusKey()) {
             case 'overdue':
-                return ['label' => 'Overdue', 'class' => 'pill-unpaid'];
+                return ['label' => __('driver_portal.due.overdue'), 'class' => 'pill-unpaid'];
             case 'due_today':
-                return ['label' => 'Due Today', 'class' => 'pill-partial'];
+                return ['label' => __('driver_portal.due.today'), 'class' => 'pill-partial'];
             case 'not_due':
-                return ['label' => 'Due ' . optional($invoice->payment_due_date)->format('d M Y'), 'class' => 'pill-due'];
+                return ['label' => __('driver_portal.due.on_date', [
+                    'date' => optional($invoice->payment_due_date)->format('d M Y'),
+                ]), 'class' => 'pill-due'];
             case 'not_set':
-                return ['label' => 'No due date', 'class' => 'pill-due'];
+                return ['label' => __('driver_portal.due.not_set'), 'class' => 'pill-due'];
             case 'not_applicable':
-                return $invoice->isCodCustomer() ? ['label' => 'COD', 'class' => 'pill-due'] : null;
+                return $invoice->isCodCustomer()
+                    ? ['label' => __('driver_portal.customers.cod'), 'class' => 'pill-due']
+                    : null;
             default:
                 return null;
         }

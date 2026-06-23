@@ -43,14 +43,14 @@ class VehicleController extends Controller
         $data = $request->validate([
             'lorry_number' => ['required', 'string', Rule::in($lorries->all())],
         ], [
-            'lorry_number.required' => 'Please choose a vehicle.',
-            'lorry_number.in' => 'The selected vehicle is not registered. Please pick one from the list.',
+            'lorry_number.required' => __('driver_portal.vehicle.choose_required'),
+            'lorry_number.in' => __('driver_portal.vehicle.invalid'),
         ]);
 
         $driver->update(['lorry_number' => $data['lorry_number']]);
 
         return redirect(route('driver.vehicle.edit'))
-            ->with('success', 'Your vehicle is now ' . $data['lorry_number'] . '.');
+            ->with('success', __('driver_portal.vehicle.saved', ['vehicle' => $data['lorry_number']]));
     }
 
     /**

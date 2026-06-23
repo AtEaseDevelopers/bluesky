@@ -1,0 +1,103 @@
+<?php
+
+return [
+    'nav' => [
+        'deliveries' => 'Deliveries',
+        'customers' => 'Customers',
+        'change_vehicle' => 'Change vehicle',
+        'vehicle' => 'Vehicle',
+    ],
+
+    'deliveries' => [
+        'title' => 'My Deliveries',
+        'orders_assigned' => '{0} No orders assigned|{1} :count order assigned|[2,*] :count orders assigned',
+        'empty' => 'No delivery orders assigned.',
+        'back' => 'Back to deliveries',
+        'order_number' => 'Order #:id',
+        'customer' => 'Customer',
+        'contact' => 'Contact',
+        'delivery_address' => 'Delivery Address',
+        'order_items' => 'Order Items',
+        'qty' => 'Qty: :qty',
+        'no_items' => 'No items.',
+        'total_amount' => 'Total Amount',
+        'payment' => 'Payment',
+        'total' => 'Total',
+        'paid' => 'Paid',
+        'balance' => 'Balance',
+        'view_payment_proof' => 'View Payment Proof',
+        'update_status' => 'Update Delivery Status',
+        'record_payment' => 'Record Payment',
+        'payment_method' => 'Payment Method',
+        'select_method' => 'Select method',
+        'amount_collected' => 'Amount Collected (RM)',
+        'payment_proof' => 'Payment Proof',
+        'payment_proof_hint' => '(required for QR / Transfer)',
+        'save_payment' => 'Save Payment',
+        'status_updated' => 'Delivery status updated to ":status".',
+    ],
+
+    'customers' => [
+        'title' => 'My Customers',
+        'customers_assigned' => '{0} No customers assigned|{1} :count customer assigned|[2,*] :count customers assigned',
+        'total_outstanding' => 'Total Outstanding',
+        'across_all' => 'Across all assigned customers',
+        'outstanding' => 'Outstanding',
+        'credit' => 'Credit',
+        'cod' => 'COD',
+        'invoices' => '{0} No invoices|{1} :count invoice|[2,*] :count invoices',
+        'overdue' => '{1} :count overdue|[2,*] :count overdue',
+        'empty' => 'No customers assigned to you yet.',
+        'all_customers' => 'All customers',
+        'payment_term' => 'Payment term: :term',
+        'invoices_heading' => 'Invoices',
+        'due_date' => 'Due Date',
+        'cod_full_balance' => 'COD requires the full outstanding balance.',
+        'no_invoices' => 'No invoices for this customer.',
+    ],
+
+    'vehicle' => [
+        'title' => 'My Vehicle',
+        'subtitle' => 'Choose the lorry you are driving. The office sees this on your deliveries.',
+        'current' => 'Current Vehicle',
+        'current_help' => 'Your active lorry',
+        'empty' => 'No vehicles are registered yet. Please contact the office.',
+        'select' => 'Select vehicle',
+        'choose' => '— Choose a vehicle —',
+        'in_use' => '— in use',
+        'save' => 'Save Vehicle',
+        'choose_required' => 'Please choose a vehicle.',
+        'invalid' => 'The selected vehicle is not registered. Please pick one from the list.',
+        'saved' => 'Your vehicle is now :vehicle.',
+    ],
+
+    'payment' => [
+        'unpaid' => 'Unpaid',
+        'partial' => 'Partial',
+        'paid' => 'Paid',
+        'proof_required' => 'Payment proof is required for QR and bank transfer payments.',
+        'cannot_record' => 'Payment cannot be recorded for this order in its current status.',
+        'cod_status_required' => 'COD payment can only be recorded when the order is in route or delivered.',
+        'recorded' => 'Payment recorded successfully.',
+    ],
+
+    'due' => [
+        'overdue' => 'Overdue',
+        'today' => 'Due Today',
+        'on_date' => 'Due :date',
+        'not_set' => 'No due date',
+    ],
+
+    'auth' => [
+        'company' => 'Bluesky Live Seafood',
+        'username_placeholder' => 'Enter your username',
+        'password_placeholder' => 'Enter your password',
+        'invalid_credentials' => 'Invalid username or password.',
+        'inactive' => 'Your driver account is inactive. Please contact your administrator.',
+    ],
+
+    'errors' => [
+        'no_payment_proof' => 'No payment proof uploaded.',
+        'file_not_found' => 'File not found.',
+    ],
+];

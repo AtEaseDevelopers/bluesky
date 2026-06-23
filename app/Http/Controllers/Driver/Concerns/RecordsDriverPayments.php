@@ -14,13 +14,8 @@ use Illuminate\Support\Facades\Auth;
  */
 trait RecordsDriverPayments
 {
-    /** Payment methods a driver may record (form value => label). */
-    public static $driverPaymentMethods = [
-        'cash' => 'Cash',
-        'qr' => 'QR',
-        'transfer' => 'Bank Transfer',
-        'credit' => 'Credit Term',
-    ];
+    /** Form values a driver may use when recording a payment. */
+    public static $driverPaymentMethodKeys = ['cash', 'qr', 'transfer', 'credit'];
 
     /** Map driver-portal form values to canonical payment method keys. */
     public static $driverPaymentMethodMap = [
@@ -33,15 +28,25 @@ trait RecordsDriverPayments
     /** Methods that require a payment proof upload. */
     public static $driverProofRequiredMethods = ['qr', 'transfer'];
 
+    /** @return array<string, string> */
+    public static function driverPaymentMethodLabels(): array
+    {
+        return [
+            'cash' => __('order.payment_methods.cash'),
+            'qr' => __('order.payment_methods.qr'),
+            'transfer' => __('order.payment_methods.bank-transfer'),
+            'credit' => __('order.payment_methods.credit-term'),
+        ];
+    }
+
     /**
      * Payment methods offered to the driver for a given customer type.
-     * Credit Term is only meaningful for credit customers.
      *
      * @return array<string, string>
      */
     public static function driverPaymentMethodsFor(string $customerType): array
     {
-        $methods = self::$driverPaymentMethods;
+        $methods = self::driverPaymentMethodLabels();
 
         if ($customerType !== 'credit') {
             unset($methods['credit']);
@@ -58,12 +63,12 @@ trait RecordsDriverPayments
     {
         if (!$order->canRecordAdminPayment()) {
             return back()->with('error', $order->isCodCustomer()
-                ? 'COD payment can only be recorded when the order is in route or delivered.'
-                : 'Payment cannot be recorded for this order in its current status.');
+                ? __('driver_portal.payment.cod_status_required')
+                : __('driver_portal.payment.cannot_record'));
         }
 
         $data = $request->validate([
-            'payment_method' => ['required', 'in:' . implode(',', array_keys(self::$driverPaymentMethods))],
+            'payment_method' => ['required', 'in:' . implode(',', self::$driverPaymentMethodKeys)],
             'paid_amount' => ['required', 'numeric', 'min:0.01'],
             'payment_proof' => [
                 'nullable',
@@ -73,7 +78,7 @@ trait RecordsDriverPayments
                 'max:4096',
             ],
         ], [
-            'payment_proof.required_if' => 'Payment proof is required for QR and bank transfer payments.',
+            'payment_proof.required_if' => __('driver_portal.payment.proof_required'),
         ]);
 
         $method = self::$driverPaymentMethodMap[$data['payment_method']] ?? $data['payment_method'];
@@ -92,6 +97,6 @@ trait RecordsDriverPayments
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Payment recorded successfully.');
+        return back()->with('success', __('driver_portal.payment.recorded'));
     }
 }

@@ -1,0 +1,103 @@
+<?php
+
+return [
+    'nav' => [
+        'deliveries' => '配送',
+        'customers' => '客户',
+        'change_vehicle' => '更换车辆',
+        'vehicle' => '车辆',
+    ],
+
+    'deliveries' => [
+        'title' => '我的配送',
+        'orders_assigned' => '{0} 暂无分配订单|{1} 已分配 :count 个订单|[2,*] 已分配 :count 个订单',
+        'empty' => '暂无分配的配送订单。',
+        'back' => '返回配送列表',
+        'order_number' => '订单 #:id',
+        'customer' => '客户',
+        'contact' => '联系方式',
+        'delivery_address' => '配送地址',
+        'order_items' => '订单明细',
+        'qty' => '数量：:qty',
+        'no_items' => '暂无商品。',
+        'total_amount' => '合计金额',
+        'payment' => '付款',
+        'total' => '总额',
+        'paid' => '已付',
+        'balance' => '余额',
+        'view_payment_proof' => '查看付款凭证',
+        'update_status' => '更新配送状态',
+        'record_payment' => '记录付款',
+        'payment_method' => '付款方式',
+        'select_method' => '请选择方式',
+        'amount_collected' => '收款金额 (RM)',
+        'payment_proof' => '付款凭证',
+        'payment_proof_hint' => '（二维码/转账必填）',
+        'save_payment' => '保存付款',
+        'status_updated' => '配送状态已更新为「:status」。',
+    ],
+
+    'customers' => [
+        'title' => '我的客户',
+        'customers_assigned' => '{0} 暂无分配客户|{1} 已分配 :count 位客户|[2,*] 已分配 :count 位客户',
+        'total_outstanding' => '总未付金额',
+        'across_all' => '所有分配客户的合计',
+        'outstanding' => '未付金额',
+        'credit' => '账期',
+        'cod' => '货到付款',
+        'invoices' => '{0} 无发票|{1} :count 张发票|[2,*] :count 张发票',
+        'overdue' => '{1} :count 张逾期|[2,*] :count 张逾期',
+        'empty' => '暂无分配的客户。',
+        'all_customers' => '全部客户',
+        'payment_term' => '付款期限：:term',
+        'invoices_heading' => '发票',
+        'due_date' => '到期日',
+        'cod_full_balance' => '货到付款需收取全部未付余额。',
+        'no_invoices' => '该客户暂无发票。',
+    ],
+
+    'vehicle' => [
+        'title' => '我的车辆',
+        'subtitle' => '选择您正在驾驶的车辆，办公室可在配送中看到此信息。',
+        'current' => '当前车辆',
+        'current_help' => '您正在使用的车辆',
+        'empty' => '尚未登记任何车辆，请联系办公室。',
+        'select' => '选择车辆',
+        'choose' => '— 请选择车辆 —',
+        'in_use' => '— 使用中',
+        'save' => '保存车辆',
+        'choose_required' => '请选择车辆。',
+        'invalid' => '所选车辆未登记，请从列表中选择。',
+        'saved' => '您的车辆已设为 :vehicle。',
+    ],
+
+    'payment' => [
+        'unpaid' => '未付款',
+        'partial' => '部分付款',
+        'paid' => '已付款',
+        'proof_required' => '二维码和银行转账付款必须上传付款凭证。',
+        'cannot_record' => '当前订单状态无法记录付款。',
+        'cod_status_required' => '货到付款仅可在配送中或已送达时记录。',
+        'recorded' => '付款已成功记录。',
+    ],
+
+    'due' => [
+        'overdue' => '已逾期',
+        'today' => '今日到期',
+        'on_date' => '到期 :date',
+        'not_set' => '无到期日',
+    ],
+
+    'auth' => [
+        'company' => 'Bluesky Live Seafood',
+        'username_placeholder' => '请输入用户名',
+        'password_placeholder' => '请输入密码',
+        'invalid_credentials' => '用户名或密码不正确。',
+        'inactive' => '您的司机账号已停用，请联系管理员。',
+    ],
+
+    'errors' => [
+        'no_payment_proof' => '尚未上传付款凭证。',
+        'file_not_found' => '找不到文件。',
+    ],
+];

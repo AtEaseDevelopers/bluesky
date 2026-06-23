@@ -16,10 +16,7 @@ class DeliveryOrderController extends Controller
     use RecordsDriverPayments;
 
     /** Statuses a driver may set (canonical order workflow values). */
-    public static $driver_statuses = [
-        'in_route' => 'In Route',
-        'delivered' => 'Delivered',
-    ];
+    public static $driver_status_keys = ['in_route', 'delivered'];
 
     /** Legacy DB values kept for display/filter compatibility. */
     public static $legacy_status_map = [
@@ -72,8 +69,10 @@ class DeliveryOrderController extends Controller
 
         return view('driver.orders.show', [
             'order' => $order,
-            'driverStatuses' => self::$driver_statuses,
-            'paymentMethods' => self::$driverPaymentMethods,
+            'driverStatuses' => self::driverStatusLabels(),
+            'paymentMethods' => self::driverPaymentMethodsFor(
+                optional($order->customer)->isCreditCustomer() ? 'credit' : 'cod'
+            ),
             'proofRequiredMethods' => self::$driverProofRequiredMethods,
         ]);
     }
@@ -86,7 +85,7 @@ class DeliveryOrderController extends Controller
         $order = $this->findAssignedOrder($id);
 
         $data = $request->validate([
-            'status' => ['required', 'in:' . implode(',', array_keys(self::$driver_statuses))],
+            'status' => ['required', 'in:' . implode(',', self::$driver_status_keys)],
         ]);
 
         try {
@@ -99,7 +98,9 @@ class DeliveryOrderController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Delivery status updated to "' . self::$driver_statuses[$data['status']] . '".');
+        return back()->with('success', __('driver_portal.deliveries.status_updated', [
+            'status' => self::statusLabel($data['status']),
+        ]));
     }
 
     /**
@@ -124,12 +125,12 @@ class DeliveryOrderController extends Controller
             ->first();
 
         if (!$payment) {
-            abort(404, 'No payment proof uploaded.');
+            abort(404, __('driver_portal.errors.no_payment_proof'));
         }
 
         $path = Order::$path . '/' . $order->id . '/payments/' . $payment->payment_proof;
         if (!Storage::disk('local')->exists($path)) {
-            abort(404, 'File not found.');
+            abort(404, __('driver_portal.errors.file_not_found'));
         }
 
         $mime = Storage::disk('local')->mimeType($path);
@@ -156,6 +157,17 @@ class DeliveryOrderController extends Controller
             'delivered', 'completed' => ['delivered', 'completed'],
             default => [],
         };
+    }
+
+    /** @return array<string, string> */
+    public static function driverStatusLabels(): array
+    {
+        $labels = [];
+        foreach (self::$driver_status_keys as $status) {
+            $labels[$status] = self::statusLabel($status);
+        }
+
+        return $labels;
     }
 
     public static function statusLabel(string $status): string

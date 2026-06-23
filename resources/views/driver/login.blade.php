@@ -28,7 +28,7 @@
         <div class="col-12 col-md-8 col-lg-6 mx-auto">
             <div class="login-hero mb-4 mt-2">
                 <div class="d-flex align-items-center gap-2 mb-3" style="font-weight:700; letter-spacing:.05em; text-transform:uppercase; font-size:.8rem; opacity:.85;">
-                    <i class="fa fa-truck"></i> Bluesky Live Seafood
+                    <i class="fa fa-truck"></i> {{ __('driver_portal.auth.company') }}
                 </div>
                 <h1 class="display-font">{{ __('ui.auth.driver_portal') }}</h1>
                 <p>{{ __('ui.auth.driver_sign_in_help') }}</p>
@@ -42,7 +42,7 @@
                             <label class="form-label" for="username">{{ __('ui.auth.username') }}</label>
                             <input type="text" class="form-control form-control-lg @error('username') is-invalid @enderror"
                                 name="username" id="username" value="{{ old('username') }}" autofocus
-                                placeholder="Enter your username">
+                                placeholder="{{ __('driver_portal.auth.username_placeholder') }}">
                             @error('username')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -50,7 +50,7 @@
                         <div class="mb-3">
                             <label class="form-label" for="password">{{ __('ui.auth.password') }}</label>
                             <input type="password" class="form-control form-control-lg @error('password') is-invalid @enderror"
-                                name="password" id="password" placeholder="Enter your password">
+                                name="password" id="password" placeholder="{{ __('driver_portal.auth.password_placeholder') }}">
                             @error('password')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
