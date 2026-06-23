@@ -389,10 +389,8 @@
 
 @endsection
 @section('script')
-    <script src="{{ asset('assets/js/sweetalert.min.js') }}"></script>
-    <script>
-        var ordersJs = @json(__('orders.js'));
-        var ordersI18n = @json([
+    @php
+        $ordersI18n = [
             'method' => __('orders.method'),
             'amount_rm' => __('orders.amount_rm'),
             'proof' => __('orders.proof'),
@@ -400,7 +398,12 @@
             'optional' => __('orders.optional'),
             'payment_n' => __('orders.payment_n'),
             'remove' => __('orders.remove'),
-        ]);
+        ];
+    @endphp
+    <script src="{{ asset('assets/js/sweetalert.min.js') }}"></script>
+    <script>
+        var ordersJs = @json(__('orders.js'));
+        var ordersI18n = @json($ordersI18n);
 
         function postStatusChange(status, driverId) {
             var payload = {
