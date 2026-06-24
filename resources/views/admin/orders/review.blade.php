@@ -31,19 +31,43 @@
                                 </thead>
                                 <tbody>
                                     @foreach ($products as $product)
-                                        <tr class="review-line" data-unit-price="{{ $product->unit_price }}">
+                                        @php
+                                            $sellIn = $product->sell_in ?? \App\Product::SELL_IN_WEIGHT;
+                                            $needsQty = in_array($sellIn, [\App\Product::SELL_IN_QTY, \App\Product::SELL_IN_QTY_BILL_WEIGHT], true);
+                                            $needsWeight = in_array($sellIn, [\App\Product::SELL_IN_WEIGHT, \App\Product::SELL_IN_QTY_BILL_WEIGHT], true);
+                                            $estLabel = match ($sellIn) {
+                                                \App\Product::SELL_IN_QTY => $product->quantity ?? '-',
+                                                \App\Product::SELL_IN_QTY_BILL_WEIGHT => trim(($product->quantity ?? '-') . ' / ' . ($product->weight ?? $product->product_weight ?? '-')),
+                                                default => $product->weight ?? $product->product_weight ?? '-',
+                                            };
+                                            $catalogProduct = \App\Product::find($product->product_id);
+                                            $reviewQty = $needsQty ? $product->quantity : null;
+                                            $reviewWeight = $needsWeight ? ($product->weight ?? $product->product_weight) : null;
+                                            $initialLineTotal = $catalogProduct
+                                                ? $catalogProduct->calculateLinePrice((float) $product->unit_price, $reviewQty !== null ? (float) $reviewQty : null, $reviewWeight !== null ? (float) $reviewWeight : null)
+                                                : (float) $product->price;
+                                        @endphp
+                                        <tr class="review-line" data-unit-price="{{ $product->unit_price }}" data-sell-in="{{ $sellIn }}">
                                             <td>{{ $product->product_name }}</td>
                                             <td>{{ number_format($product->unit_price, 2) }}</td>
-                                            <td>{{ $product->quantity ?? '-' }}</td>
+                                            <td>{{ $estLabel }}</td>
                                             <td>
-                                                <input type="number" step="0.001" min="0.001" class="form-control line-qty"
-                                                    name="line_items[{{ $product->id }}][quantity]" value="{{ $product->quantity }}">
+                                                @if ($needsQty)
+                                                    <input type="number" step="0.001" min="0.001" class="form-control line-qty"
+                                                        name="line_items[{{ $product->id }}][quantity]" value="{{ $product->quantity }}" required>
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
                                             </td>
                                             <td>
-                                                <input type="number" step="0.001" min="0" class="form-control line-weight"
-                                                    name="line_items[{{ $product->id }}][weight]" value="{{ $product->weight ?? $product->product_weight }}">
+                                                @if ($needsWeight)
+                                                    <input type="number" step="0.001" min="0.001" class="form-control line-weight"
+                                                        name="line_items[{{ $product->id }}][weight]" value="{{ $product->weight ?? $product->product_weight }}" required>
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
                                             </td>
-                                            <td class="line-total text-end">{{ number_format($product->price, 2) }}</td>
+                                            <td class="line-total text-end">{{ number_format($initialLineTotal, 2) }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -130,14 +154,26 @@
 @endsection
 @section('script')
     <script>
+        function reviewBillAmount(row) {
+            var sellIn = row.dataset.sellIn || 'weight';
+            var qtyInput = row.querySelector('.line-qty');
+            var weightInput = row.querySelector('.line-weight');
+            var qty = qtyInput ? (parseFloat(qtyInput.value) || 0) : 0;
+            var weight = weightInput ? (parseFloat(weightInput.value) || 0) : 0;
+
+            if (sellIn === 'qty') {
+                return qty;
+            }
+
+            return weight;
+        }
+
         function recalculateReviewTotals() {
             var subtotal = 0;
 
             document.querySelectorAll('#review-items-table tbody tr.review-line').forEach(function (row) {
                 var unitPrice = parseFloat(row.dataset.unitPrice) || 0;
-                var qtyInput = row.querySelector('.line-qty');
-                var qty = parseFloat(qtyInput.value) || 0;
-                var lineTotal = unitPrice * qty;
+                var lineTotal = unitPrice * reviewBillAmount(row);
 
                 row.querySelector('.line-total').textContent = lineTotal.toFixed(2);
                 subtotal += lineTotal;
@@ -151,7 +187,7 @@
             document.getElementById('review-grand-total').textContent = grandTotal.toFixed(2);
         }
 
-        document.querySelectorAll('.line-qty, #delivery_fee, #amount_adjustment').forEach(function (el) {
+        document.querySelectorAll('.line-qty, .line-weight, #delivery_fee, #amount_adjustment').forEach(function (el) {
             el.addEventListener('input', recalculateReviewTotals);
         });
 

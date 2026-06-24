@@ -17,6 +17,7 @@ return [
     'enter_quantity' => '输入数量',
     'weight_kg' => '重量 (kg)',
     'weight_optional' => '可选重量（kg）',
+    'weight_required' => '输入重量（kg）',
     'remarks' => '备注',
     'remarks_optional' => '可选备注',
     'reason' => '原因',
@@ -26,9 +27,10 @@ return [
 
     'movement_type' => '变动类型',
     'all_types' => '全部类型',
-    'qty_before' => '变动前数量',
+    'qty_before' => '变动前库存',
     'change' => '变动',
-    'qty_after' => '变动后数量',
+    'qty_after' => '变动后库存',
+    'order_weight_ref' => '订单重量',
     'user' => '操作人',
     'system' => '系统',
 

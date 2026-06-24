@@ -40,7 +40,7 @@
                                     <th>{{ __('inventory.qty_before') }}</th>
                                     <th>{{ __('inventory.change') }}</th>
                                     <th>{{ __('inventory.qty_after') }}</th>
-                                    <th>{{ __('inventory.weight_kg') }}</th>
+                                    <th>{{ __('inventory.order_weight_ref') }}</th>
                                     <th>{{ __('inventory.reason') }}</th>
                                     <th>{{ __('inventory.user') }}</th>
                                     <th>{{ __('inventory.remarks') }}</th>

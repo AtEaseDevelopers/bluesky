@@ -193,8 +193,8 @@
                                         <td><img src="{{ $image_url }}" width="80px" /></td>
                                         <td>{{ $product->sku }}</td>
                                         <td>{{ $product->name }}</td>
-                                        <td>{{ $product->uom_name }}</td>
                                         <td>{{ $product->category_name }}</td>
+                                        <td>{{ $product->uom_name }}</td>
                                         <td>{{ $product->description }}</td>
                                         <td>{{ $product->price }}</td>
                                         <td>{{ $product->weight ?? 0 }} KG</td>

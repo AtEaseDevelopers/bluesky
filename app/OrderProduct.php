@@ -79,9 +79,17 @@ class OrderProduct extends Model
             }
         }
 
-        $weight = self::displayWeight($product);
-        if ($weight !== null) {
-            $parts[] = '<small>' . __('orders.weight') . ': ' . e($weight) . '</small>';
+        $sellIn = $product->sell_in ?? Product::SELL_IN_WEIGHT;
+        $qtyLabel = self::formatAdminListQty($product, $sellIn);
+        if ($qtyLabel !== null) {
+            $parts[] = '<small>' . e($qtyLabel) . '</small>';
+        }
+
+        if ($sellIn !== Product::SELL_IN_QTY) {
+            $weight = self::displayWeight($product);
+            if ($weight !== null) {
+                $parts[] = '<small>' . __('orders.weight') . ': ' . e($weight) . '</small>';
+            }
         }
 
         if (!empty($product->nos)) {
@@ -95,6 +103,30 @@ class OrderProduct extends Model
         return implode('<br>', $parts);
     }
 
+    public static function formatAdminListQty(object $product, ?string $sellIn = null): ?string
+    {
+        $sellIn = $sellIn ?? Product::SELL_IN_WEIGHT;
+
+        if ($sellIn === Product::SELL_IN_QTY) {
+            if ($product->quantity === null || $product->quantity === '') {
+                return null;
+            }
+
+            return __('orders.qty') . ': ' . rtrim(rtrim(number_format((float) $product->quantity, 3, '.', ''), '0'), '.');
+        }
+
+        if ($sellIn === Product::SELL_IN_QTY_BILL_WEIGHT) {
+            $qty = ($product->quantity !== null && $product->quantity !== '')
+                ? rtrim(rtrim(number_format((float) $product->quantity, 3, '.', ''), '0'), '.')
+                : '-';
+            $weight = self::displayWeight($product) ?? '-';
+
+            return __('orders.qty') . ': ' . $qty . ' / ' . __('orders.weight') . ': ' . $weight;
+        }
+
+        return null;
+    }
+
     public static function displayWeight(object $product): ?string
     {
         if (!empty($product->weight)) {
@@ -106,5 +138,16 @@ class OrderProduct extends Model
         }
 
         return null;
+    }
+
+    public static function reportWeightValue(object $product): ?float
+    {
+        $display = self::displayWeight($product);
+
+        if ($display === null) {
+            return null;
+        }
+
+        return (float) preg_replace('/[^0-9.]/', '', $display);
     }
 }

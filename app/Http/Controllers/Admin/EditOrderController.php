@@ -135,28 +135,27 @@ class EditOrderController extends Controller
         foreach ($data['product_id'] as $key => $product_id) {
             $product = Product::find($product_id);
 
-            $quantity = null;
-            $weight = null;
-            $qtyWeight = 0;
-
-            if ($product->sell_in === 'qty') {
-                $quantity = $data['quantity'][$key];
-                $qtyWeight = $quantity;
+            if ($product->sell_in === Product::SELL_IN_WEIGHT) {
+                $line = $product->resolveLineInputs(null, (float) ($data['weight'][$key] ?? 0));
+            } elseif ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT) {
+                $line = $product->resolveLineInputs(
+                    (float) ($data['quantity'][$key] ?? 0),
+                    (float) ($data['weight'][$key] ?? 0)
+                );
             } else {
-                $weight = $data['weight'][$key];
-                $qtyWeight = $weight;
+                $line = $product->resolveLineInputs((float) ($data['quantity'][$key] ?? 0), null);
             }
 
             $unit_price = Product::get_today_price($product->id, $user);
-            $price = $unit_price * $qtyWeight;
+            $price = $unit_price * $line['bill_amount'];
             $order_product = OrderProduct::create(
                 [
                 "order_id" => $order->id,
                 "product_id" => $product_id,
                 "product_name" => $product->name,
-                "quantity" => $quantity,
-                "weight" => $weight,
-                "product_weight" => $weight,
+                "quantity" => $line['quantity'],
+                "weight" => $line['weight'],
+                "product_weight" => $line['product_weight'],
                 "unit_price" => $unit_price,
                 "price" => $price,
                 "remark" => $data['remark'][$key],

@@ -41,6 +41,11 @@ class AddToCartController extends Controller
         }
 
         $product_price = Product::get_today_price($product->id, $user);
+        $linePrice = $product->calculateLinePrice(
+            $product_price,
+            isset($data['quantity']) ? (float) $data['quantity'] : null,
+            isset($data['weight']) ? (float) $data['weight'] : null
+        );
         $product_options = Product::getOption($product->id, true)['product_option'];
         $cart = Cart::where('user_id', $user->id)->where('status', Cart::$status['pending'])->first();
 
@@ -94,7 +99,7 @@ class AddToCartController extends Controller
                         'quantity' => $data['quantity'] ?? null,
                         'weight' => $data['weight'] ?? null,
                         'unit_price' => $product_price,
-                        'price' => $product_price * ($data['quantity'] ?? $data['weight']),
+                        'price' => $linePrice,
                         'remark' => $data['remark'],
                     ]
                 );
@@ -109,7 +114,7 @@ class AddToCartController extends Controller
                     'quantity' => $data['quantity'] ?? null,
                     'weight' => $data['weight'] ?? null,
                     'unit_price' => $product_price,
-                    'price' => $product_price * ($data['quantity'] ?? $data['weight']),
+                    'price' => $linePrice,
                     'remark' => isset($data['remark']) ? $data['remark'] : null,
                     'status' => CartProduct::$status['active'],
                 ]
@@ -138,14 +143,22 @@ class AddToCartController extends Controller
     public function validateAddToCart(Request $request, Product $product)
     {
         $rules = [
-            'quantity' => ['required_without:weight', 'numeric'],
-            'weight' => ['required_without:quantity', 'numeric'],
             'remark' => ['nullable', 'max:200'],
         ];
-        $customMessages = [
-            'quantity.required_without' => 'The quantity is required',
-            'weight.required_without' => 'The weight is required',
-        ];
+        $customMessages = [];
+
+        if ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT) {
+            $rules['quantity'] = ['required', 'numeric', 'min:0.001'];
+            $rules['weight'] = ['required', 'numeric', 'min:0.001'];
+            $customMessages['quantity.required'] = 'The quantity is required';
+            $customMessages['weight.required'] = 'The weight is required';
+        } elseif ($product->requiresQuantityInput()) {
+            $rules['quantity'] = ['required', 'numeric', 'min:0.001'];
+            $customMessages['quantity.required'] = 'The quantity is required';
+        } else {
+            $rules['weight'] = ['required', 'numeric', 'min:0.001'];
+            $customMessages['weight.required'] = 'The weight is required';
+        }
 
         // process validation for product option
         $customAttributes = [];
@@ -167,16 +180,23 @@ class AddToCartController extends Controller
             ];
         }
 
-        $requested = (float) ($data['quantity'] ?? $data['weight'] ?? 0);
+        $requested = $product->stockCheckAmount(
+            isset($data['quantity']) ? (float) $data['quantity'] : null,
+            isset($data['weight']) ? (float) $data['weight'] : null
+        );
         $stock = app(StockService::class)->getOrCreateStock($product->id);
         if ($requested <= 0) {
+            $field = $product->requiresQuantityInput() && !$product->requiresWeightInput()
+                ? 'quantity'
+                : ($product->requiresWeightInput() && !$product->requiresQuantityInput() ? 'weight' : 'quantity');
             throw ValidationException::withMessages([
-                ($product->sell_in === 'qty' ? 'quantity' : 'weight') => 'Please enter a valid amount.',
+                $field => 'Please enter a valid amount.',
             ]);
         }
         if ($requested > (float) $stock->quantity) {
+            $field = $product->requiresQuantityInput() ? 'quantity' : 'weight';
             throw ValidationException::withMessages([
-                ($product->sell_in === 'qty' ? 'quantity' : 'weight') => 'Only ' . Product::formatStockQuantity((float) $stock->quantity, $product->uom_name ?? 'KG') . ' available.',
+                $field => 'Only ' . Product::formatStockQuantity((float) $stock->quantity, $product->uom_name ?? 'KG') . ' available.',
             ]);
         }
 

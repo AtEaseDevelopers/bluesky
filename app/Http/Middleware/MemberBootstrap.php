@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use App\Cart;
 use App\CartProduct;
-use App\OrderFieldSetting;
 use Closure;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -46,12 +45,6 @@ class MemberBootstrap
             'update_cart_url' => url('/update-cart-item'),
             'remove_cart_url' => url('/remove-cart-item'),
             'product_info_url' => url('/add-to-cart-product-info'),
-        ]);
-
-        View::share('orderFieldSettings', [
-            'weight_presets' => OrderFieldSetting::weightPresets(),
-            'situation_options' => OrderFieldSetting::situationOptions(),
-            'situation_label' => OrderFieldSetting::situationLabel(),
         ]);
 
         View::share('customerPermissions', app(\App\Services\RolePermissionService::class)->allowedMap(

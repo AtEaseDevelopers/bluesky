@@ -146,11 +146,14 @@
                 <td style="font-size: 14px; text-align: left;">{{ $prod->name }}</td>
                 <td style="font-size: 14px; text-align: left;">{{ $prod->quantity ?? '' }}</td>
                 <td style="font-size: 14px; text-align: left;">{{ $prod->remark }}</td>
-                <td style="font-size: 14px; text-align: center;">{{ $prod->show_weight == true ? (($prod->quantity != null && $prod->product_weight != null ? $prod->product_weight * $prod->quantity : $prod->weight) . ' KG') : '' }}</td>
+                <td style="font-size: 14px; text-align: center;">{{ $prod->show_weight == true ? (\App\OrderProduct::displayWeight($prod) ?? '') : '' }}</td>
             </tr>
             @php
                 if ($prod->show_weight == true) {
-                    $total_weight += $prod->weight;
+                    $lineWeight = \App\OrderProduct::reportWeightValue($prod);
+                    if ($lineWeight !== null) {
+                        $total_weight = ($total_weight ?? 0) + $lineWeight;
+                    }
                 }
             @endphp
         @endforeach

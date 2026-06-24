@@ -3,7 +3,7 @@
         $product_option = $product->product_option;
         $uomLabel = $product->uom->uom_name ?? 'KG';
     @endphp
-    <div class="card products-card mb-3" id="product-card-{{ $product->id }}" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-sku="{{ $product->sku }}">
+    <div class="card products-card mb-3" id="product-card-{{ $product->id }}" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-sku="{{ $product->sku }}" data-sell-in="{{ $product->sell_in }}">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
                 <div class="d-flex">
@@ -76,11 +76,39 @@
                             </button>
                         </div>
                     </div>
+                @elseif ($product->sell_in == 'qty_bill_weight')
+                    <div class="form-group mb-3">
+                        <label class="mb-2" for="productQuantity_{{ $product->id }}">Quantity</label>
+                        <span class="text-danger"> *</span>
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productQuantity_{{ $product->id }}" data-action="minus">
+                                <i class="fa fa-minus"></i>
+                            </button>
+                            <input type="number" class="form-control text-center" id="productQuantity_{{ $product->id }}" name="quantity" value="1" min="0.001" step="0.001" required>
+                            <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productQuantity_{{ $product->id }}" data-action="plus">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="mb-2" for="productWeight_{{ $product->id }}">Weight ({{ $uomLabel }})</label>
+                        <span class="text-danger"> *</span>
+                        @include('partials.weight_presets', ['targetId' => 'productWeight_' . $product->id, 'uomLabel' => $uomLabel, 'presets' => $product->weightPresetsList()])
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productWeight_{{ $product->id }}" data-action="minus">
+                                <i class="fa fa-minus"></i>
+                            </button>
+                            <input type="number" class="form-control text-center" id="productWeight_{{ $product->id }}" name="weight" value="1" min="0.001" step="0.001" required>
+                            <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productWeight_{{ $product->id }}" data-action="plus">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
                 @else
                     <div class="form-group mb-3">
                         <label class="mb-2" for="productWeight_{{ $product->id }}">Order Qty ({{ $uomLabel }})</label>
                         <span class="text-danger"> *</span>
-                        @include('partials.weight_presets', ['targetId' => 'productWeight_' . $product->id, 'uomLabel' => $uomLabel])
+                        @include('partials.weight_presets', ['targetId' => 'productWeight_' . $product->id, 'uomLabel' => $uomLabel, 'presets' => $product->weightPresetsList()])
                         <div class="btn-group w-100" role="group">
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productWeight_{{ $product->id }}" data-action="minus">
                                 <i class="fa fa-minus"></i>

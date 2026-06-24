@@ -28,25 +28,22 @@ class InventoryController extends Controller
 
     public function stockInCreate()
     {
+        $products = $this->activeProducts();
+
         return view('admin.inventory.stock-in.create', [
-            'products' => $this->activeProducts(),
+            'products' => $products,
+            'productSellIn' => $products->pluck('sell_in', 'id'),
             'uoms' => Uom::orderBy('uom_name')->get(),
         ]);
     }
 
     public function stockInStore(Request $request)
     {
-        $data = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|numeric|min:0.001',
-            'weight' => 'nullable|numeric|min:0',
-            'movement_date' => 'required|date',
-            'remarks' => 'nullable|string|max:500',
-        ]);
+        $data = $this->validateStockMovement($request);
 
         $this->stockService->stockIn(
             (int) $data['product_id'],
-            (float) $data['quantity'],
+            isset($data['quantity']) ? (float) $data['quantity'] : null,
             isset($data['weight']) ? (float) $data['weight'] : null,
             $data['movement_date'],
             $data['remarks'] ?? null,
@@ -58,23 +55,18 @@ class InventoryController extends Controller
 
     public function stockOutCreate()
     {
+        $products = $this->activeProducts();
+
         return view('admin.inventory.stock-out.create', [
-            'products' => $this->activeProducts(),
+            'products' => $products,
+            'productSellIn' => $products->pluck('sell_in', 'id'),
             'reasons' => StockMovement::stockOutReasonLabels(),
         ]);
     }
 
     public function stockOutStore(Request $request)
     {
-        $data = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|numeric|min:0.001',
-            'weight' => 'nullable|numeric|min:0',
-            'reason' => 'required|string|max:100',
-            'reason_other' => 'nullable|required_if:reason,other|string|max:255',
-            'movement_date' => 'required|date',
-            'remarks' => 'nullable|string|max:500',
-        ]);
+        $data = $this->validateStockMovement($request, true);
 
         $reason = $data['reason'] === 'other'
             ? __('inventory.stock_out_reasons.other') . ': ' . ($data['reason_other'] ?? '')
@@ -83,7 +75,7 @@ class InventoryController extends Controller
         try {
             $this->stockService->stockOut(
                 (int) $data['product_id'],
-                (float) $data['quantity'],
+                isset($data['quantity']) ? (float) $data['quantity'] : null,
                 isset($data['weight']) ? (float) $data['weight'] : null,
                 $reason,
                 $data['remarks'] ?? null,
@@ -116,6 +108,7 @@ class InventoryController extends Controller
                 'products.name',
                 'products.sku',
                 'products.price',
+                'products.sell_in',
                 'products.images',
                 'uoms.uom_name',
                 DB::raw('COALESCE(product_stocks.quantity, 0) as quantity'),
@@ -171,6 +164,7 @@ class InventoryController extends Controller
                     . ' data-quantity="' . number_format($quantity, 3, '.', '') . '"'
                     . ' data-weight="' . number_format($weight, 3, '.', '') . '"'
                     . ' data-uom="' . e($uomName) . '"'
+                    . ' data-sell-in="' . e($record->sell_in ?? 'qty') . '"'
                     . ' data-image-url="' . e($imageUrl) . '">'
                     . '<i class="fa fa-edit"></i></button>',
                 'name' => '<div class="d-flex align-items-center gap-2">'
@@ -240,10 +234,13 @@ class InventoryController extends Controller
         $columns = ['stock_movements.id', 'movement_date', 'product_name', 'movement_type', 'quantity_before', 'quantity_change', 'quantity_after', 'weight', 'reason', 'admin_name', 'remarks'];
         $query = DB::table('stock_movements')
             ->join('products', 'stock_movements.product_id', '=', 'products.id')
+            ->leftJoin('uoms', 'products.uom_id', '=', 'uoms.id')
             ->leftJoin('admins', 'stock_movements.admin_id', '=', 'admins.id')
             ->select(
                 'stock_movements.*',
                 'products.name as product_name',
+                'products.sell_in',
+                'uoms.uom_name',
                 'admins.name as admin_name'
             );
 
@@ -280,18 +277,17 @@ class InventoryController extends Controller
 
         $data = [];
         foreach ($records as $record) {
-            $change = (float) $record->quantity_change;
-            $changeFormatted = ($change >= 0 ? '+' : '') . number_format($change, 3);
+            $stockColumns = $this->formatMovementStockColumns($record);
 
             $data[] = [
                 'id' => $record->id,
                 'movement_date' => date('d-m-Y', strtotime($record->movement_date)),
                 'product_name' => $record->product_name,
                 'movement_type' => StockMovement::movementTypeLabel($record->movement_type),
-                'quantity_before' => number_format((float) $record->quantity_before, 3),
-                'quantity_change' => '<span class="' . ($change >= 0 ? 'text-success' : 'text-danger') . '">' . $changeFormatted . '</span>',
-                'quantity_after' => number_format((float) $record->quantity_after, 3),
-                'weight' => $record->weight !== null ? number_format((float) $record->weight, 3) . ' kg' : '-',
+                'quantity_before' => $stockColumns['before'],
+                'quantity_change' => $stockColumns['change'],
+                'quantity_after' => $stockColumns['after'],
+                'weight' => $stockColumns['weight_ref'],
                 'reason' => $record->reason ?: '-',
                 'admin_name' => $record->admin_name ?: __('inventory.system'),
                 'remarks' => $record->remarks ?: '-',
@@ -311,5 +307,80 @@ class InventoryController extends Controller
         return Product::where('status', Product::$status['active'])
             ->orderBy('name')
             ->get();
+    }
+
+    private function validateStockMovement(Request $request, bool $requireReason = false): array
+    {
+        $rules = [
+            'product_id' => 'required|exists:products,id',
+            'movement_date' => 'required|date',
+            'remarks' => 'nullable|string|max:500',
+        ];
+
+        if ($requireReason) {
+            $rules['reason'] = 'required|string|max:100';
+            $rules['reason_other'] = 'nullable|required_if:reason,other|string|max:255';
+        }
+
+        $product = Product::find($request->input('product_id'));
+        if ($product && $product->inventoryTracksWeight()) {
+            $rules['weight'] = 'required|numeric|min:0.001';
+            $rules['quantity'] = 'nullable|numeric|min:0';
+        } else {
+            $rules['quantity'] = 'required|numeric|min:0.001';
+            $rules['weight'] = 'nullable|numeric|min:0';
+        }
+
+        return $request->validate($rules);
+    }
+
+    private function formatMovementStockColumns(object $record): array
+    {
+        $sellIn = $record->sell_in ?? Product::SELL_IN_QTY;
+        $uomName = $record->uom_name ?: '';
+
+        if ($sellIn === Product::SELL_IN_WEIGHT) {
+            $before = (float) ($record->weight_before ?? 0);
+            $change = $record->weight_change !== null
+                ? (float) $record->weight_change
+                : $this->legacyWeightChange($record);
+            $after = $record->weight_after !== null
+                ? (float) $record->weight_after
+                : max(0, $before + $change);
+            $suffix = ' kg';
+        } else {
+            $before = (float) $record->quantity_before;
+            $change = (float) $record->quantity_change;
+            $after = (float) $record->quantity_after;
+            $suffix = $uomName !== '' ? ' ' . $uomName : '';
+        }
+
+        $changeClass = $change >= 0 ? 'text-success' : 'text-danger';
+        $changeFormatted = ($change >= 0 ? '+' : '') . number_format($change, 3) . $suffix;
+
+        $weightRef = '-';
+        if ($sellIn === Product::SELL_IN_QTY_BILL_WEIGHT && $record->weight !== null) {
+            $weightRef = number_format((float) $record->weight, 3) . ' kg';
+        }
+
+        return [
+            'before' => number_format($before, 3) . $suffix,
+            'change' => '<span class="' . $changeClass . '">' . e($changeFormatted) . '</span>',
+            'after' => number_format($after, 3) . $suffix,
+            'weight_ref' => $weightRef,
+        ];
+    }
+
+    private function legacyWeightChange(object $record): float
+    {
+        if ($record->weight === null) {
+            return 0.0;
+        }
+
+        $amount = (float) $record->weight;
+
+        return in_array($record->movement_type, ['stock_out', 'sales_deduction'], true)
+            ? -abs($amount)
+            : abs($amount);
     }
 }

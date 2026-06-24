@@ -42,22 +42,23 @@
                                     @enderror
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="quantity-wrap">
                                 <div class="mb-4">
                                     <label class="mb-2" for="quantity">{{ __('inventory.quantity') }}</label>
-                                    <span class="text-danger"> *</span>
+                                    <span class="text-danger quantity-required-mark"> *</span>
                                     <input type="number" step="0.001" min="0.001"
                                         class="form-control @error('quantity') is-invalid @enderror" name="quantity"
-                                        id="quantity" placeholder="{{ __('inventory.enter_quantity') }}" value="{{ old('quantity') }}" required>
+                                        id="quantity" placeholder="{{ __('inventory.enter_quantity') }}" value="{{ old('quantity') }}">
                                     @error('quantity')
                                         <span class="text-danger" role="alert"><strong>{{ $message }}</strong></span>
                                     @enderror
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="weight-wrap">
                                 <div class="mb-4">
                                     <label class="mb-2" for="weight">{{ __('inventory.weight_kg') }}</label>
-                                    <input type="number" step="0.001" min="0"
+                                    <span class="text-danger weight-required-mark d-none"> *</span>
+                                    <input type="number" step="0.001" min="0.001"
                                         class="form-control @error('weight') is-invalid @enderror" name="weight"
                                         id="weight" placeholder="{{ __('inventory.weight_optional') }}" value="{{ old('weight') }}">
                                     @error('weight')
@@ -125,6 +126,10 @@
 @endsection
 @section('script')
     <script>
+        const productSellIn = @json($productSellIn);
+        const weightRequiredLabel = @json(__('inventory.weight_required'));
+        const weightOptionalLabel = @json(__('inventory.weight_optional'));
+
         $('#product_id').select2({ width: '100%', placeholder: @json(__('inventory.select_product')) });
 
         function toggleReasonOther() {
@@ -135,7 +140,30 @@
             }
         }
 
+        function updateStockOutFields() {
+            const sellIn = productSellIn[$('#product_id').val()] || 'qty';
+            const isWeightProduct = sellIn === 'weight';
+
+            $('#quantity-wrap').toggle(!isWeightProduct);
+            $('#weight-wrap').toggle(isWeightProduct);
+
+            $('#quantity').prop('required', !isWeightProduct);
+            $('#weight').prop('required', isWeightProduct);
+
+            $('.quantity-required-mark').toggle(!isWeightProduct);
+            $('.weight-required-mark').toggle(isWeightProduct);
+
+            $('#weight').attr('placeholder', isWeightProduct ? weightRequiredLabel : weightOptionalLabel);
+            if (isWeightProduct) {
+                $('#quantity').val('');
+            } else {
+                $('#weight').val('');
+            }
+        }
+
         $('#reason').on('change', toggleReasonOther);
+        $('#product_id').on('change', updateStockOutFields);
         toggleReasonOther();
+        updateStockOutFields();
     </script>
 @endsection

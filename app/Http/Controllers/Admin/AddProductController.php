@@ -47,9 +47,10 @@ class AddProductController extends Controller
                 'status' => $data['status'],
                 'remark' => $data['remark'],
                 'nos' => $data['nos'],
-                'show_weight' => isset($data['show_weight']),
-                'show_qty' => isset($data['show_qty']),
                 'sell_in' => $data['sell_in'],
+                'weight_presets' => in_array($data['sell_in'], [Product::SELL_IN_WEIGHT, Product::SELL_IN_QTY_BILL_WEIGHT], true)
+                    ? Product::parseWeightPresetsInput($request->input('weight_presets'))
+                    : null,
             ]
         );
 
@@ -114,9 +115,8 @@ class AddProductController extends Controller
             "product_option_mandatory" => ['nullable'],
             'remark' => ['nullable'],
             'nos' => ['nullable'],
-            'show_weight' => ['nullable'],
-            'show_qty' => ['nullable'],
-            'sell_in' => ['required'],
+            'sell_in' => ['required', 'in:qty,weight,qty_bill_weight'],
+            'weight_presets' => ['nullable', 'string', 'max:500'],
             'uom_id' => ['required'],
             'product_category_id' => ['required'],
         ];

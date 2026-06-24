@@ -51,7 +51,14 @@ class CartController extends Controller
             }
             $cart_products[$key]->options = CartProduct::getOption($value->cart_product_id);
             $cart_products[$key]->unit_price = Product::get_today_price($value->product_id, $user);
-            $total += $cart_products[$key]->unit_price * $value->quantity;
+            $product = Product::find($value->product_id);
+            $qty = ($value->quantity !== null && $value->quantity !== '') ? (float) $value->quantity : null;
+            $weight = ($value->weight !== null && $value->weight !== '') ? (float) $value->weight : null;
+            $linePrice = $product
+                ? $product->calculateLinePrice((float) $cart_products[$key]->unit_price, $qty, $weight)
+                : 0;
+            $cart_products[$key]->price = $linePrice;
+            $total += $linePrice;
         }
 
         return view(

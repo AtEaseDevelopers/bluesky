@@ -78,17 +78,17 @@
                                 <span class="input-group-text" id="edit-stock-price-uom">/ KG</span>
                             </div>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-3" id="edit-stock-quantity-wrap">
                             <label class="form-label" for="edit-stock-quantity">{{ __('inventory.quantity') }}</label>
                             <div class="input-group">
                                 <input type="number" step="0.001" min="0" class="form-control" name="quantity" id="edit-stock-quantity" required>
                                 <span class="input-group-text" id="edit-stock-quantity-uom">KG</span>
                             </div>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-3" id="edit-stock-weight-wrap">
                             <label class="form-label" for="edit-stock-weight">{{ __('inventory.weight_kg') }}</label>
                             <input type="number" step="0.001" min="0" class="form-control" name="weight" id="edit-stock-weight">
-                            <small class="text-muted">{{ __('inventory.weight_reference') }}</small>
+                            <small class="text-muted" id="edit-stock-weight-help">{{ __('inventory.weight_reference') }}</small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -139,6 +139,8 @@
         $(document).on('click', '.btn-edit-stock', function () {
             const btn = $(this);
             const uom = btn.data('uom') || 'KG';
+            const sellIn = btn.data('sellIn') || 'qty';
+            const isWeightProduct = sellIn === 'weight';
             const defaultImage = @json(asset('assets/images/product-default.jpg'));
 
             $('#edit-stock-product-id').val(btn.data('product-id'));
@@ -151,6 +153,14 @@
             $('#edit-stock-quantity-uom').text(uom);
             $('#edit-stock-image').val('');
             $('#edit-stock-image-preview').attr('src', btn.data('image-url') || defaultImage);
+
+            $('#edit-stock-quantity-wrap').toggle(!isWeightProduct);
+            $('#edit-stock-weight-wrap').toggle(isWeightProduct);
+            $('#edit-stock-quantity').prop('required', !isWeightProduct);
+            $('#edit-stock-weight').prop('required', isWeightProduct);
+            $('#edit-stock-weight-help').text(isWeightProduct
+                ? @json(__('inventory.weight_required'))
+                : @json(__('inventory.weight_reference')));
 
             editStockModal.show();
         });

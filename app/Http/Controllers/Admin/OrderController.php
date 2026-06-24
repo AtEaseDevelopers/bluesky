@@ -111,7 +111,8 @@ class OrderController extends Controller
             $orderProductsByOrder = DB::table('order_products')
                 ->select(
                     'order_products.*',
-                    'products.sku'
+                    'products.sku',
+                    'products.sell_in'
                 )
                 ->leftJoin('products', 'products.id', '=', 'order_products.product_id')
                 ->whereIn('order_products.order_id', $orderIds)
@@ -143,12 +144,6 @@ class OrderController extends Controller
                 $orderProducts,
                 $optionsByOrderProduct->all()
             );
-
-            $qtyLines = [];
-            foreach ($orderProducts as $orderProduct) {
-                $qtyLines[] = __('orders.qty') . ': ' . ($orderProduct->quantity ?? '-');
-            }
-            $orders[$key]->order_qtys = implode('<br>', $qtyLines);
         }
 
         $statuses = collect(Order::$status)->mapWithKeys(function ($value, $key) {

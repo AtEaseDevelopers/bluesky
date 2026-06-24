@@ -105,7 +105,6 @@
                             <li><a class="dropdown-item" href="{{ route('admin.uom.index') }}">{{ __('ui.nav.uom') }}</a></li>
                             <li><a class="dropdown-item" href="{{ route('admin.product-categories.index') }}">{{ __('ui.nav.product_categories') }}</a></li>
                             <li><a class="dropdown-item" href="{{ route('admin.customer-categories.index') }}">{{ __('ui.nav.customer_categories') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.order-field-settings.edit') }}">{{ __('ui.nav.order_field_settings') }}</a></li>
                         </ul>
                     </li>
                 @endif

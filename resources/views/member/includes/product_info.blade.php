@@ -56,10 +56,36 @@
             </button>
         </div>
     </div>
+@elseif ($product->sell_in == 'qty_bill_weight')
+    <div class="mb-4">
+        <label class="mb-2" for="quantity">Quantity</label>
+        <div class="btn-group w-100" role="group">
+            <button type="button" class="btn btn-outline-primary btn-minus" disabled>
+                <i class="fa fa-minus" aria-hidden="true"></i>
+            </button>
+            <input type="number" class="form-control px-4" id="quantity" name="quantity" value="1" min="0.001" max="{{ $product->stock_quantity }}" step="0.001">
+            <button type="button" class="btn btn-outline-primary btn-plus">
+                <i class="fa fa-plus" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
+    <div class="mb-4">
+        <label class="mb-2" for="weight">Weight ({{ $product->uom_name ?? 'KG' }})</label>
+        @include('partials.weight_presets', ['targetId' => 'weight', 'uomLabel' => $product->uom_name ?? 'KG', 'presets' => $product->weightPresetsList()])
+        <div class="btn-group w-100" role="group">
+            <button type="button" class="btn btn-outline-primary btn-minus-weight" disabled>
+                <i class="fa fa-minus" aria-hidden="true"></i>
+            </button>
+            <input type="number" class="form-control px-4" id="weight" name="weight" value="1" min="0.001" step="0.001">
+            <button type="button" class="btn btn-outline-primary btn-plus-weight">
+                <i class="fa fa-plus" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
 @else
     <div class="mb-4">
         <label class="mb-2" for="weight">Order Qty ({{ $product->uom_name ?? 'KG' }})</label>
-        @include('partials.weight_presets', ['targetId' => 'weight', 'uomLabel' => $product->uom_name ?? 'KG'])
+        @include('partials.weight_presets', ['targetId' => 'weight', 'uomLabel' => $product->uom_name ?? 'KG', 'presets' => $product->weightPresetsList()])
         <div class="btn-group w-100" role="group">
             <button type="button" class="btn btn-outline-primary btn-minus-weight" disabled>
                 <i class="fa fa-minus" aria-hidden="true"></i>

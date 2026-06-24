@@ -117,9 +117,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
     
                     if (isValid) {
-                         var qtyWeightValue = (productOptions['quantity'] == '' || productOptions['quantity'] == undefined) ? productOptions['weight'] : productOptions['quantity'];
-                        
-                        productOptions['total_price'] = parseFloat(productOptions['price']) * parseFloat(qtyWeightValue);
+                        var sellIn = card.getAttribute('data-sell-in') || 'qty';
+                        productOptions['sell_in'] = sellIn;
+
+                        if (sellIn === 'qty_bill_weight') {
+                            productOptions['total_price'] = parseFloat(productOptions['price']) * parseFloat(productOptions['weight'] || 0);
+                        } else {
+                            var qtyWeightValue = (productOptions['quantity'] == '' || productOptions['quantity'] == undefined) ? productOptions['weight'] : productOptions['quantity'];
+                            productOptions['total_price'] = parseFloat(productOptions['price']) * parseFloat(qtyWeightValue || 0);
+                        }
                         selected_products.push(productOptions);
                     }
                 }
@@ -453,14 +459,14 @@ document.addEventListener('change', function(event) {
         }
     }
 
-    if (event.target.matches('input[name="quantity[]"]')) {
+    if (event.target.matches('input[name="quantity[]"], input[name="weight[]"]')) {
         syncBagQuantityToSelectedProducts(event.target);
         calculateTotal();
     }
 });
 
 document.addEventListener('input', function(event) {
-    if (event.target.matches('input[name="quantity[]"]')) {
+    if (event.target.matches('input[name="quantity[]"], input[name="weight[]"]')) {
         syncBagQuantityToSelectedProducts(event.target);
         calculateTotal();
     }
@@ -682,8 +688,43 @@ function display_selected_products() {
                     </div>`;
 
         if (document.getElementById('order_customer')) {
-            
-            if(product.quantity == undefined || product.quantity == "")
+            var sellIn = product.sell_in || 'qty';
+
+            if (sellIn === 'qty_bill_weight') {
+                productHtml += `
+                ${optionHtml}
+                <div class="form-group mb-3">
+                    <label class="mb-2">Quantity</label>
+                    <span class="text-danger"> *</span>
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="minus">
+                            <i class="fa fa-minus"></i>
+                        </button>
+                        <input type="number" class="form-control text-center add-products-quantity" id="bagQty_${product.product_id}" name="quantity[]" value="${product.quantity || 1}" data-pid="${product.product_id}" data-price="${product.price}" data-field="quantity" data-sell-in="qty_bill_weight" min="0.001" step="0.001" required>
+                        <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="plus">
+                            <i class="fa fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="mb-2">Weight (KG)</label>
+                    <span class="text-danger"> *</span>
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagBillWeight_${product.product_id}" data-action="minus">
+                            <i class="fa fa-minus"></i>
+                        </button>
+                        <input type="number" class="form-control text-center add-products-bill-weight" id="bagBillWeight_${product.product_id}" name="weight[]" value="${product.weight || 1}" data-pid="${product.product_id}" data-price="${product.price}" data-field="bill_weight" data-sell-in="qty_bill_weight" min="0.001" step="0.001" required>
+                        <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagBillWeight_${product.product_id}" data-action="plus">
+                            <i class="fa fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="mb-2">Remark</label>
+                    <textarea class="form-control" name="remark[]">${product.remark || ''}</textarea>
+                </div>
+            `;
+            } else if(product.quantity == undefined || product.quantity == "")
             {
                  productHtml += `
                 ${optionHtml}
@@ -764,30 +805,59 @@ function syncBagQuantityToSelectedProducts(input) {
         return;
     }
 
-    if (field === 'weight') {
+    if (field === 'bill_weight') {
+        product.weight = value;
+    } else if (field === 'weight') {
         product.weight = value;
         delete product.quantity;
     } else {
         product.quantity = value;
-        delete product.weight;
+        if (product.sell_in !== 'qty_bill_weight') {
+            delete product.weight;
+        }
     }
 
-    product.total_price = parseFloat(product.price) * parseFloat(value || 0);
+    var billAmount = product.sell_in === 'qty_bill_weight'
+        ? parseFloat(product.weight || 0)
+        : parseFloat(product.quantity || product.weight || 0);
+    product.total_price = parseFloat(product.price) * billAmount;
 }
 
 function calculateTotal() {
     let total = 0;
 
-    document.querySelectorAll('input[name="quantity[]"]').forEach(function(input) {
-        let qty = parseFloat(input.value) || 0;
-        let price = parseFloat(input.getAttribute('data-price')) || 0;
-        let pid = input.getAttribute('data-pid');
+    document.querySelectorAll('input[name="quantity[]"], input[name="weight[]"]').forEach(function(input) {
+        if (!input.getAttribute('data-pid')) {
+            return;
+        }
 
-        total += qty * price;
-        document.getElementById(`product-${pid}-total`).innerHTML = (qty * price).toFixed(2);
+        const pid = input.getAttribute('data-pid');
+        const sellIn = input.getAttribute('data-sell-in');
+        const price = parseFloat(input.getAttribute('data-price')) || 0;
+        let lineTotal = 0;
+
+        if (sellIn === 'qty_bill_weight') {
+            if (input.getAttribute('data-field') !== 'bill_weight') {
+                return;
+            }
+            lineTotal = (parseFloat(input.value) || 0) * price;
+        } else {
+            if (input.name !== 'quantity[]') {
+                return;
+            }
+            lineTotal = (parseFloat(input.value) || 0) * price;
+        }
+
+        total += lineTotal;
+        const totalEl = document.getElementById(`product-${pid}-total`);
+        if (totalEl) {
+            totalEl.innerHTML = lineTotal.toFixed(2);
+        }
     });
 
-    document.getElementById('total-price').textContent = total.toFixed(2);
+    if (document.getElementById('total-price')) {
+        document.getElementById('total-price').textContent = total.toFixed(2);
+    }
 }
 
 function updateButtonState(quantity) {

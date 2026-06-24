@@ -194,8 +194,6 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/export-daily-sales-report', 'ReportsController@export_daily_sales_report')->name('export-daily-sales-report');
                 Route::get('/do-report', 'ReportsController@do_report')->name('do-report');
 
-                Route::get('/settings/order-fields', 'OrderFieldSettingController@edit')->name('order-field-settings.edit');
-                Route::post('/settings/order-fields', 'OrderFieldSettingController@update')->name('order-field-settings.update');
                 Route::resource('roles', 'RoleController')->parameters(['roles' => 'role']);
                 Route::get('/role-permissions', function () {
                     return redirect()->route('admin.roles.index');

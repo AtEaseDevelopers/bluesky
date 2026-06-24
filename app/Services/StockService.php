@@ -11,26 +11,58 @@ use Illuminate\Support\Facades\DB;
 
 class StockService
 {
-    public function stockIn(int $productId, float $quantity, ?float $weight, string $movementDate, ?string $remarks, ?int $adminId): StockMovement
+    public function stockIn(int $productId, ?float $quantity, ?float $weight, string $movementDate, ?string $remarks, ?int $adminId): StockMovement
     {
         return DB::transaction(function () use ($productId, $quantity, $weight, $movementDate, $remarks, $adminId) {
             $product = Product::findOrFail($productId);
             $stock = $this->getOrCreateStock($productId);
             $quantityBefore = (float) $stock->quantity;
+            $weightBefore = (float) ($stock->weight ?? 0);
 
-            $stock->quantity = $quantityBefore + $quantity;
-            if ($weight !== null) {
-                $stock->weight = ($stock->weight ?? 0) + $weight;
+            if ($product->inventoryTracksWeight()) {
+                $amount = (float) $weight;
+                if ($amount <= 0) {
+                    throw new \InvalidArgumentException('Weight is required for this product.');
+                }
+
+                $stock->weight = $weightBefore + $amount;
+                $stock->save();
+
+                return $this->createMovement([
+                    'product_id' => $productId,
+                    'movement_type' => 'stock_in',
+                    'quantity_before' => $quantityBefore,
+                    'quantity_change' => 0,
+                    'quantity_after' => $quantityBefore,
+                    'weight' => $amount,
+                    'weight_before' => $weightBefore,
+                    'weight_change' => $amount,
+                    'weight_after' => $stock->weight,
+                    'uom_id' => $product->uom_id,
+                    'admin_id' => $adminId,
+                    'remarks' => $remarks,
+                    'movement_date' => $movementDate,
+                ]);
             }
+
+            $amount = (float) $quantity;
+            if ($amount <= 0) {
+                throw new \InvalidArgumentException('Quantity is required for this product.');
+            }
+
+            $stock->quantity = $quantityBefore + $amount;
             $stock->save();
 
-            return StockMovement::create([
+            return $this->createMovement([
                 'product_id' => $productId,
                 'movement_type' => 'stock_in',
                 'quantity_before' => $quantityBefore,
-                'quantity_change' => $quantity,
+                'quantity_change' => $amount,
                 'quantity_after' => $stock->quantity,
-                'weight' => $weight,
+                'weight' => null,
+                'weight_before' => null,
+                'weight_change' => null,
+                'weight_after' => null,
                 'uom_id' => $product->uom_id,
                 'admin_id' => $adminId,
                 'remarks' => $remarks,
@@ -39,30 +71,67 @@ class StockService
         });
     }
 
-    public function stockOut(int $productId, float $quantity, ?float $weight, string $reason, ?string $remarks, ?int $adminId, string $movementDate): StockMovement
+    public function stockOut(int $productId, ?float $quantity, ?float $weight, string $reason, ?string $remarks, ?int $adminId, string $movementDate): StockMovement
     {
         return DB::transaction(function () use ($productId, $quantity, $weight, $reason, $remarks, $adminId, $movementDate) {
             $product = Product::findOrFail($productId);
             $stock = $this->getOrCreateStock($productId);
             $quantityBefore = (float) $stock->quantity;
+            $weightBefore = (float) ($stock->weight ?? 0);
 
-            if ($quantityBefore < $quantity) {
-                throw new \InvalidArgumentException('Insufficient stock. Current balance: ' . $quantityBefore);
+            if ($product->inventoryTracksWeight()) {
+                $amount = (float) $weight;
+                if ($amount <= 0) {
+                    throw new \InvalidArgumentException('Weight is required for this product.');
+                }
+
+                if ($weightBefore < $amount) {
+                    throw new \InvalidArgumentException('Insufficient stock. Current balance: ' . number_format($weightBefore, 3) . ' kg');
+                }
+
+                $stock->weight = $weightBefore - $amount;
+                $stock->save();
+
+                return $this->createMovement([
+                    'product_id' => $productId,
+                    'movement_type' => 'stock_out',
+                    'quantity_before' => $quantityBefore,
+                    'quantity_change' => 0,
+                    'quantity_after' => $quantityBefore,
+                    'weight' => $amount,
+                    'weight_before' => $weightBefore,
+                    'weight_change' => -$amount,
+                    'weight_after' => $stock->weight,
+                    'uom_id' => $product->uom_id,
+                    'admin_id' => $adminId,
+                    'reason' => $reason,
+                    'remarks' => $remarks,
+                    'movement_date' => $movementDate,
+                ]);
             }
 
-            $stock->quantity = $quantityBefore - $quantity;
-            if ($weight !== null && $stock->weight !== null) {
-                $stock->weight = max(0, (float) $stock->weight - $weight);
+            $amount = (float) $quantity;
+            if ($amount <= 0) {
+                throw new \InvalidArgumentException('Quantity is required for this product.');
             }
+
+            if ($quantityBefore < $amount) {
+                throw new \InvalidArgumentException('Insufficient stock. Current balance: ' . number_format($quantityBefore, 3));
+            }
+
+            $stock->quantity = $quantityBefore - $amount;
             $stock->save();
 
-            return StockMovement::create([
+            return $this->createMovement([
                 'product_id' => $productId,
                 'movement_type' => 'stock_out',
                 'quantity_before' => $quantityBefore,
-                'quantity_change' => -$quantity,
+                'quantity_change' => -$amount,
                 'quantity_after' => $stock->quantity,
-                'weight' => $weight,
+                'weight' => null,
+                'weight_before' => null,
+                'weight_change' => null,
+                'weight_after' => null,
                 'uom_id' => $product->uom_id,
                 'admin_id' => $adminId,
                 'reason' => $reason,
@@ -84,11 +153,6 @@ class StockService
                 ->get();
 
             foreach ($orderProducts as $orderProduct) {
-                $quantity = $this->resolveOrderLineQuantity($orderProduct);
-                if ($quantity <= 0) {
-                    continue;
-                }
-
                 $product = Product::find($orderProduct->product_id);
                 if (!$product) {
                     continue;
@@ -96,23 +160,48 @@ class StockService
 
                 $stock = $this->getOrCreateStock($product->id);
                 $quantityBefore = (float) $stock->quantity;
-                $weight = $this->resolveOrderLineWeight($orderProduct);
+                $weightBefore = (float) ($stock->weight ?? 0);
+                $qtyDeduction = 0.0;
+                $weightDeduction = null;
+                $referenceWeight = null;
 
-                $stock->quantity = $quantityBefore - $quantity;
-                if ($weight !== null && $stock->weight !== null) {
-                    $stock->weight = max(0, (float) $stock->weight - $weight);
-                } elseif ($weight !== null) {
-                    $stock->weight = max(0, 0 - $weight);
+                if ($product->inventoryTracksQuantity()) {
+                    $qtyDeduction = (float) ($orderProduct->quantity ?? 0);
+
+                    if ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT) {
+                        $rawWeight = $orderProduct->weight ?? $orderProduct->product_weight;
+                        if ($rawWeight !== null && $rawWeight !== '') {
+                            $referenceWeight = (float) preg_replace('/[^0-9.]/', '', (string) $rawWeight);
+                        }
+                    }
+                } elseif ($product->inventoryTracksWeight()) {
+                    $rawWeight = $orderProduct->weight ?? $orderProduct->product_weight;
+                    if ($rawWeight !== null && $rawWeight !== '') {
+                        $weightDeduction = (float) preg_replace('/[^0-9.]/', '', (string) $rawWeight);
+                    }
+                }
+
+                if ($qtyDeduction <= 0 && ($weightDeduction === null || $weightDeduction <= 0)) {
+                    continue;
+                }
+
+                if ($product->inventoryTracksWeight()) {
+                    $stock->weight = max(0, $weightBefore - $weightDeduction);
+                } else {
+                    $stock->quantity = $quantityBefore - $qtyDeduction;
                 }
                 $stock->save();
 
-                StockMovement::create([
+                $this->createMovement([
                     'product_id' => $product->id,
                     'movement_type' => 'sales_deduction',
                     'quantity_before' => $quantityBefore,
-                    'quantity_change' => -$quantity,
+                    'quantity_change' => -$qtyDeduction,
                     'quantity_after' => $stock->quantity,
-                    'weight' => $weight,
+                    'weight' => $referenceWeight ?? $weightDeduction,
+                    'weight_before' => $product->inventoryTracksWeight() ? $weightBefore : null,
+                    'weight_change' => $product->inventoryTracksWeight() ? -$weightDeduction : null,
+                    'weight_after' => $product->inventoryTracksWeight() ? $stock->weight : null,
                     'uom_id' => $product->uom_id,
                     'order_id' => $order->id,
                     'admin_id' => $adminId,
@@ -135,23 +224,32 @@ class StockService
 
         DB::transaction(function () use ($movements, $order, $adminId) {
             foreach ($movements as $movement) {
+                $product = Product::find($movement->product_id);
                 $stock = $this->getOrCreateStock($movement->product_id);
                 $quantityBefore = (float) $stock->quantity;
+                $weightBefore = (float) ($stock->weight ?? 0);
                 $restoreQty = abs((float) $movement->quantity_change);
+                $restoreWeight = $movement->weight_change !== null
+                    ? abs((float) $movement->weight_change)
+                    : null;
 
-                $stock->quantity = $quantityBefore + $restoreQty;
-                if ($movement->weight !== null) {
-                    $stock->weight = ($stock->weight ?? 0) + (float) $movement->weight;
+                if ($product && $product->inventoryTracksWeight() && $restoreWeight !== null) {
+                    $stock->weight = $weightBefore + $restoreWeight;
+                } else {
+                    $stock->quantity = $quantityBefore + $restoreQty;
                 }
                 $stock->save();
 
-                StockMovement::create([
+                $this->createMovement([
                     'product_id' => $movement->product_id,
                     'movement_type' => 'order_amendment',
                     'quantity_before' => $quantityBefore,
                     'quantity_change' => $restoreQty,
                     'quantity_after' => $stock->quantity,
                     'weight' => $movement->weight,
+                    'weight_before' => $product && $product->inventoryTracksWeight() ? $weightBefore : null,
+                    'weight_change' => $product && $product->inventoryTracksWeight() && $restoreWeight !== null ? $restoreWeight : null,
+                    'weight_after' => $product && $product->inventoryTracksWeight() ? $stock->weight : null,
                     'uom_id' => $movement->uom_id,
                     'order_id' => $order->id,
                     'admin_id' => $adminId,
@@ -196,30 +294,57 @@ class StockService
             $product = Product::findOrFail($productId);
             $stock = $this->getOrCreateStock($productId);
             $quantityBefore = (float) $stock->quantity;
-            $weightBefore = $stock->weight !== null ? (float) $stock->weight : 0.0;
-            $newWeightValue = $newWeight !== null ? (float) $newWeight : $weightBefore;
+            $weightBefore = (float) ($stock->weight ?? 0);
+
+            if ($product->inventoryTracksWeight()) {
+                $newWeightValue = $newWeight !== null ? (float) $newWeight : $weightBefore;
+                $weightChange = $newWeightValue - $weightBefore;
+                $weightChanged = abs($weightChange) >= 0.0005;
+
+                if (!$weightChanged) {
+                    return null;
+                }
+
+                $stock->weight = $newWeightValue;
+                $stock->save();
+
+                return $this->createMovement([
+                    'product_id' => $productId,
+                    'movement_type' => 'manual_adjustment',
+                    'quantity_before' => $quantityBefore,
+                    'quantity_change' => 0,
+                    'quantity_after' => $quantityBefore,
+                    'weight' => abs($weightChange),
+                    'weight_before' => $weightBefore,
+                    'weight_change' => $weightChange,
+                    'weight_after' => $stock->weight,
+                    'uom_id' => $product->uom_id,
+                    'admin_id' => $adminId,
+                    'remarks' => $remarks ?? 'Manual stock balance adjustment',
+                    'movement_date' => now()->toDateString(),
+                ]);
+            }
 
             $quantityChange = $newQuantity - $quantityBefore;
             $quantityChanged = abs($quantityChange) >= 0.0005;
-            $weightChanged = $newWeight !== null && abs($newWeightValue - $weightBefore) >= 0.0005;
 
-            if (!$quantityChanged && !$weightChanged) {
+            if (!$quantityChanged) {
                 return null;
             }
 
             $stock->quantity = $newQuantity;
-            if ($newWeight !== null) {
-                $stock->weight = $newWeightValue;
-            }
             $stock->save();
 
-            return StockMovement::create([
+            return $this->createMovement([
                 'product_id' => $productId,
                 'movement_type' => 'manual_adjustment',
                 'quantity_before' => $quantityBefore,
                 'quantity_change' => $quantityChange,
                 'quantity_after' => $stock->quantity,
-                'weight' => $newWeight !== null ? $newWeightValue : null,
+                'weight' => null,
+                'weight_before' => null,
+                'weight_change' => null,
+                'weight_after' => null,
                 'uom_id' => $product->uom_id,
                 'admin_id' => $adminId,
                 'remarks' => $remarks ?? 'Manual stock balance adjustment',
@@ -235,19 +360,8 @@ class StockService
             ->exists();
     }
 
-    private function resolveOrderLineQuantity(OrderProduct $orderProduct): float
+    private function createMovement(array $attributes): StockMovement
     {
-        return (float) $orderProduct->quantity;
-    }
-
-    private function resolveOrderLineWeight(OrderProduct $orderProduct): ?float
-    {
-        $weight = $orderProduct->product_weight ?? $orderProduct->weight;
-
-        if ($weight === null || $weight === '') {
-            return null;
-        }
-
-        return (float) preg_replace('/[^0-9.]/', '', (string) $weight);
+        return StockMovement::create($attributes);
     }
 }

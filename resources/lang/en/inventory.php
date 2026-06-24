@@ -17,6 +17,7 @@ return [
     'enter_quantity' => 'Enter quantity',
     'weight_kg' => 'Weight (kg)',
     'weight_optional' => 'Optional weight in kg',
+    'weight_required' => 'Enter weight in kg',
     'remarks' => 'Remarks',
     'remarks_optional' => 'Optional remarks',
     'reason' => 'Reason',
@@ -26,9 +27,10 @@ return [
 
     'movement_type' => 'Movement Type',
     'all_types' => 'All Types',
-    'qty_before' => 'Qty Before',
+    'qty_before' => 'Stock Before',
     'change' => 'Change',
-    'qty_after' => 'Qty After',
+    'qty_after' => 'Stock After',
+    'order_weight_ref' => 'Order Weight',
     'user' => 'User',
     'system' => 'System',
 

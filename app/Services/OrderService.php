@@ -6,6 +6,7 @@ use App\Order;
 use App\OrderPayment;
 use App\OrderProduct;
 use App\PdfHelper;
+use App\Product;
 use App\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -489,19 +490,45 @@ class OrderService
                     continue;
                 }
 
-                $quantity = (float) ($item['quantity'] ?? $orderProduct->quantity);
-                $weight = isset($item['weight']) && $item['weight'] !== ''
+                $product = Product::find($orderProduct->product_id);
+
+                $qtyInput = isset($item['quantity']) && $item['quantity'] !== ''
+                    ? (float) $item['quantity']
+                    : null;
+                $weightInput = isset($item['weight']) && $item['weight'] !== ''
                     ? (float) $item['weight']
                     : null;
 
-                $lineTotal = (float) $orderProduct->unit_price * $quantity;
+                if ($product) {
+                    if (!$product->requiresQuantityInput()) {
+                        $qtyInput = null;
+                    }
+                    if (!$product->requiresWeightInput()) {
+                        $weightInput = null;
+                    }
 
-                $orderProduct->update([
-                    'quantity' => $quantity,
-                    'weight' => $weight,
-                    'product_weight' => $weight,
-                    'price' => $lineTotal,
-                ]);
+                    $line = $product->resolveLineInputs($qtyInput, $weightInput);
+                    $lineTotal = $product->calculateLinePrice(
+                        (float) $orderProduct->unit_price,
+                        $line['quantity'],
+                        $line['weight']
+                    );
+
+                    $orderProduct->update([
+                        'quantity' => $line['quantity'],
+                        'weight' => $line['weight'],
+                        'product_weight' => $line['product_weight'],
+                        'price' => $lineTotal,
+                    ]);
+                } else {
+                    $quantity = (float) ($qtyInput ?? $orderProduct->quantity ?? 0);
+                    $orderProduct->update([
+                        'quantity' => $quantity,
+                        'weight' => $weightInput,
+                        'product_weight' => $weightInput,
+                        'price' => (float) $orderProduct->unit_price * $quantity,
+                    ]);
+                }
             }
 
             $order->update([

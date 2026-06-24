@@ -70,7 +70,14 @@ class CheckoutController extends Controller
             }
             $cart_products[$key]->options = CartProduct::getOption($value->cart_product_id);
             $cart_products[$key]->unit_price = Product::get_today_price($value->product_id, $user);
-            $total += $cart_products[$key]->unit_price * ($value->quantity ?? $value->weight);
+            $product = Product::find($value->product_id);
+            $total += $product
+                ? $product->calculateLinePrice(
+                    (float) $cart_products[$key]->unit_price,
+                    $value->quantity !== null ? (float) $value->quantity : null,
+                    $value->weight !== null ? (float) $value->weight : null
+                )
+                : 0;
         }
 
         // payment_method
@@ -128,7 +135,14 @@ class CheckoutController extends Controller
         foreach ($cart_products as $key => $value) {
             $cart_products[$key]->options = CartProduct::getOption($value->cart_product_id);
             $cart_products[$key]->unit_price = Product::get_today_price($value->product_id, $user);
-            $total += $cart_products[$key]->unit_price * ($value->quantity ?? $value->weight);
+            $product = Product::find($value->product_id);
+            $total += $product
+                ? $product->calculateLinePrice(
+                    (float) $cart_products[$key]->unit_price,
+                    $value->quantity !== null ? (float) $value->quantity : null,
+                    $value->weight !== null ? (float) $value->weight : null
+                )
+                : 0;
         }
 
         $deliverySlot = DeliverySlot::findOrFail($data['delivery_slot_id']);
@@ -186,27 +200,34 @@ class CheckoutController extends Controller
 
         $order_weight = 0;
         foreach ($cart_products as $key => $value) {
-            $product_weight = DB::table('products')->where('id', $value->product_id)->value('weight');
+            $product = Product::find($value->product_id);
+            $line = $product
+                ? $product->resolveLineInputs(
+                    $value->quantity !== null ? (float) $value->quantity : null,
+                    $value->weight !== null ? (float) $value->weight : null
+                )
+                : [
+                    'quantity' => $value->quantity,
+                    'weight' => $value->weight,
+                    'product_weight' => $value->weight,
+                    'order_weight' => $value->quantity ?? $value->weight,
+                ];
 
             $order_product = OrderProduct::create(
                 [
                     "order_id" => $order->id,
                     "product_id" => $value->product_id,
                     "product_name" => $value->name,
-                    "quantity" => $value->quantity ?? null,
-                    "weight" => $value->weight ?? null,
-                    'product_weight' => $product_weight,
+                    "quantity" => $line['quantity'],
+                    "weight" => $line['weight'],
+                    'product_weight' => $line['product_weight'],
                     "unit_price" => $value->unit_price,
                     "price" => $value->price,
                     "remark" => $value->remark,
                     "status" => OrderProduct::$status['active'],
                 ]
             );
-            if ($value->quantity != null) {
-                $order_weight += $value->quantity * $product_weight;
-            } else {
-                $order_weight += $value->weight;
-            }
+            $order_weight += $line['order_weight'];
             
             foreach ($value->options as $opt => $opt_itm) {
                 if ($opt_itm) {

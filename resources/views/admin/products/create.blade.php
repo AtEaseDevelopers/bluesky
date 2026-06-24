@@ -180,19 +180,23 @@
                                             <input name="sell_in" id="sell_in_weight" type="radio" value="weight" />
                                             <label class="mb-2" for="sell_in_weight">Weight</label>
                                         </div>
+                                        <div>
+                                            <input name="sell_in" id="sell_in_qty_bill_weight" type="radio" value="qty_bill_weight" />
+                                            <label class="mb-2" for="sell_in_qty_bill_weight">Quantity (bill by weight)</label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-12 d-flex gap-4">
+                        <div class="row" id="weight-presets-wrap">
+                            <div class="col-md-12">
                                 <div class="mb-4">
-                                    <input name="show_weight" id="show_weight" type="checkbox"/>
-                                    <label class="mb-2" for="show_weight">Show Weight In Report</label>
-                                </div>
-                                <div class="mb-4">
-                                    <input name="show_qty" id="show_qty" type="checkbox"/>
-                                    <label class="mb-2" for="show_qty">Show Quantity In Report</label>
+                                    <label class="mb-2" for="weight_presets">Weight Presets</label>
+                                    <textarea class="form-control @error('weight_presets') is-invalid @enderror" name="weight_presets" id="weight_presets" rows="3" placeholder="1, 1.5, 2, 2.5, 3">{{ old('weight_presets') }}</textarea>
+                                    <small class="text-muted">Comma or line-separated values shown as quick-select buttons when customers order by weight (e.g. 1, 1.5, 2).</small>
+                                    @error('weight_presets')
+                                        <span class="text-danger" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
@@ -294,13 +298,15 @@
         $('input[name="sell_in"]').on('change', function() {
             let val = $('input[name="sell_in"]:checked').val()
 
-            if (val == 'qty') {
+            if (val == 'qty' || val == 'qty_bill_weight') {
                 $('input[name="weight"]').val(null)
                 $('input[name="weight"]').prop('disabled', false)
             } else if (val == 'weight') {
                 $('input[name="weight"]').val(null)
                 $('input[name="weight"]').prop('disabled', true)
             }
+
+            $('#weight-presets-wrap').toggle(val === 'weight' || val === 'qty_bill_weight')
         })
 
         $(document).ready(function(){

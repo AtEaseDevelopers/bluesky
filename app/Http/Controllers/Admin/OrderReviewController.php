@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Order;
 use App\OrderProduct;
+use App\Product;
 use App\Services\OrderService;
 use App\Services\OrderStatusService;
 use Illuminate\Http\Request;
@@ -27,8 +28,11 @@ class OrderReviewController extends Controller
                 ->with('warning', 'This order can no longer be adjusted.');
         }
 
-        $products = OrderProduct::where('order_id', $order->id)
-            ->where('status', OrderProduct::$status['active'])
+        $products = OrderProduct::query()
+            ->select('order_products.*', 'products.sell_in')
+            ->leftJoin('products', 'products.id', '=', 'order_products.product_id')
+            ->where('order_products.order_id', $order->id)
+            ->where('order_products.status', OrderProduct::$status['active'])
             ->get();
 
         $drivers = DB::table('drivers')->pluck('lorry_number', 'id');
@@ -51,16 +55,47 @@ class OrderReviewController extends Controller
             return back()->with('error', 'This order can no longer be adjusted.');
         }
 
-        $request->validate([
+        $rules = [
             'delivery_fee' => 'required|numeric|min:0',
             'amount_adjustment' => 'nullable|numeric',
             'adjustment_remark' => 'nullable|string|max:500',
             'payment_due_date' => 'nullable|date',
             'driver_id' => 'nullable|exists:drivers,id',
             'line_items' => 'required|array',
-            'line_items.*.quantity' => 'required|numeric|min:0.001',
-            'line_items.*.weight' => 'nullable|numeric|min:0',
-        ]);
+        ];
+
+        $orderProducts = OrderProduct::query()
+            ->select('order_products.id', 'order_products.product_id')
+            ->where('order_products.order_id', $order->id)
+            ->whereIn('order_products.id', array_keys($request->input('line_items', [])))
+            ->get()
+            ->keyBy('id');
+
+        foreach ($request->input('line_items', []) as $lineId => $item) {
+            $orderProduct = $orderProducts->get((int) $lineId);
+            if (!$orderProduct) {
+                continue;
+            }
+
+            $product = Product::find($orderProduct->product_id);
+            if (!$product) {
+                continue;
+            }
+
+            if ($product->requiresQuantityInput()) {
+                $rules['line_items.' . $lineId . '.quantity'] = 'required|numeric|min:0.001';
+            } else {
+                $rules['line_items.' . $lineId . '.quantity'] = 'nullable';
+            }
+
+            if ($product->requiresWeightInput()) {
+                $rules['line_items.' . $lineId . '.weight'] = 'required|numeric|min:0.001';
+            } else {
+                $rules['line_items.' . $lineId . '.weight'] = 'nullable|numeric|min:0';
+            }
+        }
+
+        $request->validate($rules);
 
         $orderService = app(OrderService::class);
         $amountAdjustment = $request->input('amount_adjustment', 0);

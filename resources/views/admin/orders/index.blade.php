@@ -196,7 +196,6 @@
                                     <th>{{ __('orders.order_at') }}</th>
                                     <th>{{ __('orders.customer') }}</th>
                                     <th class="order-products-col">{{ __('orders.products') }}</th>
-                                    <th>{{ __('orders.quantity') }}</th>
                                     <th>{{ __('orders.area') }}</th>
                                     <th>{{ __('orders.billing_address') }}</th>
                                     <th>{{ __('orders.shipping_address') }}</th>
@@ -269,7 +268,6 @@
                                             @endif
                                         </td>
                                         <td class="order-products-col">{!! $order->order_products !!}</td>
-                                        <td class="white-space-nowrap">{!! $order->order_qtys !!}</td>
                                         <td>{{ $order->area }}</td>
                                         <td>{!! $order->billing_address !!}</td>
                                         <td>{!! $order->shipping_address !!}</td>
@@ -337,7 +335,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="17">
+                                    <td colspan="16">
                                         {{ $orders->appends(request()->query())->links('pagination::bootstrap-4') }}
                                     </td>
                                 </tr>

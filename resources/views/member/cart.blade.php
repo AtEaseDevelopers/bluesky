@@ -22,7 +22,7 @@
                             </thead>
                             <tbody>
                                 @forelse ($products as $product)
-                                    <tr>
+                                    <tr data-sell-in="{{ $product->sell_in ?? 'weight' }}">
                                         <td>
                                             <img src="{{ $product->image_url }}" onError="this.onerror=null;this.src='{{ asset('assets/images/product-default.jpg') }}';" alt="{{ $product->name }}" class="img-fluid" width="100px">
                                         </td>
@@ -37,13 +37,26 @@
                                             @if ($product->sell_in == 'qty')
                                                 <div class="quantity-controls">
                                                     <button class="btn btn-sm btn-primary decrease-quantity" type="button">-</button>
-                                                    <input type="number" id="quantity" name="quantity" class="quantity-input" data-id="{{ $product->cart_product_id }}" value="{{ $product->quantity }}">
+                                                    <input type="number" id="quantity" name="quantity" class="quantity-input" data-id="{{ $product->cart_product_id }}" data-sell-in="qty" value="{{ $product->quantity }}">
                                                     <button class="btn btn-sm btn-primary increase-quantity" type="button">+</button>
+                                                </div>
+                                            @elseif ($product->sell_in == 'qty_bill_weight')
+                                                <div class="quantity-controls mb-2">
+                                                    <span class="small text-muted d-block mb-1">Qty</span>
+                                                    <button class="btn btn-sm btn-primary decrease-quantity" type="button">-</button>
+                                                    <input type="number" name="quantity" class="quantity-input" data-id="{{ $product->cart_product_id }}" data-sell-in="qty_bill_weight" value="{{ $product->quantity }}">
+                                                    <button class="btn btn-sm btn-primary increase-quantity" type="button">+</button>
+                                                </div>
+                                                <div class="weight-controls">
+                                                    <span class="small text-muted d-block mb-1">Weight (KG)</span>
+                                                    <button class="btn btn-sm btn-primary decrease-weight" type="button">-</button>
+                                                    <input type="number" name="weight" class="weight-input" data-id="{{ $product->cart_product_id }}" data-sell-in="qty_bill_weight" value="{{ $product->weight }}">
+                                                    <button class="btn btn-sm btn-primary increase-weight" type="button">+</button>
                                                 </div>
                                             @else
                                                 <div class="weight-controls">
                                                     <button class="btn btn-sm btn-primary decrease-weight" type="button">-</button>
-                                                    <input type="number" id="weight" name="weight" class="weight-input" data-id="{{ $product->cart_product_id }}" value="{{ $product->weight }}">
+                                                    <input type="number" id="weight" name="weight" class="weight-input" data-id="{{ $product->cart_product_id }}" data-sell-in="weight" value="{{ $product->weight }}">
                                                     <button class="btn btn-sm btn-primary increase-weight" type="button">+</button>
                                                     <span class="ms-1">KG</span>
                                                 </div>
@@ -61,7 +74,7 @@
                                         </td>
                                         <td>
                                             @if ($user->price_permission)
-                                                RM <span class="product-price-val">{{ $product->price }}</span>
+                                                RM <span class="product-price-val">{{ number_format((float) $product->price, 2, '.', '') }}</span>
                                             @else
                                             -
                                             @endif
@@ -133,29 +146,60 @@
                 });
             })
 
+            function cartBillAmount(row) {
+                var sellIn = row.data('sellIn') || 'weight';
+                var qty = parseFloat(row.find('.quantity-input').val()) || 0;
+                var weight = parseFloat(row.find('.weight-input').val()) || 0;
+
+                if (sellIn === 'qty') {
+                    return qty;
+                }
+
+                return weight;
+            }
+
             function updatePrices() {
-                $('.cart-container').each(function() {
-                    var container = $(this);
-                    var quantity = parseInt(container.find('.quantity-input').val()) || 0;
-                    var unitPrice = parseFloat(container.find('.unit-price-val').text()) || 0;
-
-                    // Calculate product price for this item
-                    var productPrice = unitPrice * quantity;
-
-                    // Update the product price for this item
-                    container.find('.product-price-val').text(productPrice.toFixed(2));
-                });
-
-                // Calculate the total price for all items
                 var total = 0;
-                $('.product-price-val').each(function() {
-                    total += parseFloat($(this).text()) || 0;
+
+                $('table.table-bordered tbody tr[data-sell-in]').each(function() {
+                    var row = $(this);
+                    var unitPrice = parseFloat(row.find('.unit-price-val').text()) || 0;
+                    var productPrice = unitPrice * cartBillAmount(row);
+
+                    row.find('.product-price-val').text(productPrice.toFixed(2));
+                    total += productPrice;
                 });
 
-                // Update the total price
-                if ($('#total-price-value')) {
+                if ($('#total-price-value').length) {
                     $('#total-price-value').text(total.toFixed(2));
                 }
+            }
+
+            function syncCartRow(input) {
+                var row = $(input).closest('tr');
+                var data = {
+                    _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    id: $(input).data('id')
+                };
+
+                if (row.find('.quantity-input').length) {
+                    data.quantity = row.find('.quantity-input').val();
+                }
+                if (row.find('.weight-input').length) {
+                    data.weight = row.find('.weight-input').val();
+                }
+
+                $.ajax({
+                    url: "{{ $portal['update_cart_url'] }}",
+                    method: 'POST',
+                    data: data,
+                    success: function(response) {
+                        updatePrices();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error(error);
+                    }
+                });
             }
 
             // Decrease quantity
@@ -164,7 +208,6 @@
                 var currentQuantity = parseInt(quantityInput.val());
                 if (currentQuantity > 1) {
                     quantityInput.val(currentQuantity - 1).trigger('input');
-                    updatePrices();
                 }
             });
 
@@ -173,75 +216,30 @@
                 var quantityInput = $(this).closest('.quantity-controls').find('.quantity-input');
                 var currentQuantity = parseInt(quantityInput.val());
                 quantityInput.val(currentQuantity + 1).trigger('input');
-                updatePrices();
             });
 
-            // Call the updatePrices function when quantity changes
-            $('.quantity-input').on('input', function(e) {
-                if ($(this).val() < 1) {
-                    e.preventDefault();
-                    $(this).val(1)
-                    return false;
-                }
-
-                $.ajax({
-                    url: "{{ $portal['update_cart_url'] }}",
-                    method: 'POST',
-                    data: {
-                        _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        quantity: $(this).val(),
-                        id: $(this).data('id')
-                    },
-                    success: function(response) {
-                        updatePrices();
-                    },
-                    error: function(xhr, status, error) {
-                        console.error(error);
-                    }
-                });
-            });
-            
-            // Decrease weight
             $(document).on('click', '.decrease-weight', function() {
                 var weightInput = $(this).closest('.weight-controls').find('.weight-input');
                 var currentWeight = parseFloat(weightInput.val());
                 if (currentWeight > 0.1) {
                     weightInput.val(currentWeight - 1).trigger('input');
-                    updatePrices();
                 }
             });
 
-            // Increase weight
             $(document).on('click', '.increase-weight', function() {
                 var weightInput = $(this).closest('.weight-controls').find('.weight-input');
                 var currentWeight = parseFloat(weightInput.val());
                 weightInput.val(currentWeight + 1).trigger('input');
-                updatePrices();
             });
-            
-            // Call the updatePrices function when weight changes
-            $('.weight-input').on('input', function(e) {
+
+            $('.quantity-input, .weight-input').on('input', function(e) {
                 if ($(this).val() < 0.1) {
                     e.preventDefault();
-                    $(this).val(0.1)
+                    $(this).val(0.1);
                     return false;
                 }
 
-                $.ajax({
-                    url: "{{ $portal['update_cart_url'] }}",
-                    method: 'POST',
-                    data: {
-                        _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        weight: $(this).val(),
-                        id: $(this).data('id')
-                    },
-                    success: function(response) {
-                        updatePrices();
-                    },
-                    error: function(xhr, status, error) {
-                        console.error(error);
-                    }
-                });
+                syncCartRow(this);
             });
 
             // Call the updatePrices function on page load
