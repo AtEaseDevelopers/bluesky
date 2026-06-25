@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Driver;
 use App\Http\Controllers\Controller;
 use App\Order;
 use App\OrderProduct;
@@ -35,7 +36,7 @@ class OrderReviewController extends Controller
             ->where('order_products.status', OrderProduct::$status['active'])
             ->get();
 
-        $drivers = DB::table('drivers')->pluck('lorry_number', 'id');
+        $drivers = Driver::optionsForSelect($order->driver_id ? (int) $order->driver_id : null);
 
         return view('admin.orders.review', [
             'order' => $order,
@@ -61,6 +62,7 @@ class OrderReviewController extends Controller
             'adjustment_remark' => 'nullable|string|max:500',
             'payment_due_date' => 'nullable|date',
             'driver_id' => 'nullable|exists:drivers,id',
+            'fulfillment_type' => 'required|in:delivery,pickup',
             'line_items' => 'required|array',
         ];
 

@@ -281,15 +281,6 @@
                                     @enderror
                                 </div>
                             </div>
-                            <div class="col-md-12">
-                                <div class="mb-4">
-                                    <label class="mb-2">{{ __('customers.assigned_drivers_lorry') }}</label>
-                                    @include('admin.customers.partials.driver-picker', [
-                                        'drivers' => $drivers,
-                                        'selectedDriverIds' => old('driver_ids', []),
-                                    ])
-                                </div>
-                            </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">

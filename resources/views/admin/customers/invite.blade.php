@@ -63,16 +63,6 @@
                             </div>
                             <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2">{{ __('customers.assigned_drivers_lorry') }}</label>
-                                    @include('admin.customers.partials.driver-picker', [
-                                        'drivers' => $drivers,
-                                        'selectedDriverIds' => old('driver_ids', []),
-                                        'showDriverName' => true,
-                                    ])
-                                </div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="mb-4">
                                     <label class="mb-2" for="remark">{{ __('customers.internal_remark') }}</label>
                                     <textarea name="remark" id="remark" class="form-control" rows="2" placeholder="{{ __('customers.internal_remark_placeholder') }}">{{ old('remark') }}</textarea>
                                 </div>

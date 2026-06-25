@@ -41,6 +41,7 @@ class Order extends Model
         'transfer_slip',
         'status',
         'driver_id',
+        'fulfillment_type',
         'delivery_slot_id',
         'delivery_date',
         'delivery_time_slot',
@@ -95,6 +96,29 @@ class Order extends Model
         'walk_in' => 'walk_in',
         'public' => 'public',
     ];
+
+    public static $fulfillment_types = [
+        'delivery' => 'delivery',
+        'pickup' => 'pickup',
+    ];
+
+    public function isDelivery(): bool
+    {
+        return ($this->fulfillment_type ?? self::$fulfillment_types['delivery']) === self::$fulfillment_types['delivery'];
+    }
+
+    public function isPickup(): bool
+    {
+        return ($this->fulfillment_type ?? self::$fulfillment_types['delivery']) === self::$fulfillment_types['pickup'];
+    }
+
+    public function fulfillmentTypeLabel(): string
+    {
+        $key = 'order.fulfillment_types.' . ($this->fulfillment_type ?? 'delivery');
+        $label = __($key);
+
+        return $label !== $key ? $label : ucfirst($this->fulfillment_type ?? 'delivery');
+    }
 
     public function customer()
     {

@@ -212,7 +212,7 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Driver::class, 'customer_drivers', 'user_id', 'driver_id')
             ->withTimestamps()
-            ->orderBy('drivers.lorry_number');
+            ->orderBy('drivers.name');
     }
 
     /**

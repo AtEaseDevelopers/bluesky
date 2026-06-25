@@ -40,11 +40,18 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
+                                <label class="mb-2">{{ __('orders.fulfillment_type') }}</label>
+                                <select name="fulfillment_type" id="fulfillment_type" class="form-select">
+                                    <option value="delivery">{{ __('orders.fulfillment_delivery') }}</option>
+                                    <option value="pickup">{{ __('orders.fulfillment_pickup') }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6" id="create-driver-wrap">
                                 <label class="mb-2">{{ __('orders.assign_driver') }}</label>
-                                <select name="driver_id" class="form-select">
+                                <select name="driver_id" id="driver_id" class="form-select">
                                     <option value="">{{ __('orders.none') }}</option>
-                                    @foreach ($drivers as $id => $lorry)
-                                        <option value="{{ $id }}">{{ $lorry }}</option>
+                                    @foreach ($drivers as $id => $label)
+                                        <option value="{{ $id }}">{{ $label }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -182,7 +189,16 @@
         
         document.addEventListener('DOMContentLoaded', function () {
             toggleTransferSlip();
+            toggleCreateDriverField();
         });
+
+        function toggleCreateDriverField() {
+            var isPickup = document.getElementById('fulfillment_type').value === 'pickup';
+            document.getElementById('create-driver-wrap').style.display = isPickup ? 'none' : '';
+            document.getElementById('driver_id').disabled = isPickup;
+        }
+
+        document.getElementById('fulfillment_type').addEventListener('change', toggleCreateDriverField);
         $(document).ready(function() {
             
             $('#order_customer').select2();

@@ -45,7 +45,8 @@
                                     @endif
                                     <p><strong>{{ __('orders.order_date') }}:</strong> {{ $order->created_at->format('Y-m-d h:i a') }}</p>
                                     <p><strong>{{ __('orders.delivery') }}:</strong> {{ $order->delivery_date ? $order->delivery_date->format('d-m-Y') : '-' }} {{ $order->delivery_time_slot }}</p>
-                                    <p><strong>{{ __('orders.driver_lorry') }}:</strong> {{ $order->driver_id && isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '-' }}</p>
+                                    <p><strong>{{ __('orders.fulfillment_type') }}:</strong> {{ $order->fulfillmentTypeLabel() }}</p>
+                                    <p><strong>{{ __('orders.assign_driver') }}:</strong> {{ $order->driver_id && isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '-' }}</p>
                                 </div>
                                 <div class="col-md-6">
                                     <p><strong>{{ __('orders.status_label') }}</strong> {{ __('order.status.' . $order->status) }}</p>
@@ -183,15 +184,22 @@
 
                     <div class="card shadow no-border mb-4">
                         <div class="card-body">
-                            <h5 class="card-title">{{ __('orders.assign_driver') }}</h5>
+                            <h5 class="card-title">{{ __('orders.fulfillment_type') }}</h5>
                             <hr>
                             @if (count($drivers))
-                                <form action="{{ route('admin.change-order-lorry') }}" method="POST">
+                                <form action="{{ route('admin.change-order-delivery') }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="orders_id" value="{{ encrypt($order->id) }}">
                                     <div class="mb-3">
-                                        <label class="mb-1">{{ __('orders.driver_lorry') }}</label>
-                                        <select name="driver_id" class="form-select">
+                                        <label class="mb-1">{{ __('orders.fulfillment_type') }}</label>
+                                        <select name="fulfillment_type" id="summary_fulfillment_type" class="form-select">
+                                            <option value="delivery" {{ ($order->fulfillment_type ?? 'delivery') === 'delivery' ? 'selected' : '' }}>{{ __('orders.fulfillment_delivery') }}</option>
+                                            <option value="pickup" {{ ($order->fulfillment_type ?? 'delivery') === 'pickup' ? 'selected' : '' }}>{{ __('orders.fulfillment_pickup') }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3" id="summary-driver-wrap">
+                                        <label class="mb-1">{{ __('orders.assign_driver') }}</label>
+                                        <select name="driver_id" id="summary_driver_id" class="form-select">
                                             <option value="">{{ __('orders.none') }}</option>
                                             @foreach ($drivers as $id => $label)
                                                 <option value="{{ $id }}" {{ (int) $order->driver_id === (int) $id ? 'selected' : '' }}>{{ $label }}</option>
@@ -202,7 +210,7 @@
                                 </form>
                             @else
                                 <p class="text-muted mb-3">{{ __('orders.no_drivers') }}</p>
-                                <a href="{{ route('admin.lorry.create') }}" class="btn btn-outline-primary w-100">{{ __('orders.add_driver_lorry') }}</a>
+                                <a href="{{ route('admin.drivers.create') }}" class="btn btn-outline-primary w-100">{{ __('orders.add_driver_lorry') }}</a>
                             @endif
                         </div>
                     </div>
@@ -620,5 +628,19 @@
                 updatePaymentLinesTotal();
             }
         });
+
+        (function () {
+            var fulfillment = document.getElementById('summary_fulfillment_type');
+            var wrap = document.getElementById('summary-driver-wrap');
+            var driver = document.getElementById('summary_driver_id');
+            if (!fulfillment || !wrap || !driver) return;
+            function sync() {
+                var isPickup = fulfillment.value === 'pickup';
+                wrap.style.display = isPickup ? 'none' : '';
+                driver.disabled = isPickup;
+            }
+            fulfillment.addEventListener('change', sync);
+            sync();
+        })();
     </script>
 @endsection

@@ -61,6 +61,10 @@ trait RecordsDriverPayments
      */
     protected function recordDriverPayment(Request $request, Order $order)
     {
+        if ($order->isCreditCustomer()) {
+            return back()->with('error', __('driver_portal.payment.credit_not_allowed'));
+        }
+
         if (!$order->canRecordAdminPayment()) {
             return back()->with('error', $order->isCodCustomer()
                 ? __('driver_portal.payment.cod_status_required')

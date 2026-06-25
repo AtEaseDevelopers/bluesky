@@ -68,7 +68,7 @@
                                                 }
                                             @endphp
                                             @if ($order->driver_id)
-                                                {!! $driver != null ? $driver->lorry_number : '<span class="text-danger">Lorry Deleted</span>' !!}
+                                                {!! $driver != null ? e($driver->name ?: $driver->username) : '<span class="text-danger">Driver Deleted</span>' !!}
                                             @else
                                                 -
                                             @endif

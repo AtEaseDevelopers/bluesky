@@ -16,6 +16,7 @@ class DriverOrderController extends Controller
 
         $orders = Order::with(['customer:id,name,attn_contact,customer_type'])
             ->where('driver_id', $driver->id)
+            ->where('fulfillment_type', Order::$fulfillment_types['delivery'])
             ->whereIn('status', [
                 Order::$status['in_route'],
                 Order::$status['delivered'],
@@ -123,6 +124,7 @@ class DriverOrderController extends Controller
     {
         return Order::where('id', $orderId)
             ->where('driver_id', $driverId)
+            ->where('fulfillment_type', Order::$fulfillment_types['delivery'])
             ->firstOrFail();
     }
 

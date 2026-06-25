@@ -538,7 +538,10 @@ class OrderService
                 'payment_due_date' => $order->isCreditCustomer()
                     ? $this->resolvePaymentDueDate($order, $data['payment_due_date'] ?? null)
                     : null,
-                'driver_id' => $data['driver_id'] ?? $order->driver_id,
+                'fulfillment_type' => $data['fulfillment_type'] ?? $order->fulfillment_type ?? Order::$fulfillment_types['delivery'],
+                'driver_id' => ($data['fulfillment_type'] ?? $order->fulfillment_type ?? Order::$fulfillment_types['delivery']) === Order::$fulfillment_types['pickup']
+                    ? null
+                    : ($data['driver_id'] ?? $order->driver_id),
             ]);
 
             $this->recalculateTotals($order->fresh());

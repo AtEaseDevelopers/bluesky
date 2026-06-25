@@ -49,7 +49,7 @@
                                         <option value="">Choose...</option>
                                         @foreach($drivers as $driver)
                                             <option value="{{ $driver->id }}" {{ $req['drive'] == $driver->id ? 'selected' : '' }}>
-                                                {{ $driver->lorry_number }}
+                                                {{ $driver->name ?: $driver->username }}
                                             </option>
                                         @endforeach
                                     </select>

@@ -34,6 +34,7 @@ class DeliveryOrderController extends Controller
 
         $query = Order::with('customer')
             ->where('driver_id', $driver->id)
+            ->where('fulfillment_type', Order::$fulfillment_types['delivery'])
             ->where('status', '!=', Order::$status['cancelled']);
 
         if ($request->filled('status')) {
@@ -146,6 +147,7 @@ class DeliveryOrderController extends Controller
     {
         return Order::where('id', $id)
             ->where('driver_id', Auth::guard('web_driver')->id())
+            ->where('fulfillment_type', Order::$fulfillment_types['delivery'])
             ->firstOrFail();
     }
 

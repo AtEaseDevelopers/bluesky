@@ -141,8 +141,10 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                     }
                 );
 
-                Route::resource('lorry', 'LorryController');
-                Route::post('/get-lorry', 'LorryController@get_lorry');
+                Route::resource('drivers', 'DriverController');
+                Route::post('/fetch-drivers', 'DriverController@fetch');
+                Route::resource('vehicles', 'VehicleController');
+                Route::post('/fetch-vehicles', 'VehicleController@fetch');
 
                 Route::controller('OrderReviewController')->group(function () {
                     Route::get('/order/review/{id}', 'show')->name('orders.review');
@@ -167,7 +169,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/orders', 'OrderController@index')->name('orders');
                 Route::get('/orders/export', 'OrderController@export')->name('orders.export');
                 Route::post('/change-order-status', 'OrderController@change_order_status')->name('change-order-status');
-                Route::post('/change-order-lorry', 'OrderController@change_order_lorry')->name('change-order-lorry');
+                Route::post('/change-order-delivery', 'OrderController@change_order_delivery')->name('change-order-delivery');
                 Route::post('/assign-order-driver', 'OrderController@assign_order_driver')->name('assign-order-driver');
                 Route::get('/order/add', 'AddOrderController@showForm')->name('orders.create');
                 Route::post('/order/add', 'AddOrderController@addOrder')->name('orders.store');

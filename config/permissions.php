@@ -33,8 +33,8 @@ return [
                     'default' => true,
                 ],
                 'drivers' => [
-                    'label' => 'Drivers / Lorry',
-                    'description' => 'Manage drivers and lorry assignments.',
+                    'label' => 'Drivers / Vehicles',
+                    'description' => 'Manage drivers and vehicle registry.',
                     'default' => true,
                 ],
                 'settings' => [
@@ -114,12 +114,12 @@ return [
                 'vehicle' => [
                     'label' => 'Vehicle Selection',
                     'description' => 'Choose which registered lorry the driver is operating.',
-                    'default' => true,
+                    'default' => false,
                 ],
                 'assigned_customers' => [
                     'label' => 'Assigned Customers',
                     'description' => 'View assigned customer list with invoice payment status and due dates.',
-                    'default' => true,
+                    'default' => false,
                 ],
                 'order_detail' => [
                     'label' => 'Order Detail',
@@ -138,7 +138,7 @@ return [
                 ],
                 'record_payment' => [
                     'label' => 'Record Payment',
-                    'description' => 'Record COD or on-site payments.',
+                    'description' => 'Record COD payments on delivery.',
                     'default' => true,
                 ],
                 'payment_proof' => [

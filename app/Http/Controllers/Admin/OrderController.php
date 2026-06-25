@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Driver;
 use App\Http\Controllers\Controller;
 
 use Illuminate\Support\Facades\Response;
@@ -150,12 +151,7 @@ class OrderController extends Controller
             return [$key => __('order.status.' . $key)];
         })->toArray();
 
-        $drivers_arr = [];
-        $drivers = DB::table('drivers')->select('id', 'lorry_number')->get()->toArray();
-        foreach ($drivers as $driver) {
-            $drivers_arr[$driver->id] = $driver->lorry_number;
-        }
-        
+        $drivers_arr = Driver::optionsForSelect();
         return view('admin.orders.index', [
                 'orders' => $orders,
                 'statuses' => $statuses,
@@ -254,29 +250,49 @@ class OrderController extends Controller
         return back()->with('success', 'Order products weight updated successfully.');
     }
 
-    public function change_order_lorry(Request $request)
+    public function change_order_delivery(Request $request)
     {
-        DB::table('orders')->where('id', decrypt($request['orders_id']))->update(
-            [
-                'driver_id' => $request->input('driver_id') ?: null,
-            ]
-        );
+        $data = $request->validate([
+            'orders_id' => 'required',
+            'fulfillment_type' => 'required|in:delivery,pickup',
+            'driver_id' => 'nullable|exists:drivers,id',
+        ]);
 
-        return back()->with('success', 'Driver has been updated successfully.');
+        $fulfillmentType = $data['fulfillment_type'];
+        $driverId = $fulfillmentType === Order::$fulfillment_types['pickup']
+            ? null
+            : ($data['driver_id'] ?? null);
+
+        DB::table('orders')->where('id', decrypt($data['orders_id']))->update([
+            'fulfillment_type' => $fulfillmentType,
+            'driver_id' => $driverId,
+        ]);
+
+        return back()->with('success', __('orders.delivery_assignment_updated'));
     }
 
     public function assign_order_driver(Request $request)
     {
-        $ids = explode(',', $request->orders_id);
+        $data = $request->validate([
+            'orders_id' => 'required',
+            'fulfillment_type' => 'nullable|in:delivery,pickup',
+            'driver_id' => 'nullable|exists:drivers,id',
+        ]);
+
+        $ids = array_filter(explode(',', $data['orders_id']));
         if ($ids) {
-            DB::table('orders')->whereIn('id', $ids)->update(
-                [
-                    'driver_id' => $request->input('driver_id') ?: null,
-                ]
-            );
+            $fulfillmentType = $data['fulfillment_type'] ?? Order::$fulfillment_types['delivery'];
+            $driverId = $fulfillmentType === Order::$fulfillment_types['pickup']
+                ? null
+                : ($data['driver_id'] ?? null);
+
+            DB::table('orders')->whereIn('id', $ids)->update([
+                'fulfillment_type' => $fulfillmentType,
+                'driver_id' => $driverId,
+            ]);
         }
 
-        return back()->with('success', 'Driver has been updated successfully.');
+        return back()->with('success', __('orders.delivery_assignment_updated'));
     }
 
     public function viewSummary($id)
@@ -369,28 +385,7 @@ class OrderController extends Controller
 
     private function driverOptionsForOrder(Order $order): array
     {
-        return DB::table('drivers')
-            ->select('id', 'name', 'lorry_number', 'is_active')
-            ->where(function ($query) use ($order) {
-                $query->where('is_active', true);
-                if ($order->driver_id) {
-                    $query->orWhere('id', $order->driver_id);
-                }
-            })
-            ->orderBy('lorry_number')
-            ->get()
-            ->mapWithKeys(function ($driver) {
-                $label = $driver->lorry_number;
-                if ($driver->name) {
-                    $label = $driver->name . ' (' . $driver->lorry_number . ')';
-                }
-                if (!$driver->is_active) {
-                    $label .= ' [Inactive]';
-                }
-
-                return [$driver->id => $label];
-            })
-            ->all();
+        return Driver::optionsForSelect($order->driver_id ? (int) $order->driver_id : null);
     }
 
     public function updatePaymentDueDate(Request $request, $id)

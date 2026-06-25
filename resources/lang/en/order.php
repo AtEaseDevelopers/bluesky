@@ -21,6 +21,10 @@ return [
         'paid' => 'Paid',
         'payment_due' => 'Due',
     ],
+    'fulfillment_types' => [
+        'delivery' => 'Delivery',
+        'pickup' => 'Pickup / Courier',
+    ],
     'order_type' => [
         'registered' => 'Registered Customer',
         'walk_in' => 'Walk-in',

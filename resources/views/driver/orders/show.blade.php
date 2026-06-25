@@ -99,7 +99,8 @@
         </div>
     </div>
 
-    {{-- Payment status --}}
+    {{-- Payment status (COD only) --}}
+    @if ($order->isCodCustomer() && ($driverCan('record_payment') || $driverCan('payment_proof')))
     <div class="card driver-card mb-3">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -135,6 +136,7 @@
             @endif
         </div>
     </div>
+    @endif
 
     {{-- Update delivery status --}}
     @if ($driverCan('update_status'))
@@ -157,8 +159,8 @@
     </div>
     @endif
 
-    {{-- Record payment --}}
-    @if ($driverCan('record_payment'))
+    {{-- Record payment (COD only) --}}
+    @if ($order->isCodCustomer() && $driverCan('record_payment'))
     <div class="card driver-card mb-3">
         <div class="card-body">
             <h5 class="display-font mb-3" style="font-size:1.15rem;">{{ __('driver_portal.deliveries.record_payment') }}</h5>
@@ -195,7 +197,7 @@
     @endif
 
 @endsection
-@if ($driverCan('record_payment'))
+@if ($order->isCodCustomer() && $driverCan('record_payment'))
 @section('script')
     <script>
         (function () {

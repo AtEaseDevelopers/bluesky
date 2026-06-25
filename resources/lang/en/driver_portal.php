@@ -78,6 +78,7 @@ return [
         'proof_required' => 'Payment proof is required for QR and bank transfer payments.',
         'cannot_record' => 'Payment cannot be recorded for this order in its current status.',
         'cod_status_required' => 'COD payment can only be recorded when the order is in route or delivered.',
+        'credit_not_allowed' => 'Payment recording is not available for credit customer deliveries.',
         'recorded' => 'Payment recorded successfully.',
     ],
 

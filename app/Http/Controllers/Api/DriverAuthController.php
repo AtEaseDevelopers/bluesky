@@ -41,7 +41,7 @@ class DriverAuthController extends Controller
                 'id' => $driver->id,
                 'name' => $driver->name,
                 'phone' => $driver->phone,
-                'lorry_number' => $driver->lorry_number,
+                'username' => $driver->username,
             ],
         ]);
     }
@@ -64,7 +64,7 @@ class DriverAuthController extends Controller
                 'id' => $driver->id,
                 'name' => $driver->name,
                 'phone' => $driver->phone,
-                'lorry_number' => $driver->lorry_number,
+                'username' => $driver->username,
             ],
         ]);
     }

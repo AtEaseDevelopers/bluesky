@@ -36,13 +36,11 @@ class AddCustomerController extends Controller
 
         $areas = DB::table('areas')->select('id', 'area_name')->get()->toArray();
         $products = DB::table('products')->select('id', 'name', 'sku')->get()->toArray();
-        $drivers = DB::table('drivers')->select('id', 'lorry_number')->get()->toArray();
 
         return view(
             'admin.customers.create',
             [
                 'products' => $products,
-                'drivers' => $drivers,
                 'areas' => $areas,
                 'category_list' => $category_list,
                 'payment_method_options' => User::$payment_method,
@@ -95,13 +93,10 @@ class AddCustomerController extends Controller
                 "price_permission" => $request['price_permission'] ?? 0,
                 "invoice_visibility" => $request['invoice_visibility'] ?? 0,
                 "invoice_price_permission" => $request['invoice_price_permission'] ?? 0,
-                "default_driver_id" => null,
                 'sql_customer_code' => $request['sql_customer_code'] ?? null,
                 'registration_completed_at' => now(),
             ]
         );
-
-        $customer->syncDrivers($request->input('driver_ids', []));
 
         if ($request['product_id']) {
             foreach ($request['product_id'] as $pid) {
@@ -141,8 +136,6 @@ class AddCustomerController extends Controller
             'shipping_state' => ['nullable'],
             "remark" => array_merge(User::$attribute_rules['remark'], []),
             "fax_no" => array_merge(User::$attribute_rules['fax_no'], []),
-            'driver_ids' => ['nullable', 'array'],
-            'driver_ids.*' => ['exists:drivers,id'],
         ];
 
         try {

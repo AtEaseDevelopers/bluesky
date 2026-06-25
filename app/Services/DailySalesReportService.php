@@ -59,7 +59,7 @@ class DailySalesReportService
         return [
             'statuses' => $statuses,
             'payment_methods' => $this->summaryCategoryLabels(),
-            'drivers' => DB::table('drivers')->select('id', 'lorry_number')->orderBy('lorry_number')->get(),
+            'drivers' => DB::table('drivers')->select('id', 'name', 'username')->orderBy('name')->get(),
             'customers' => DB::table('users')->select('id', 'name', 'email')->orderBy('name')->get(),
             'areaList' => \App\Helper::areaList(),
         ];

@@ -199,7 +199,7 @@
                                     <th>{{ __('orders.area') }}</th>
                                     <th>{{ __('orders.billing_address') }}</th>
                                     <th>{{ __('orders.shipping_address') }}</th>
-                                    <th>{{ __('orders.lorry') }}</th>
+                                    <th>{{ __('orders.assign_driver') }}</th>
                                     <th>{{ __('orders.status') }}</th>
                                     <th>{{ __('orders.payment') }}</th>
                                     <th>{{ __('orders.payment_due') }}</th>
@@ -415,19 +415,23 @@
                     <h5 class="modal-title">{{ __('orders.change_lorry') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
-                <form action="{{ route('admin.change-order-lorry') }}" method="POST" class="form-wrapper">
+                <form action="{{ route('admin.change-order-delivery') }}" method="POST" class="form-wrapper">
                     @csrf
                     <input type="hidden" class="orders_id" name="orders_id">
                     <div class="modal-body">
                         <div class="mb-4">
-                            <label class="mb-2">{{ __('orders.change_lorry') }}</label>
-                            <span class="text-danger"> *</span>
-                            <select class="form-select" id="order_driver_id" name="driver_id" required>
+                            <label class="mb-2">{{ __('orders.fulfillment_type') }}</label>
+                            <select class="form-select" id="modal_fulfillment_type" name="fulfillment_type">
+                                <option value="delivery">{{ __('orders.fulfillment_delivery') }}</option>
+                                <option value="pickup">{{ __('orders.fulfillment_pickup') }}</option>
+                            </select>
+                        </div>
+                        <div class="mb-4" id="modal-driver-wrap">
+                            <label class="mb-2">{{ __('orders.assign_driver') }}</label>
+                            <select class="form-select" id="order_driver_id" name="driver_id">
                                 <option value="">{{ __('orders.choose') }}</option>
                                 @foreach ($drivers as $id => $driver)
-                                    <option value="{{ $id }}">
-                                        {{ $driver }}
-                                    </option>
+                                    <option value="{{ $id }}">{{ $driver }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -483,14 +487,18 @@
                     <input type="hidden" class="orders_id" name="orders_id">
                     <div class="modal-body">
                         <div class="mb-4">
-                            <label class="mb-2" for="order_driver_id">{{ __('orders.assign_lorry') }}</label>
-                            <span class="text-danger"> *</span>
-                            <select class="form-select" id="order_driver_id" name="driver_id" required>
+                            <label class="mb-2">{{ __('orders.fulfillment_type') }}</label>
+                            <select class="form-select" id="bulk_fulfillment_type" name="fulfillment_type">
+                                <option value="delivery">{{ __('orders.fulfillment_delivery') }}</option>
+                                <option value="pickup">{{ __('orders.fulfillment_pickup') }}</option>
+                            </select>
+                        </div>
+                        <div class="mb-4" id="bulk-driver-wrap">
+                            <label class="mb-2">{{ __('orders.assign_driver') }}</label>
+                            <select class="form-select" id="bulk_driver_id" name="driver_id">
                                 <option value="">{{ __('orders.choose') }}</option>
                                 @foreach ($drivers as $id => $driver)
-                                    <option value="{{ $id }}">
-                                        {{ $driver }}
-                                    </option>
+                                    <option value="{{ $id }}">{{ $driver }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -649,6 +657,23 @@
                 });
             });
         });
+
+        function toggleFulfillmentDriver(selectId, wrapId, driverId) {
+            var select = document.getElementById(selectId);
+            var wrap = document.getElementById(wrapId);
+            var driver = document.getElementById(driverId);
+            if (!select || !wrap || !driver) return;
+            function sync() {
+                var isPickup = select.value === 'pickup';
+                wrap.style.display = isPickup ? 'none' : '';
+                driver.disabled = isPickup;
+            }
+            select.addEventListener('change', sync);
+            sync();
+        }
+
+        toggleFulfillmentDriver('modal_fulfillment_type', 'modal-driver-wrap', 'order_driver_id');
+        toggleFulfillmentDriver('bulk_fulfillment_type', 'bulk-driver-wrap', 'bulk_driver_id');
     </script>
 
 @endsection

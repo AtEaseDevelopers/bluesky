@@ -14,7 +14,6 @@ class Driver extends Authenticatable
         'phone',
         'username',
         'password',
-        'lorry_number',
         'api_token',
         'is_active',
         'role_slug',
@@ -61,5 +60,29 @@ class Driver extends Authenticatable
         return static::where('api_token', hash('sha256', $plainToken))
             ->where('is_active', true)
             ->first();
+    }
+
+    /** @return array<int, string> */
+    public static function optionsForSelect(?int $includeInactiveId = null): array
+    {
+        return \Illuminate\Support\Facades\DB::table('drivers')
+            ->select('id', 'name', 'username', 'is_active')
+            ->where(function ($query) use ($includeInactiveId) {
+                $query->where('is_active', true);
+                if ($includeInactiveId) {
+                    $query->orWhere('id', $includeInactiveId);
+                }
+            })
+            ->orderBy('name')
+            ->get()
+            ->mapWithKeys(function ($driver) {
+                $label = $driver->name ?: $driver->username;
+                if (!$driver->is_active) {
+                    $label .= ' (' . __('drivers.status_labels.inactive') . ')';
+                }
+
+                return [$driver->id => $label];
+            })
+            ->all();
     }
 }

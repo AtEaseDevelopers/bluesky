@@ -120,11 +120,20 @@
                             @endif
                             <div class="col-md-4">
                                 <div class="mb-4">
+                                    <label class="mb-2">{{ __('orders.fulfillment_type') }}</label>
+                                    <select name="fulfillment_type" id="fulfillment_type" class="form-select">
+                                        <option value="delivery" {{ old('fulfillment_type', $order->fulfillment_type ?? 'delivery') === 'delivery' ? 'selected' : '' }}>{{ __('orders.fulfillment_delivery') }}</option>
+                                        <option value="pickup" {{ old('fulfillment_type', $order->fulfillment_type ?? 'delivery') === 'pickup' ? 'selected' : '' }}>{{ __('orders.fulfillment_pickup') }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4" id="review-driver-wrap">
+                                <div class="mb-4">
                                     <label class="mb-2">{{ __('orders.assign_driver') }}</label>
-                                    <select name="driver_id" class="form-select">
+                                    <select name="driver_id" id="driver_id" class="form-select">
                                         <option value="">{{ __('orders.none') }}</option>
-                                        @foreach ($drivers as $id => $lorry)
-                                            <option value="{{ $id }}" {{ $order->driver_id == $id ? 'selected' : '' }}>{{ $lorry }}</option>
+                                        @foreach ($drivers as $id => $label)
+                                            <option value="{{ $id }}" {{ (string) old('driver_id', $order->driver_id) === (string) $id ? 'selected' : '' }}>{{ $label }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -192,5 +201,14 @@
         });
 
         recalculateReviewTotals();
+
+        function toggleReviewDriverField() {
+            var isPickup = document.getElementById('fulfillment_type').value === 'pickup';
+            document.getElementById('review-driver-wrap').style.display = isPickup ? 'none' : '';
+            document.getElementById('driver_id').disabled = isPickup;
+        }
+
+        document.getElementById('fulfillment_type').addEventListener('change', toggleReviewDriverField);
+        toggleReviewDriverField();
     </script>
 @endsection

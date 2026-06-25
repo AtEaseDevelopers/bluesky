@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Driver;
 use App\Http\Controllers\Controller;
 
 use App\Exports\DailySummaryStockReport;
@@ -235,11 +236,7 @@ class ReportsController extends Controller
             ->get()
             ->toArray();
 
-        $drivers_arr = [];
-        $drivers = DB::table('drivers')->select('id', 'lorry_number')->get()->toArray();
-        foreach ($drivers as $driver) {
-            $drivers_arr[$driver->id] = $driver->lorry_number;
-        }
+        $drivers_arr = Driver::optionsForSelect();
         $data['order_drivers'] = $drivers_arr;
 
         return view('admin.reports.do_report', $data);
@@ -308,11 +305,7 @@ class ReportsController extends Controller
         //     ->get()
         //     ->toArray();
 
-        $drivers_arr = [];
-        $drivers = DB::table('drivers')->select('id', 'lorry_number')->get()->toArray();
-        foreach ($drivers as $driver) {
-            $drivers_arr[$driver->id] = $driver->lorry_number;
-        }
+        $drivers_arr = Driver::optionsForSelect();
         $data['order_drivers'] = $drivers_arr;
 
         return view('admin.reports.sql_do_export_report', $data);

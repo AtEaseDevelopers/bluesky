@@ -81,8 +81,14 @@
                     </li>
                 @endif
                 @if ($user->canAccessModule('drivers'))
-                    <li class="nav-item">
-                        <a class="nav-link {{ str_starts_with($currentRoute ?? '', 'admin.lorry.') ? 'active' : '' }}" href="{{ route('admin.lorry.index') }}">{{ __('ui.nav.drivers_lorry') }}</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {{ str_starts_with($currentRoute ?? '', 'admin.drivers.') || str_starts_with($currentRoute ?? '', 'admin.vehicles.') ? 'active' : '' }}" href="javascript:void(0);" role="button" data-bs-toggle="dropdown">
+                            {{ __('ui.nav.drivers_lorry') }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ route('admin.drivers.index') }}">{{ __('drivers.list') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.vehicles.index') }}">{{ __('drivers.vehicles_list') }}</a></li>
+                        </ul>
                     </li>
                 @endif
                 @if ($user->canAccessModule('settings'))

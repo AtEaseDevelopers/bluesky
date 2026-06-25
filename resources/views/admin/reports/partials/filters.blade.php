@@ -56,7 +56,7 @@
                             <option value="">{{ __('ui.all') }}</option>
                             @foreach ($drivers as $driver)
                                 <option value="{{ $driver->id }}" {{ ($req['driver'] ?? '') == $driver->id ? 'selected' : '' }}>
-                                    {{ $driver->lorry_number }}
+                                    {{ $driver->name ?: $driver->username }}
                                 </option>
                             @endforeach
                         </select>

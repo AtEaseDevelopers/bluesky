@@ -125,24 +125,8 @@
                             </a>
                         </li>
                     @endif
-                    @if ($driverPermissions['assigned_customers'] ?? false)
-                        <li class="nav-item">
-                            <a class="nav-link px-2 {{ request()->routeIs('driver.customers.*') ? 'active-tab' : '' }}" href="{{ route('driver.customers.index') }}">
-                                <i class="fa fa-users"></i> <span class="d-none d-sm-inline">{{ __('driver_portal.nav.customers') }}</span>
-                            </a>
-                        </li>
-                    @endif
                 </ul>
                 <ul class="navbar-nav ms-auto align-items-center">
-                    @if ($driverPermissions['vehicle'] ?? false)
-                        <li class="nav-item">
-                            <a class="nav-link px-2 d-flex align-items-center gap-1 {{ request()->routeIs('driver.vehicle.*') ? 'active-tab' : '' }}"
-                               href="{{ route('driver.vehicle.edit') }}" data-bs-toggle="tooltip" title="{{ __('driver_portal.nav.change_vehicle') }}">
-                                <i class="fa fa-truck"></i>
-                                <span>{{ Auth::guard('web_driver')->user()->lorry_number ?: __('driver_portal.nav.vehicle') }}</span>
-                            </a>
-                        </li>
-                    @endif
                     @include('partials.language-switcher')
                     <li class="nav-item me-2 d-none d-sm-block">
                         <span class="nav-link">{{ Auth::guard('web_driver')->user()->name ?? Auth::guard('web_driver')->user()->username }}</span>

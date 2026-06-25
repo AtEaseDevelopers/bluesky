@@ -25,7 +25,6 @@ class CustomerInviteController extends Controller
         return view('admin.customers.invite', [
             'category_list' => DB::table('customer_categories')->select('id', 'category')->get(),
             'areas' => DB::table('areas')->select('id', 'area_name')->get(),
-            'drivers' => DB::table('drivers')->select('id', 'lorry_number', 'name')->get(),
         ]);
     }
 
@@ -36,8 +35,6 @@ class CustomerInviteController extends Controller
             'payment_term_days' => 'nullable|integer|min:1|max:365',
             'category' => 'required|string|max:30',
             'area_id' => 'nullable|exists:areas,id',
-            'driver_ids' => 'nullable|array',
-            'driver_ids.*' => 'exists:drivers,id',
             'remark' => 'nullable|string|max:500',
         ]);
 
@@ -66,7 +63,6 @@ class CustomerInviteController extends Controller
                 : null,
             'payment_method' => $paymentMethods,
             'area' => $data['area_id'] ?? null,
-            'default_driver_id' => null,
             'billing_address' => 'Pending registration',
             'billing_postcode' => '',
             'billing_state' => '',
@@ -77,8 +73,6 @@ class CustomerInviteController extends Controller
             'invoice_visibility' => true,
             'invoice_price_permission' => true,
         ]);
-
-        $customer->syncDrivers($data['driver_ids'] ?? []);
 
         $categoryRecord = DB::table('customer_categories')->where('category', $data['category'])->first();
         if ($categoryRecord) {

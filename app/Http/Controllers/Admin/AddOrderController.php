@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\DeliverySlot;
+use App\Driver;
 use App\Http\Controllers\Controller;
 
 use Illuminate\Validation\ValidationException;
@@ -41,7 +42,7 @@ class AddOrderController extends Controller
                 'shipping_state_options' => System::$country_state['MY'],
                 'customers_list' => User::all(),
                 'areaList' => Helper::areaList(),
-                'drivers' => DB::table('drivers')->pluck('lorry_number', 'id'),
+                'drivers' => Driver::optionsForSelect(),
                 'deliverySlots' => DeliverySlot::availableSlots(),
             ]
         );
@@ -93,7 +94,10 @@ class AddOrderController extends Controller
             "shipping_state" => $data['shipping_state'] ?? null,
             "status" => Order::$status['pending'],
             "payment_status" => Order::$payment_status['unpaid'],
-            "driver_id" => $request->input('driver_id') ?: ($isWalkIn ? null : $user->default_driver_id),
+            "driver_id" => $request->input('fulfillment_type') === Order::$fulfillment_types['pickup']
+                ? null
+                : ($request->input('driver_id') ?: null),
+            "fulfillment_type" => $request->input('fulfillment_type', Order::$fulfillment_types['delivery']),
             "is_estimated" => true,
         ];
 

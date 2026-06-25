@@ -19,6 +19,10 @@ return [
         'paid' => '已付款',
         'payment_due' => '到期应付',
     ],
+    'fulfillment_types' => [
+        'delivery' => '配送',
+        'pickup' => '自提 / 快递',
+    ],
     'order_type' => [
         'registered' => '注册客户',
         'walk_in' => 'Walk-in',
