@@ -12,7 +12,6 @@
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
                         <h5>{{ __('drivers.list') }}</h5>
                         <div class="d-flex gap-2">
-                            <a href="{{ route('admin.vehicles.index') }}" class="btn btn-secondary">{{ __('drivers.vehicles_list') }}</a>
                             <a href="{{ route('admin.drivers.create') }}" class="btn btn-primary">{{ __('drivers.add') }}</a>
                         </div>
                     </div>

@@ -28,8 +28,8 @@ return [
     'none' => 'None',
 
     'change_order_status' => 'Change Order Status',
-    'change_lorry' => 'Change Lorry',
-    'assign_lorry' => 'Assign Lorry',
+    'change_lorry' => 'Change Driver',
+    'assign_lorry' => 'Assign Driver',
     'change_status' => 'Change Status',
     'change_status_to' => 'Change Status To :status',
     'action' => 'Action',
