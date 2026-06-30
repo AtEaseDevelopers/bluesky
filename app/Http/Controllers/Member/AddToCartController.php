@@ -8,15 +8,16 @@ use App\CartProductOption;
 use App\Helper;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Concerns\ValidatesProductCartInput;
 use App\Product;
 use App\ProductOptionItem;
-use App\Services\StockService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class AddToCartController extends Controller
 {
+    use ValidatesProductCartInput;
+
     public function __construct()
     {
         $this->middleware('web');
@@ -130,79 +131,5 @@ class AddToCartController extends Controller
         }
 
         return redirect()->back()->with('success', ($data['quantity'] ?? $data['weight']) . " $product->name has been ". ($option_updated? 'updated' : 'added') ." to cart successfully.");
-    }
-
-    /**
-     * Validate add product to cart.
-     *
-     * @return \Illuminate\Contracts\Support\Renderable
-     */
-    public function validateAddToCart(Request $request, Product $product)
-    {
-        $rules = [
-            'remark' => ['nullable', 'max:200'],
-        ];
-        $customMessages = [];
-
-        if ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT) {
-            $rules['quantity'] = ['required', 'numeric', 'min:0.001'];
-            $rules['weight'] = ['required', 'numeric', 'min:0.001'];
-            $customMessages['quantity.required'] = 'The quantity is required';
-            $customMessages['weight.required'] = 'The weight is required';
-        } elseif ($product->requiresQuantityInput()) {
-            $rules['quantity'] = ['required', 'numeric', 'min:0.001'];
-            $customMessages['quantity.required'] = 'The quantity is required';
-        } else {
-            $rules['weight'] = ['required', 'numeric', 'min:0.001'];
-            $customMessages['weight.required'] = 'The weight is required';
-        }
-
-        // process validation for product option
-        $customAttributes = [];
-        $product_option = Product::getOption($product->id, true);
-        foreach ($product_option['product_option'] as $option => $option_items) {
-            $rules['product_option.'.$option] = [
-                $product_option['product_option_mandatory'][$option]? "required" : "nullable",
-                "in:".implode(',', $option_items),
-            ];
-            $customAttributes['product_option.'.$option] = $option;
-        }
-
-        try {
-            $data = $request->validate($rules, $customMessages, $customAttributes);
-        } catch (ValidationException $err) {
-            return [
-                'error' => $err->getMessage(),
-                'field_err' => $err->validator->errors()->getMessages(),
-            ];
-        }
-
-        $requested = $product->stockCheckAmount(
-            isset($data['quantity']) ? (float) $data['quantity'] : null,
-            isset($data['weight']) ? (float) $data['weight'] : null
-        );
-        $stock = app(StockService::class)->getOrCreateStock($product->id);
-        if ($requested <= 0) {
-            $field = $product->requiresQuantityInput() && !$product->requiresWeightInput()
-                ? 'quantity'
-                : ($product->requiresWeightInput() && !$product->requiresQuantityInput() ? 'weight' : 'quantity');
-            throw ValidationException::withMessages([
-                $field => 'Please enter a valid amount.',
-            ]);
-        }
-        $available = Product::availableStockAmount($product, $stock);
-        if ($requested > $available) {
-            $field = $product->requiresQuantityInput() ? 'quantity' : 'weight';
-            throw ValidationException::withMessages([
-                $field => 'Only ' . Product::formatStorefrontStockLabel(
-                    $product,
-                    (float) $stock->quantity,
-                    (float) ($stock->weight ?? 0),
-                    $product->uom_name ?? 'KG'
-                ) . ' available.',
-            ]);
-        }
-
-        return $data;
     }
 }

@@ -10,6 +10,6 @@ class OrderFieldSetting extends Model
 
     public static function isSituationOption(string $optionName): bool
     {
-        return strcasecmp(trim($optionName), 'Situation') === 0;
+        return str_contains(strtolower(trim($optionName)), 'situation');
     }
 }

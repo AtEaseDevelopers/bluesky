@@ -5,6 +5,9 @@
             @php
                 $isSituation = \App\OrderFieldSetting::isSituationOption($option);
                 $selectedValue = old('product_option.'.$option, ($cart_product_options[$option] ?? null));
+                if ($isSituation && ! $selectedValue && ! empty($option_items[0])) {
+                    $selectedValue = $option_items[0];
+                }
             @endphp
             <div class="form-group mb-3">
                 <label class="mb-2" for="productOption-{{ $option }}">{{ $option }}

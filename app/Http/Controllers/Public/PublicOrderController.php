@@ -6,6 +6,7 @@ use App\Cart;
 use App\CartProduct;
 use App\CartProductOption;
 use App\Http\Controllers\Controller;
+use App\Http\Concerns\ValidatesProductCartInput;
 use App\Order;
 use App\OrderProduct;
 use App\OrderProductOption;
@@ -25,6 +26,8 @@ use Illuminate\Validation\ValidationException;
  */
 class PublicOrderController extends Controller
 {
+    use ValidatesProductCartInput;
+
     /** Storefront — renders the member product screen with guest pricing. */
     public function index(Request $request)
     {
@@ -77,6 +80,11 @@ class PublicOrderController extends Controller
 
         $price = Product::getPublicTodayPrice($product->id);
         $cart = $this->currentCart($request, true);
+        $linePrice = $product->calculateLinePrice(
+            $price,
+            isset($data['quantity']) ? (float) $data['quantity'] : null,
+            isset($data['weight']) ? (float) $data['weight'] : null
+        );
 
         $cart_product = CartProduct::create([
             'cart_id' => $cart->id,
@@ -84,7 +92,7 @@ class PublicOrderController extends Controller
             'quantity' => $data['quantity'] ?? null,
             'weight' => $data['weight'] ?? null,
             'unit_price' => $price,
-            'price' => $price * ($data['quantity'] ?? $data['weight']),
+            'price' => $linePrice,
             'remark' => $data['remark'] ?? null,
             'status' => CartProduct::$status['active'],
         ]);
@@ -318,29 +326,6 @@ class PublicOrderController extends Controller
         }
 
         return [$products, $total];
-    }
-
-    private function validateAddToCart(Request $request, Product $product)
-    {
-        $rules = [
-            'quantity' => ['required_without:weight', 'numeric'],
-            'weight' => ['required_without:quantity', 'numeric'],
-            'remark' => ['nullable', 'max:200'],
-        ];
-
-        $product_option = Product::getOption($product->id, true);
-        foreach ($product_option['product_option'] as $option => $option_items) {
-            $rules['product_option.' . $option] = [
-                $product_option['product_option_mandatory'][$option] ? 'required' : 'nullable',
-                'in:' . implode(',', $option_items),
-            ];
-        }
-
-        try {
-            return $request->validate($rules);
-        } catch (ValidationException $err) {
-            return ['error' => true, 'field_err' => $err->validator->errors()->getMessages()];
-        }
     }
 
     private function validateCheckout(Request $request)

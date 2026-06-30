@@ -371,6 +371,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 .then(data => {
                     modalBody.innerHTML = data.view;
+                    modalBody.querySelectorAll('.situation-btn-group').forEach(function (group) {
+                        const hiddenInput = document.getElementById(group.dataset.target);
+                        if (!hiddenInput || hiddenInput.value) {
+                            return;
+                        }
+                        const firstBtn = group.querySelector('.situation-preset-btn');
+                        if (firstBtn) {
+                            firstBtn.classList.add('active');
+                            hiddenInput.value = firstBtn.dataset.value;
+                        }
+                    });
                 })
                 .catch(error => {
                     modalBody.innerHTML = '<div class="alert alert-danger mb-0">Unable to load product details. Please try again.</div>';
