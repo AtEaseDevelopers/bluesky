@@ -10,6 +10,8 @@ use App\ProductOptionItem;
 use App\ProductOption;
 use App\Product;
 use App\ProductCategoryPrice;
+use App\ProductStock;
+use App\CustomerCategoryProduct;
 use Illuminate\Support\Facades\DB;
 
 class AddProductController extends Controller
@@ -53,6 +55,18 @@ class AddProductController extends Controller
                     : null,
             ]
         );
+
+        ProductStock::firstOrCreate(
+            ['product_id' => $product->id],
+            ['quantity' => 0, 'weight' => 0]
+        );
+
+        foreach (DB::table('customer_categories')->pluck('id') as $categoryId) {
+            CustomerCategoryProduct::firstOrCreate([
+                'customer_category_id' => $categoryId,
+                'product_id' => $product->id,
+            ]);
+        }
 
         // process images
         if (isset($data['images']) && $data['images']) {

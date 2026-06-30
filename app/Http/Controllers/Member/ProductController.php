@@ -34,7 +34,6 @@ class ProductController extends Controller
         $products = Product::query()
             ->withStorefrontStock()
             ->storefrontAvailable()
-            ->visibleToCustomer($user)
             ->when($keyword, function ($q) use ($keyword) {
                 return $q->where(function ($query) use ($keyword) {
                     $query->where('products.name', 'LIKE', '%' . $keyword . '%')
@@ -121,7 +120,6 @@ class ProductController extends Controller
         $product = Product::query()
             ->withStorefrontStock()
             ->storefrontAvailable()
-            ->visibleToCustomer($user)
             ->where('products.id', decrypt($id))
             ->firstOrFail();
 
@@ -174,11 +172,9 @@ class ProductController extends Controller
 
     public function add_to_cart_product_info(Request $request)
     {
-        $user = Auth::guard('web')->user();
         $product = Product::query()
             ->withStorefrontStock()
             ->storefrontAvailable()
-            ->when($user, fn ($q) => $q->visibleToCustomer($user))
             ->where('products.id', decrypt($request['id']))
             ->firstOrFail();
 

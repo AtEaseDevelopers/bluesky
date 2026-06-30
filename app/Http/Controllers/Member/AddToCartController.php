@@ -27,7 +27,6 @@ class AddToCartController extends Controller
         $product = Product::query()
             ->withStorefrontStock()
             ->storefrontAvailable()
-            ->visibleToCustomer($user)
             ->where('products.id', decrypt($id))
             ->firstOrFail();
 

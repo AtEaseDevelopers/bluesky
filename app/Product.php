@@ -316,21 +316,24 @@ class Product extends Model
     }
 
     /**
-     * When a customer has assigned products, only those appear in the portal.
-     * Customers with no assignments see all in-stock active products.
+     * Optional catalog filter by customer category visible products.
+     * When a category has no products configured, all in-stock products are shown.
+     * Per-customer product_visibilities are admin metadata only — not used to hide portal items.
      */
     public function scopeVisibleToCustomer(Builder $query, User $user): Builder
     {
         return $query->where(function (Builder $q) use ($user) {
             $q->whereNotExists(function ($sub) use ($user) {
                 $sub->select(DB::raw(1))
-                    ->from('product_visibilities')
-                    ->where('product_visibilities.user_id', $user->id);
+                    ->from('customer_category_products')
+                    ->join('customer_categories', 'customer_categories.id', '=', 'customer_category_products.customer_category_id')
+                    ->where('customer_categories.category', $user->category);
             })->orWhereExists(function ($sub) use ($user) {
                 $sub->select(DB::raw(1))
-                    ->from('product_visibilities')
-                    ->whereColumn('product_visibilities.product_id', 'products.id')
-                    ->where('product_visibilities.user_id', $user->id);
+                    ->from('customer_category_products')
+                    ->join('customer_categories', 'customer_categories.id', '=', 'customer_category_products.customer_category_id')
+                    ->whereColumn('customer_category_products.product_id', 'products.id')
+                    ->where('customer_categories.category', $user->category);
             });
         });
     }
