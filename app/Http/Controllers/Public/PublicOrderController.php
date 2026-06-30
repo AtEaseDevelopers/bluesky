@@ -29,11 +29,8 @@ class PublicOrderController extends Controller
     public function index(Request $request)
     {
         $products = Product::query()
-            ->select('products.*', 'product_stocks.quantity as stock_quantity', 'uoms.uom_name')
-            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
-            ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id')
-            ->where('products.status', Product::$status['active'])
-            ->where('product_stocks.quantity', '>', 0)
+            ->withStorefrontStock()
+            ->storefrontAvailable()
             ->when($request->keyword, function ($q) use ($request) {
                 $q->where('products.name', 'LIKE', '%' . $request->keyword . '%');
             })
@@ -43,7 +40,13 @@ class PublicOrderController extends Controller
                 $product->original_price = $product->price = Product::getPublicTodayPrice($product->id);
                 $product->image_url = Product::resolveImageUrl($product);
                 $uomName = $product->uom_name ?? optional($product->uom)->uom_name;
-                $product->stock_label = Product::formatStockQuantity((float) $product->stock_quantity, $uomName);
+                $product->storefront_available_amount = $product->storefrontAvailableAmount();
+                $product->stock_label = Product::formatStorefrontStockLabel(
+                    $product,
+                    (float) $product->stock_quantity,
+                    (float) ($product->stock_weight ?? 0),
+                    $uomName
+                );
                 $product->price_label = Product::formatUnitPrice((float) $product->price, $uomName);
                 $product->original_price_label = Product::formatUnitPrice((float) $product->original_price, $uomName);
                 $product->added_to_cart = null;
@@ -61,10 +64,11 @@ class PublicOrderController extends Controller
     /** Add a product to the guest's session cart (id is encrypted, like the member flow). */
     public function addToCart(Request $request, $id)
     {
-        $product = Product::find($this->decryptId($id));
-        if (!$product || $product->status != Product::$status['active']) {
-            abort(404);
-        }
+        $product = Product::query()
+            ->withStorefrontStock()
+            ->storefrontAvailable()
+            ->where('products.id', $this->decryptId($id))
+            ->firstOrFail();
 
         $data = $this->validateAddToCart($request, $product);
         if (isset($data['error']) && $data['error']) {

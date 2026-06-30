@@ -66,21 +66,21 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>pcs</td>
-                                    <td>Electronics</td>
-                                    <td>Sample Product</td>
-                                    <td>Product description</td>
-                                    <td>SKU-001</td>
-                                    <td>99.99</td>
-                                    <td>1.5</td>
-                                    <td>["image1.jpg", "image2.jpg"]</td>
+                                    <td>kg</td>
+                                    <td>Fresh Fish</td>
+                                    <td>Tilapia</td>
+                                    <td>Fresh tilapia</td>
+                                    <td>TIL-001</td>
+                                    <td>30.00</td>
+                                    <td>1.0</td>
+                                    <td>tilapia.jpg</td>
                                     <td>active</td>
-                                    <td>Sample remark</td>
+                                    <td></td>
                                     <td>1</td>
+                                    <td>No</td>
                                     <td>Yes</td>
-                                    <td>Yes</td>
-                                    <td>piece</td>
-                                    <td>{"color":["black","white"], "size":["sm","md"]}</td>
+                                    <td>qty</td>
+                                    <td>{"Situation":["Whole","Cleaned"]}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -95,7 +95,8 @@
                     <li>Options field must be valid JSON format</li>
                     <li>Images field must be a JSON array of image filenames</li>
                     <li>Show Weight and Show Quantity: Use "Yes" or "No"</li>
-                    <li>Status: Use your system's status values (active, inactive, etc.)</li>
+                    <li>Sell In: <code>qty</code>, <code>weight</code>, or <code>qty_bill_weight</code></li>
+                    <li>Status: <code>active</code> or <code>inactive</code></li>
                 </ul>
             </div>
         </div>

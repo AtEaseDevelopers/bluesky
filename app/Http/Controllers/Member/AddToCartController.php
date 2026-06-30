@@ -25,12 +25,10 @@ class AddToCartController extends Controller
     public function addToCart(Request $request, $id)
     {
         $product = Product::query()
-            ->select('products.*', 'product_stocks.quantity as stock_quantity', 'uoms.uom_name')
-            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
-            ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id')
+            ->withStorefrontStock()
+            ->storefrontAvailable()
+            ->visibleToCustomer($user)
             ->where('products.id', decrypt($id))
-            ->where('products.status', Product::$status['active'])
-            ->where('product_stocks.quantity', '>', 0)
             ->firstOrFail();
 
         $user = Auth::guard('web')->user();
@@ -193,10 +191,16 @@ class AddToCartController extends Controller
                 $field => 'Please enter a valid amount.',
             ]);
         }
-        if ($requested > (float) $stock->quantity) {
+        $available = Product::availableStockAmount($product, $stock);
+        if ($requested > $available) {
             $field = $product->requiresQuantityInput() ? 'quantity' : 'weight';
             throw ValidationException::withMessages([
-                $field => 'Only ' . Product::formatStockQuantity((float) $stock->quantity, $product->uom_name ?? 'KG') . ' available.',
+                $field => 'Only ' . Product::formatStorefrontStockLabel(
+                    $product,
+                    (float) $stock->quantity,
+                    (float) ($stock->weight ?? 0),
+                    $product->uom_name ?? 'KG'
+                ) . ' available.',
             ]);
         }
 

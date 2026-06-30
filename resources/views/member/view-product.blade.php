@@ -67,7 +67,7 @@
                             <div class="mb-4">
                                 <label class="mb-2" for="quantity">Quantity</label>
                                 <span class="text-danger"> *</span>
-                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ $product->added_to_cart? $product->added_to_cart->quantity : 1 }}" min="0.001" max="{{ $product->stock_quantity }}" step="0.001">
+                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ $product->added_to_cart? $product->added_to_cart->quantity : 1 }}" min="0.001" max="{{ $product->storefront_available_amount }}" step="0.001">
                                 @error('quantity')
                                     <span class="text-danger" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -78,7 +78,7 @@
                             <div class="mb-4">
                                 <label class="mb-2" for="quantity">Quantity</label>
                                 <span class="text-danger"> *</span>
-                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ old('quantity', $product->added_to_cart? $product->added_to_cart->quantity : 1) }}" min="0.001" max="{{ $product->stock_quantity }}" step="0.001">
+                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ old('quantity', $product->added_to_cart? $product->added_to_cart->quantity : 1) }}" min="0.001" max="{{ $product->storefront_available_amount }}" step="0.001">
                                 @error('quantity')
                                     <span class="text-danger" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -99,7 +99,7 @@
                             <div class="mb-4">
                                 <label class="mb-2" for="weight">Order Qty ({{ $product->uom_name ?? 'KG' }})</label>
                                 <span class="text-danger"> *</span>
-                                <input type="number" class="form-control @error('weight') is-invalid @enderror" id="weight" name="weight" value="{{ $product->added_to_cart? $product->added_to_cart->weight : 1 }}" min="0.001" max="{{ $product->stock_quantity }}" step="0.001">
+                                <input type="number" class="form-control @error('weight') is-invalid @enderror" id="weight" name="weight" value="{{ $product->added_to_cart? $product->added_to_cart->weight : 1 }}" min="0.001" max="{{ $product->storefront_available_amount }}" step="0.001">
                                 @error('weight')
                                     <span class="text-danger" role="alert">
                                         <strong>{{ $message }}</strong>

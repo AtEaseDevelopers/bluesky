@@ -3,8 +3,10 @@
 namespace App;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
@@ -283,6 +285,83 @@ class Product extends Model
         }
 
         return (float) $weight;
+    }
+
+    public function scopeWithStorefrontStock(Builder $query): Builder
+    {
+        return $query
+            ->select(
+                'products.*',
+                'product_stocks.quantity as stock_quantity',
+                'product_stocks.weight as stock_weight',
+                'uoms.uom_name'
+            )
+            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
+            ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id');
+    }
+
+    public function scopeStorefrontAvailable(Builder $query): Builder
+    {
+        return $query
+            ->where('products.status', self::$status['active'])
+            ->where(function (Builder $q) {
+                $q->where(function (Builder $q) {
+                    $q->whereIn('products.sell_in', [self::SELL_IN_QTY, self::SELL_IN_QTY_BILL_WEIGHT])
+                        ->where('product_stocks.quantity', '>', 0);
+                })->orWhere(function (Builder $q) {
+                    $q->where('products.sell_in', self::SELL_IN_WEIGHT)
+                        ->where('product_stocks.weight', '>', 0);
+                });
+            });
+    }
+
+    /**
+     * When a customer has assigned products, only those appear in the portal.
+     * Customers with no assignments see all in-stock active products.
+     */
+    public function scopeVisibleToCustomer(Builder $query, User $user): Builder
+    {
+        return $query->where(function (Builder $q) use ($user) {
+            $q->whereNotExists(function ($sub) use ($user) {
+                $sub->select(DB::raw(1))
+                    ->from('product_visibilities')
+                    ->where('product_visibilities.user_id', $user->id);
+            })->orWhereExists(function ($sub) use ($user) {
+                $sub->select(DB::raw(1))
+                    ->from('product_visibilities')
+                    ->whereColumn('product_visibilities.product_id', 'products.id')
+                    ->where('product_visibilities.user_id', $user->id);
+            });
+        });
+    }
+
+    public function storefrontAvailableAmount(): float
+    {
+        if ($this->sell_in === self::SELL_IN_WEIGHT) {
+            return (float) ($this->stock_weight ?? 0);
+        }
+
+        return (float) ($this->stock_quantity ?? 0);
+    }
+
+    public static function availableStockAmount(self $product, ProductStock $stock): float
+    {
+        if ($product->sell_in === self::SELL_IN_WEIGHT) {
+            return (float) $stock->weight;
+        }
+
+        return (float) $stock->quantity;
+    }
+
+    public static function formatStorefrontStockLabel(self $product, float $quantity, float $weight, ?string $uomName = null): string
+    {
+        if ($product->sell_in === self::SELL_IN_WEIGHT) {
+            $w = rtrim(rtrim(number_format($weight, 3, '.', ''), '0'), '.');
+
+            return "Weight: {$w} kg";
+        }
+
+        return self::formatStockQuantity($quantity, $uomName);
     }
 
     public static function formatStockQuantity(float $quantity, ?string $uomName = null): string

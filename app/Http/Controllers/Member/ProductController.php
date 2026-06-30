@@ -32,11 +32,9 @@ class ProductController extends Controller
         $keyword = $request->keyword;
 
         $products = Product::query()
-            ->select('products.*', 'product_stocks.quantity as stock_quantity', 'uoms.uom_name')
-            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
-            ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id')
-            ->where('products.status', Product::$status['active'])
-            ->where('product_stocks.quantity', '>', 0)
+            ->withStorefrontStock()
+            ->storefrontAvailable()
+            ->visibleToCustomer($user)
             ->when($keyword, function ($q) use ($keyword) {
                 return $q->where(function ($query) use ($keyword) {
                     $query->where('products.name', 'LIKE', '%' . $keyword . '%')
@@ -115,19 +113,17 @@ class ProductController extends Controller
 
     public function view($id)
     {
-        $product = Product::query()
-            ->select('products.*', 'product_stocks.quantity as stock_quantity', 'uoms.uom_name')
-            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
-            ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id')
-            ->where('products.id', decrypt($id))
-            ->where('products.status', Product::$status['active'])
-            ->where('product_stocks.quantity', '>', 0)
-            ->firstOrFail();
-
         $user = Auth::guard('web')->user();
         if (!$user) {
             return redirect(route('login'))->with('error', 'Please login to continue using your account');
         }
+
+        $product = Product::query()
+            ->withStorefrontStock()
+            ->storefrontAvailable()
+            ->visibleToCustomer($user)
+            ->where('products.id', decrypt($id))
+            ->firstOrFail();
 
         $product = $this->formatProductForMember($product, $user);
         $product->product_option = Product::getOption($product->id, true);
@@ -163,8 +159,11 @@ class ProductController extends Controller
         $product->price = Product::get_today_price($product->id, $user);
         $product->image_url = Product::resolveImageUrl($product);
         $uomName = $product->uom_name ?? optional($product->uom)->uom_name;
-        $product->stock_label = Product::formatStockQuantity(
+        $product->storefront_available_amount = $product->storefrontAvailableAmount();
+        $product->stock_label = Product::formatStorefrontStockLabel(
+            $product,
             (float) $product->stock_quantity,
+            (float) ($product->stock_weight ?? 0),
             $uomName
         );
         $product->price_label = Product::formatUnitPrice((float) $product->price, $uomName);
@@ -175,10 +174,11 @@ class ProductController extends Controller
 
     public function add_to_cart_product_info(Request $request)
     {
+        $user = Auth::guard('web')->user();
         $product = Product::query()
-            ->select('products.*', 'product_stocks.quantity as stock_quantity', 'uoms.uom_name')
-            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
-            ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id')
+            ->withStorefrontStock()
+            ->storefrontAvailable()
+            ->when($user, fn ($q) => $q->visibleToCustomer($user))
             ->where('products.id', decrypt($request['id']))
             ->firstOrFail();
 

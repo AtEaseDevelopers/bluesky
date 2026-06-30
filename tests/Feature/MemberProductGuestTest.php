@@ -84,7 +84,27 @@ class MemberProductGuestTest extends TestCase
         $this->get(route('public.guest.index'))
             ->assertOk()
             ->assertSee('Chicken Breast')
-            ->assertSee('Qty: 100')          // stock_label was previously blank
-            ->assertSee('RM 50.00 / KG');     // price_label was previously blank
+            ->assertSee('Qty: 100')
+            ->assertSee('RM 50.00 / KG');
+    }
+
+    /** @test */
+    public function guest_storefront_shows_weight_product_when_only_weight_stock_exists()
+    {
+        $product = $this->makeProduct([
+            'name' => 'Weight Only Prawn',
+            'price' => 50.00,
+            'sell_in' => 'weight',
+        ]);
+
+        $product->stock()->update([
+            'quantity' => 0,
+            'weight' => 25.5,
+        ]);
+
+        $this->get(route('public.guest.index'))
+            ->assertOk()
+            ->assertSee('Weight Only Prawn')
+            ->assertSee('Weight: 25.5 kg');
     }
 }

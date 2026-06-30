@@ -19,7 +19,7 @@
                         </a>
                         <h5 class="card-title my-4">{{ $product->name }}</h5>
                         <p class="mb-3">
-                            <span class="badge {{ (float) $product->stock_quantity > 0 ? 'bg-success' : 'bg-secondary' }}">
+                            <span class="badge {{ (float) $product->storefront_available_amount > 0 ? 'bg-success' : 'bg-secondary' }}">
                                 {{ $product->stock_label }}
                             </span>
                         </p>
@@ -33,7 +33,7 @@
                                 @endif
                             </div>
                             <div class="full-width-on-mobile">
-                                @if ((float) $product->stock_quantity > 0)
+                                @if ((float) $product->storefront_available_amount > 0)
                                 <button type="button" class="btn btn-outline-primary btn-add-to-cart mb-1" data-id="{{ encrypt($product->id) }}" data-action="{{ route($portal['add_to_cart_name'], encrypt($product->id)) }}" data-bs-toggle="modal" data-bs-target="#add-to-cart">
                                     Add to cart
                                 </button>

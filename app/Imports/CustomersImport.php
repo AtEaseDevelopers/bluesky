@@ -46,7 +46,7 @@ class CustomersImport implements ToCollection
                             'name' => $row[0],
                             'sql_customer_code' => $row[1],
                             'email' => $row[2] == '' ? null : $row[2],
-                            'password' => \Hash::make($row[19]),
+                            'password' => \Hash::make($row[20]),
                             'category' => $row[3],
                             'attn_name' => $row[4],
                             'attn_contact' => $row[5],
