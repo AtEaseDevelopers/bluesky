@@ -35,7 +35,7 @@ class DemoCleanupSeeder extends Seeder
                 'status' => Product::$status['active'],
                 'show_weight' => 1,
                 'show_qty' => 0,
-                'sell_in' => 'weight',
+                'sell_in' => 'qty_bill_weight',
             ]);
 
             DB::table('product_stocks')->insert([

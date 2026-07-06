@@ -50,7 +50,7 @@ class RoleController extends Controller
             'permissions.*' => 'string',
         ]);
 
-        $validKeys = array_keys($service->portalDefinitions($data['portal']));
+        $validKeys = $service->allFlatPermissionKeys($data['portal']);
         $enabled = array_values(array_intersect($data['permissions'] ?? [], $validKeys));
 
         $role = $service->createRole($data, $enabled);
@@ -87,7 +87,7 @@ class RoleController extends Controller
             'permissions.*' => 'string',
         ]);
 
-        $validKeys = array_keys($service->definitionsForRole($role));
+        $validKeys = $service->allFlatPermissionKeys($role->portal);
         $enabled = array_values(array_intersect($data['permissions'] ?? [], $validKeys));
 
         $service->updateRole($role, $data, $enabled);

@@ -20,11 +20,7 @@ class CustomersImport implements ToCollection
         try {
             foreach ($collection as $key => $row) {
                 if ($key > 0) {
-                    do {
-                        $login_code = Helper::generateRandomString(100);
-                        $exist = User::where('login_code', $login_code)->exists();
-                    } while ($exist);
-
+                    $login_code = User::generateLoginCode();
                     // Check for duplicate email or customer code (add your own checks here)
                     if ($row[2] == '') {
                          $duplicateUser = User::where('sql_customer_code', $row[1])->first();

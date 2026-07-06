@@ -21,6 +21,7 @@ Route::namespace('Driver')->middleware(['web'])->prefix('driver')->group(
                 Route::get('/orders', 'DeliveryOrderController@index')->name('orders.index');
                 Route::get('/orders/{id}', 'DeliveryOrderController@show')->name('orders.show');
                 Route::post('/orders/{id}/status', 'DeliveryOrderController@updateStatus')->name('orders.update-status');
+                Route::post('/orders/{id}/adjust', 'DeliveryOrderController@adjustOrder')->name('orders.adjust');
                 Route::post('/orders/{id}/payment', 'DeliveryOrderController@recordPayment')->name('orders.record-payment');
                 Route::get('/orders/{id}/payment-proof', 'DeliveryOrderController@downloadProof')->name('orders.payment-proof');
             }

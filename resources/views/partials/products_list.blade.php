@@ -10,7 +10,7 @@
                     <img src="{{ $product->image_url }}" alt="{{ $product->name }}" onError="this.onerror=null;this.src='{{ asset('assets/images/product-default.jpg') }}';" class="me-3" width="120">
                     <div>
                         <h5>{{ $product->name }}</h5>
-                        <p>Sku: {{ $product->sku }}</p>
+                        <p>{{ __('orders.sku_label', ['sku' => $product->sku]) }}</p>
                         @if ($product->price < $product->original_price)
                             <p>RM {{ $product->original_price }} -> RM {{ $product->price }}</p>
                         @else
@@ -21,7 +21,7 @@
                 <div>
                     <div class="form-check">
                         <input type="checkbox" class="form-check-input products toggle-product-options" id="product_{{ $product->id }}" value="{{ $product->id }}" {{ in_array($product->id, $selected_ids) ? 'checked' : '' }}>
-                        <label class="form-check-label" for="product_{{ $product->id }}">Select</label>
+                        <label class="form-check-label" for="product_{{ $product->id }}">{{ __('orders.select') }}</label>
                     </div>
                 </div>
             </div>
@@ -52,7 +52,7 @@
                                 </div>
                             @else
                                 <select id="productOption-{{ $product->id }}-{{ $type }}" class="form-select" name="{{ $type }}" {{ $is_required ? 'required' : '' }}>
-                                    <option value="">Choose {{ $type }}...</option>
+                                    <option value="">{{ __('orders.choose_option', ['option' => $type]) }}</option>
                                     @foreach ($options as $option)
                                         <option value="{{ $option }}">{{ ucfirst($option) }}</option>
                                     @endforeach
@@ -64,7 +64,7 @@
 
                 @if ($product->sell_in == 'qty')
                     <div class="form-group mb-3">
-                        <label class="mb-2" for="productQuantity_{{ $product->id }}">Quantity</label>
+                        <label class="mb-2" for="productQuantity_{{ $product->id }}">{{ __('orders.quantity_label') }}</label>
                         <span class="text-danger"> *</span>
                         <div class="btn-group w-100" role="group">
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productQuantity_{{ $product->id }}" data-action="minus">
@@ -76,9 +76,9 @@
                             </button>
                         </div>
                     </div>
-                @elseif ($product->sell_in == 'qty_bill_weight')
+                @elseif (in_array($product->sell_in, ['qty_bill_weight', 'weight'], true))
                     <div class="form-group mb-3">
-                        <label class="mb-2" for="productQuantity_{{ $product->id }}">Quantity</label>
+                        <label class="mb-2" for="productQuantity_{{ $product->id }}">{{ __('orders.quantity_label') }}</label>
                         <span class="text-danger"> *</span>
                         <div class="btn-group w-100" role="group">
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productQuantity_{{ $product->id }}" data-action="minus">
@@ -91,14 +91,13 @@
                         </div>
                     </div>
                     <div class="form-group mb-3">
-                        <label class="mb-2" for="productWeight_{{ $product->id }}">Weight ({{ $uomLabel }})</label>
-                        <span class="text-danger"> *</span>
+                        <label class="mb-2" for="productWeight_{{ $product->id }}">{{ __('product.estimated_weight', ['uom' => $uomLabel]) }} {{ __('product.optional') }}</label>
                         @include('partials.weight_presets', ['targetId' => 'productWeight_' . $product->id, 'uomLabel' => $uomLabel, 'presets' => $product->weightPresetsList()])
                         <div class="btn-group w-100" role="group">
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productWeight_{{ $product->id }}" data-action="minus">
                                 <i class="fa fa-minus"></i>
                             </button>
-                            <input type="number" class="form-control text-center" id="productWeight_{{ $product->id }}" name="weight" value="1" min="0.001" step="0.001" required>
+                            <input type="number" class="form-control text-center" id="productWeight_{{ $product->id }}" name="weight" value="" min="0.001" step="0.001">
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productWeight_{{ $product->id }}" data-action="plus">
                                 <i class="fa fa-plus"></i>
                             </button>
@@ -106,7 +105,7 @@
                     </div>
                 @else
                     <div class="form-group mb-3">
-                        <label class="mb-2" for="productWeight_{{ $product->id }}">Order Qty ({{ $uomLabel }})</label>
+                        <label class="mb-2" for="productWeight_{{ $product->id }}">{{ __('orders.order_qty_uom', ['uom' => $uomLabel]) }}</label>
                         <span class="text-danger"> *</span>
                         @include('partials.weight_presets', ['targetId' => 'productWeight_' . $product->id, 'uomLabel' => $uomLabel, 'presets' => $product->weightPresetsList()])
                         <div class="btn-group w-100" role="group">
@@ -122,7 +121,7 @@
                 @endif
 
                 <div class="form-group mb-3">
-                    <label class="mb-2" for="productRemark_{{ $product->id }}">Remark</label>
+                    <label class="mb-2" for="productRemark_{{ $product->id }}">{{ __('orders.remark') }}</label>
                     <textarea class="form-control" id="productRemark_{{ $product->id }}" name="remark"></textarea>
                 </div>
             </div>

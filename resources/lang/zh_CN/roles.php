@@ -18,6 +18,11 @@ return [
     'permissions' => '权限',
     'allow' => '允许',
     'permission' => '权限项',
+    'capabilities' => [
+        'view' => '查看',
+        'create' => '创建',
+        'edit' => '编辑',
+    ],
 
     'type_labels' => [
         'superadmin' => '超级管理员',

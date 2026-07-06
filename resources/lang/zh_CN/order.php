@@ -3,14 +3,15 @@
 return [
     'status' => [
         'pending' => '待处理',
+        'packing' => '打包中',
         'customer_reviewing' => '客户审核中',
         'in_route' => '配送中',
         'delivered' => '已送达',
+        'completed' => '已完成',
         'cancelled' => '已取消',
         'paid_completed' => '已送达',
         'processing' => '处理中',
         'delivering' => '配送中',
-        'completed' => '已送达',
     ],
     'payment_status' => [
         'unpaid' => '未付款',
@@ -25,8 +26,9 @@ return [
     ],
     'order_type' => [
         'registered' => '注册客户',
-        'walk_in' => 'Walk-in',
+        'walk_in' => '散客',
         'public' => '公开链接订单',
+        'pos' => 'POS',
     ],
     'file' => [
         'invoice' => '发票',
@@ -42,5 +44,7 @@ return [
         'credit-term' => '账期',
         'customer-credit' => '客户信用',
         'cod' => '货到付款',
+        'in-store' => '店内付款',
+        'term' => '账期',
     ],
 ];

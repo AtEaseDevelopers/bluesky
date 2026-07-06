@@ -270,6 +270,12 @@ class StockService
             $this->deductForOrder($order, $adminId);
         }
 
+        if ($newStatus === Order::$status['completed']
+            && $previousStatus !== Order::$status['completed']
+            && $order->isPosOrder()) {
+            $this->deductForOrder($order, $adminId);
+        }
+
         if ($newStatus === Order::$status['cancelled'] && $previousStatus !== Order::$status['cancelled']) {
             $this->restoreForOrder($order, $adminId);
         }

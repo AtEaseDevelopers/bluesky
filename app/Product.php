@@ -181,7 +181,7 @@ class Product extends Model
 
     public function requiresQuantityInput(): bool
     {
-        return in_array($this->sell_in, [self::SELL_IN_QTY, self::SELL_IN_QTY_BILL_WEIGHT], true);
+        return in_array($this->sell_in, [self::SELL_IN_QTY, self::SELL_IN_QTY_BILL_WEIGHT, self::SELL_IN_WEIGHT], true);
     }
 
     public function requiresWeightInput(): bool
@@ -189,9 +189,68 @@ class Product extends Model
         return in_array($this->sell_in, [self::SELL_IN_WEIGHT, self::SELL_IN_QTY_BILL_WEIGHT], true);
     }
 
+    public static function lineNeedsQuantityInput(string $sellIn): bool
+    {
+        return in_array($sellIn, [self::SELL_IN_QTY, self::SELL_IN_QTY_BILL_WEIGHT], true);
+    }
+
+    public static function lineNeedsWeightInput(string $sellIn): bool
+    {
+        return in_array($sellIn, [self::SELL_IN_WEIGHT, self::SELL_IN_QTY_BILL_WEIGHT], true);
+    }
+
+    /**
+     * Resolve how an order line is sold (qty, weight, or both) even when product.sell_in is missing.
+     */
+    public static function resolveSellInForOrderLine($line, ?self $product = null): string
+    {
+        if ($product && $product->sell_in) {
+            return $product->sell_in;
+        }
+
+        if (!empty($line->sell_in)) {
+            return $line->sell_in;
+        }
+
+        if ($product) {
+            if ($product->show_qty && $product->show_weight) {
+                return self::SELL_IN_QTY_BILL_WEIGHT;
+            }
+            if ($product->show_qty) {
+                return self::SELL_IN_QTY;
+            }
+        }
+
+        $hasQty = $line->quantity !== null && $line->quantity !== '';
+        $hasWeight = ($line->weight ?? $line->product_weight ?? null) !== null
+            && ($line->weight ?? $line->product_weight ?? null) !== '';
+
+        if ($hasQty && $hasWeight) {
+            return self::SELL_IN_QTY_BILL_WEIGHT;
+        }
+        if ($hasQty) {
+            return self::SELL_IN_QTY;
+        }
+
+        return self::SELL_IN_WEIGHT;
+    }
+
+    public static function formatOrderLineQtyLabel($line, ?self $product = null): string
+    {
+        $sellIn = self::resolveSellInForOrderLine($line, $product);
+
+        return match ($sellIn) {
+            self::SELL_IN_QTY => (string) ($line->quantity ?? '-'),
+            self::SELL_IN_QTY_BILL_WEIGHT => trim(
+                ($line->quantity ?? '-') . ' / ' . ($line->weight ?? $line->product_weight ?? '-') . ' kg'
+            ),
+            default => ($line->weight ?? $line->product_weight ?? '-') . ' kg',
+        };
+    }
+
     public function inventoryTracksQuantity(): bool
     {
-        return in_array($this->sell_in, [self::SELL_IN_QTY, self::SELL_IN_QTY_BILL_WEIGHT], true);
+        return in_array($this->sell_in, [self::SELL_IN_QTY, self::SELL_IN_QTY_BILL_WEIGHT, self::SELL_IN_WEIGHT], true);
     }
 
     public function inventoryTracksWeight(): bool
@@ -235,28 +294,17 @@ class Product extends Model
      */
     public function resolveLineInputs(?float $quantity, ?float $weight): array
     {
-        if ($this->sell_in === self::SELL_IN_QTY_BILL_WEIGHT) {
+        if ($this->sell_in === self::SELL_IN_QTY_BILL_WEIGHT || $this->sell_in === self::SELL_IN_WEIGHT) {
             $qty = (float) $quantity;
-            $wt = (float) $weight;
+            $wt = ($weight !== null && $weight !== '') ? (float) $weight : null;
+            $billAmount = ($wt !== null && $qty > 0) ? $qty * $wt : 0;
 
             return [
                 'quantity' => $qty,
                 'weight' => $wt,
                 'product_weight' => $wt,
-                'bill_amount' => $wt,
-                'order_weight' => $wt,
-            ];
-        }
-
-        if ($this->sell_in === self::SELL_IN_WEIGHT) {
-            $wt = (float) $weight;
-
-            return [
-                'quantity' => null,
-                'weight' => $wt,
-                'product_weight' => $wt,
-                'bill_amount' => $wt,
-                'order_weight' => $wt,
+                'bill_amount' => $billAmount,
+                'order_weight' => $billAmount,
             ];
         }
 
@@ -296,10 +344,17 @@ class Product extends Model
                 'product_stocks.weight as stock_weight',
                 'uoms.uom_name'
             )
-            ->join('product_stocks', 'product_stocks.product_id', '=', 'products.id')
+            ->leftJoin('product_stocks', 'product_stocks.product_id', '=', 'products.id')
             ->leftJoin('uoms', 'uoms.id', '=', 'products.uom_id');
     }
 
+    /** Active products for customer ordering (subject to availability — stock may be zero). */
+    public function scopeStorefrontCatalog(Builder $query): Builder
+    {
+        return $query->where('products.status', self::$status['active']);
+    }
+
+    /** In-stock products only (e.g. POS counter sales). */
     public function scopeStorefrontAvailable(Builder $query): Builder
     {
         return $query
@@ -317,7 +372,7 @@ class Product extends Model
 
     /**
      * Optional catalog filter by customer category visible products.
-     * When a category has no products configured, all in-stock products are shown.
+     * When a category has no products configured, all active catalog products are shown.
      * Per-customer product_visibilities are admin metadata only — not used to hide portal items.
      */
     public function scopeVisibleToCustomer(Builder $query, User $user): Builder

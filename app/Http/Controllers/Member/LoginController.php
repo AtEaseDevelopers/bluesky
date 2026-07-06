@@ -73,14 +73,12 @@ class LoginController extends Controller
 
     public function fastLogin(Request $request, $login_code)
     {
-        try {
-            // Attempt to decrypt the data
-            $login_code = Crypt::decryptString($login_code);
-        } catch (DecryptException $e) {
+        $login_code = $this->resolveFastLoginToken($login_code);
+        if ($login_code === null) {
             return redirect()->to('/')->with(['error' => 'Invalid Login. Please contact us for more.']);
         }
 
-        $user = User::where('login_code', $login_code)->first();  
+        $user = User::where('login_code', $login_code)->first();
         if ($user) {
             if (!$user->hasCompletedRegistration()) {
                 return redirect()->to('/')->with(['error' => 'Please complete registration using your invitation link first.']);
@@ -93,6 +91,15 @@ class LoginController extends Controller
         } else {
             // Authentication failed
             return redirect()->to('/')->with(['error' => 'Account Not Found.']);
+        }
+    }
+
+    private function resolveFastLoginToken(string $token): ?string
+    {
+        try {
+            return Crypt::decryptString($token);
+        } catch (DecryptException $e) {
+            return preg_match('/^[A-Za-z0-9]+$/', $token) ? $token : null;
         }
     }
 

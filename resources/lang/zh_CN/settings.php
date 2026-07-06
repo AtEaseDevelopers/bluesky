@@ -18,6 +18,12 @@ return [
 
     'save_settings' => '保存设置',
     'updated_success' => '订单字段设置已更新。',
+
+    'do_settings' => '送货单设置',
+    'do_settings_help' => '控制送货单 PDF 是否显示单价、行小计和订单总额。',
+    'do_show_prices' => '在送货单上显示单价和小计',
+    'do_show_prices_help' => '启用后，送货单将显示单价、行小计、配送费、调整金额和总额。总重量始终显示。',
+    'do_settings_updated' => '送货单设置已更新。',
     'weight_presets_required' => '请至少输入一个重量预设值。',
     'situation_options_required' => '请至少输入一个处理方式选项。',
 ];

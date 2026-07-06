@@ -33,7 +33,7 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->withStorefrontStock()
-            ->storefrontAvailable()
+            ->storefrontCatalog()
             ->when($keyword, function ($q) use ($keyword) {
                 return $q->where(function ($query) use ($keyword) {
                     $query->where('products.name', 'LIKE', '%' . $keyword . '%')
@@ -119,7 +119,7 @@ class ProductController extends Controller
 
         $product = Product::query()
             ->withStorefrontStock()
-            ->storefrontAvailable()
+            ->storefrontCatalog()
             ->where('products.id', decrypt($id))
             ->firstOrFail();
 
@@ -174,7 +174,7 @@ class ProductController extends Controller
     {
         $product = Product::query()
             ->withStorefrontStock()
-            ->storefrontAvailable()
+            ->storefrontCatalog()
             ->where('products.id', decrypt($request['id']))
             ->firstOrFail();
 

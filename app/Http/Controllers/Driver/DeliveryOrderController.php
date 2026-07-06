@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Driver\Concerns\RecordsDriverPayments;
 use App\Order;
 use App\OrderPayment;
+use App\OrderProduct;
+use App\Product;
+use App\Services\OrderService;
 use App\Services\OrderStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -46,7 +49,7 @@ class DeliveryOrderController extends Controller
 
         $orders = $query->orderByRaw("CASE status
                 WHEN 'in_route' THEN 0 WHEN 'delivering' THEN 0
-                WHEN 'pending' THEN 1 WHEN 'customer_reviewing' THEN 1 WHEN 'processing' THEN 1
+                WHEN 'packing' THEN 1 WHEN 'pending' THEN 1 WHEN 'customer_reviewing' THEN 1 WHEN 'processing' THEN 1
                 WHEN 'delivered' THEN 2 WHEN 'completed' THEN 2
                 ELSE 4 END")
             ->orderByDesc('id')
@@ -66,10 +69,24 @@ class DeliveryOrderController extends Controller
     {
         $order = $this->findAssignedOrder($id);
 
-        $order->load(['customer', 'products', 'payments']);
+        $order->load(['customer', 'payments']);
+
+        $orderProducts = OrderProduct::query()
+            ->select('order_products.*', 'products.sell_in')
+            ->leftJoin('products', 'products.id', '=', 'order_products.product_id')
+            ->where('order_products.order_id', $order->id)
+            ->where('order_products.status', OrderProduct::$status['active'])
+            ->get();
+
+        $productsById = Product::whereIn('id', $orderProducts->pluck('product_id')->unique()->filter())
+            ->get()
+            ->keyBy('id');
 
         return view('driver.orders.show', [
             'order' => $order,
+            'orderProducts' => $orderProducts,
+            'productsById' => $productsById,
+            'canAdjustOrder' => Order::canDriverAdjustQuantities($order->status),
             'driverStatuses' => self::driverStatusLabels(),
             'paymentMethods' => self::driverPaymentMethodsFor(
                 optional($order->customer)->isCreditCustomer() ? 'credit' : 'cod'
@@ -102,6 +119,64 @@ class DeliveryOrderController extends Controller
         return back()->with('success', __('driver_portal.deliveries.status_updated', [
             'status' => self::statusLabel($data['status']),
         ]));
+    }
+
+    /**
+     * Adjust actual qty/weight on delivery (recalculates line totals and order total).
+     */
+    public function adjustOrder(Request $request, $id)
+    {
+        $order = $this->findAssignedOrder($id);
+
+        if (!Order::canDriverAdjustQuantities($order->status)) {
+            return back()->with('error', __('driver_portal.deliveries.adjust_not_allowed'));
+        }
+
+        $rules = [
+            'line_items' => 'required|array',
+        ];
+
+        $orderProducts = OrderProduct::query()
+            ->select('order_products.id', 'order_products.product_id')
+            ->where('order_products.order_id', $order->id)
+            ->whereIn('order_products.id', array_keys($request->input('line_items', [])))
+            ->get()
+            ->keyBy('id');
+
+        foreach ($request->input('line_items', []) as $lineId => $item) {
+            $orderProduct = $orderProducts->get((int) $lineId);
+            if (!$orderProduct) {
+                continue;
+            }
+
+            $product = Product::find($orderProduct->product_id);
+            if (!$product) {
+                continue;
+            }
+
+            $sellIn = Product::resolveSellInForOrderLine($orderProduct, $product);
+
+            if (Product::lineNeedsQuantityInput($sellIn)) {
+                $rules['line_items.' . $lineId . '.quantity'] = 'required|numeric|min:0.001';
+            } else {
+                $rules['line_items.' . $lineId . '.quantity'] = 'nullable';
+            }
+
+            if (Product::lineNeedsWeightInput($sellIn)) {
+                $rules['line_items.' . $lineId . '.weight'] = 'required|numeric|min:0.001';
+            } else {
+                $rules['line_items.' . $lineId . '.weight'] = 'nullable|numeric|min:0';
+            }
+        }
+
+        $request->validate($rules);
+
+        app(OrderService::class)->applyDriverAdjustments(
+            $order,
+            $request->input('line_items', [])
+        );
+
+        return back()->with('success', __('driver_portal.deliveries.adjust_saved'));
     }
 
     /**
@@ -154,7 +229,7 @@ class DeliveryOrderController extends Controller
     public static function statusesForFilter(string $filter): array
     {
         return match ($filter) {
-            'processing' => ['pending', 'customer_reviewing', 'processing'],
+            'processing' => ['pending', 'packing', 'customer_reviewing', 'processing'],
             'in_route', 'delivering' => ['in_route', 'delivering'],
             'delivered', 'completed' => ['delivered', 'completed'],
             default => [],

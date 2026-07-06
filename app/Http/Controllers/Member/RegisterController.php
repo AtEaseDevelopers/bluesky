@@ -50,9 +50,7 @@ class RegisterController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        do {
-            $loginCode = \App\Helper::generateRandomString(100);
-        } while (User::where('login_code', $loginCode)->exists());
+        $loginCode = User::generateLoginCode();
 
         $customer->update([
             'name' => $data['name'],

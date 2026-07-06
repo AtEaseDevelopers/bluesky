@@ -9,8 +9,14 @@ return [
     ],
     'payment_method' => [
         'cod' => '货到付款',
-        'term' => '账期付款',
+        'term' => '账期',
+        'in-store' => '店内付款',
         'bank-transfer' => '银行转账',
         'e-wallet' => '电子钱包',
+    ],
+    'profile' => [
+        'email_address' => '电子邮箱',
+        'attn' => '联系人',
+        'confirm_password' => '确认密码',
     ],
 ];

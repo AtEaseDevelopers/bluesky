@@ -38,9 +38,7 @@ class CustomerInviteController extends Controller
             'remark' => 'nullable|string|max:500',
         ]);
 
-        do {
-            $loginCode = Helper::generateRandomString(100);
-        } while (User::where('login_code', $loginCode)->exists());
+        $loginCode = User::generateLoginCode();
 
         do {
             $placeholderName = 'Invite-' . strtoupper(Str::random(8));

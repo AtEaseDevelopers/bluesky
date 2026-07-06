@@ -43,7 +43,8 @@ class AddOrderController extends Controller
                 'customers_list' => User::all(),
                 'areaList' => Helper::areaList(),
                 'drivers' => Driver::optionsForSelect(),
-                'deliverySlots' => DeliverySlot::availableSlots(),
+                'deliveryDates' => DeliverySlot::availableDates(),
+                'deliverySlotsUrl' => route('admin.delivery-slots.for-date'),
             ]
         );
     }
@@ -68,6 +69,16 @@ class AddOrderController extends Controller
             $data['customer_id'] = null;
         } else {
             $user = User::find($data['customer_id']);
+        }
+
+        $allowedPaymentMethods = $isWalkIn
+            ? User::walkInOrderPaymentMethodKeys()
+            : User::adminOrderPaymentMethodKeys($user);
+
+        if ($request->filled('payment_method') && !in_array($request->input('payment_method'), $allowedPaymentMethods, true)) {
+            return redirect()->back()->withInput()->withErrors([
+                'payment_method' => __('orders.invalid_payment_method'),
+            ]);
         }
 
         $total = 0;
@@ -101,11 +112,11 @@ class AddOrderController extends Controller
             "is_estimated" => true,
         ];
 
-        if ($request->filled('delivery_slot_id')) {
+        if ($request->filled('delivery_slot_id') && $request->filled('delivery_date')) {
             $slot = DeliverySlot::find($request->input('delivery_slot_id'));
-            if ($slot) {
+            if ($slot && $slot->isAvailableForDate($request->input('delivery_date'))) {
                 $orderData['delivery_slot_id'] = $slot->id;
-                $orderData['delivery_date'] = $slot->slot_date;
+                $orderData['delivery_date'] = $request->input('delivery_date');
                 $orderData['delivery_time_slot'] = $slot->time_label;
             }
         }
@@ -137,12 +148,11 @@ class AddOrderController extends Controller
         foreach ($data['product_id'] as $key => $product_id) {
             $product = Product::find($product_id);
 
-            if ($product->sell_in === Product::SELL_IN_WEIGHT) {
-                $line = $product->resolveLineInputs(null, (float) ($data['quantity'][$key] ?? 0));
-            } elseif ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT) {
+            if (in_array($product->sell_in, [Product::SELL_IN_WEIGHT, Product::SELL_IN_QTY_BILL_WEIGHT], true)) {
+                $rawWeight = $data['weight'][$key] ?? null;
                 $line = $product->resolveLineInputs(
                     (float) ($data['quantity'][$key] ?? 0),
-                    (float) ($data['weight'][$key] ?? 0)
+                    ($rawWeight !== null && $rawWeight !== '') ? (float) $rawWeight : null
                 );
             } else {
                 $line = $product->resolveLineInputs((float) ($data['quantity'][$key] ?? 0), null);
@@ -198,7 +208,7 @@ class AddOrderController extends Controller
             app(CreditService::class)->applyAvailableCredit($order->fresh());
         }
 
-        return redirect(route('admin.orders.summary', $order->id))->with('success', "Order has been created!");
+        return redirect(route('admin.orders.summary', $order->id))->with('success', __('orders.created_success'));
     }
 
     public function validateAddOrder(Request $request)
@@ -246,12 +256,16 @@ class AddOrderController extends Controller
     public function getCustomerData(Request $request)
     {
         $customer = User::find($request['id']);
-        return response()->json(
-            [
-                'success' => true,
-                'customer' => $customer
-            ]
-        );
+
+        if (!$customer) {
+            return response()->json(['success' => false], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'customer' => $customer,
+            'order_payment_methods' => User::adminOrderPaymentMethodLabels($customer),
+        ]);
     }
 
     public function getProducts(Request $request, $id)

@@ -18,6 +18,12 @@ return [
 
     'save_settings' => 'Save Settings',
     'updated_success' => 'Order field settings updated.',
+
+    'do_settings' => 'Delivery Order Settings',
+    'do_settings_help' => 'Control whether unit prices, line subtotals, and order total appear on delivery order PDFs.',
+    'do_show_prices' => 'Show unit price and subtotal on delivery orders',
+    'do_show_prices_help' => 'When enabled, delivery orders include unit price, line subtotal, delivery fee, adjustment, and total amount. Total weight is always shown.',
+    'do_settings_updated' => 'Delivery order settings updated.',
     'weight_presets_required' => 'Enter at least one weight preset.',
     'situation_options_required' => 'Enter at least one situation option.',
 ];

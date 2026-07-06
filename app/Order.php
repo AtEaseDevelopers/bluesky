@@ -77,9 +77,11 @@ class Order extends Model
 
     public static $status = [
         'pending' => 'pending',
+        'packing' => 'packing',
         'customer_reviewing' => 'customer_reviewing',
         'in_route' => 'in_route',
         'delivered' => 'delivered',
+        'completed' => 'completed',
         'cancelled' => 'cancelled',
     ];
 
@@ -95,7 +97,22 @@ class Order extends Model
         'registered' => 'registered',
         'walk_in' => 'walk_in',
         'public' => 'public',
+        'pos' => 'pos',
     ];
+
+    public function isPosOrder(): bool
+    {
+        return $this->order_type === self::$order_types['pos'];
+    }
+
+    public function isFulfilled(): bool
+    {
+        if ($this->isPosOrder()) {
+            return $this->status === self::$status['completed'];
+        }
+
+        return $this->status === self::$status['delivered'];
+    }
 
     public static $fulfillment_types = [
         'delivery' => 'delivery',
@@ -220,6 +237,14 @@ class Order extends Model
             return false;
         }
 
+        if ($this->isPosOrder()) {
+            return in_array($this->status, [
+                self::$status['pending'],
+                self::$status['packing'],
+                self::$status['completed'],
+            ], true);
+        }
+
         if ($this->isCodCustomer()) {
             return in_array($this->status, [
                 self::$status['in_route'],
@@ -228,6 +253,7 @@ class Order extends Model
         }
 
         return in_array($this->status, [
+            self::$status['packing'],
             self::$status['customer_reviewing'],
             self::$status['in_route'],
             self::$status['delivered'],
@@ -289,6 +315,7 @@ class Order extends Model
         }
 
         return in_array($this->status, [
+            self::$status['packing'],
             self::$status['customer_reviewing'],
             self::$status['in_route'],
             self::$status['delivered'],
@@ -303,10 +330,21 @@ class Order extends Model
         ], true);
     }
 
+    public static function canDriverAdjustQuantities(string $status): bool
+    {
+        return in_array($status, [
+            self::$status['in_route'],
+            self::$status['delivered'],
+            'delivering',
+            'completed',
+        ], true);
+    }
+
     public static function canEditDeliveryFee(string $status): bool
     {
         return in_array($status, [
             self::$status['pending'],
+            self::$status['packing'],
             self::$status['customer_reviewing'],
             self::$status['in_route'],
         ], true);

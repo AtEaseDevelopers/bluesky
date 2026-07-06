@@ -27,13 +27,13 @@ class AddToCartController extends Controller
     {
         $product = Product::query()
             ->withStorefrontStock()
-            ->storefrontAvailable()
+            ->storefrontCatalog()
             ->where('products.id', decrypt($id))
             ->firstOrFail();
 
         $user = Auth::guard('web')->user();
 
-        $data = $this->validateAddToCart($request, $product);
+        $data = $this->validateAddToCart($request, $product, false);
         if (isset($data['error']) && $data['error']) {
             return back()->withInput()->withErrors($data['field_err']);
         }

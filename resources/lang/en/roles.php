@@ -18,6 +18,11 @@ return [
     'permissions' => 'Permissions',
     'allow' => 'Allow',
     'permission' => 'Permission',
+    'capabilities' => [
+        'view' => 'View',
+        'create' => 'Create',
+        'edit' => 'Edit',
+    ],
 
     'type_labels' => [
         'superadmin' => 'Superadmin',

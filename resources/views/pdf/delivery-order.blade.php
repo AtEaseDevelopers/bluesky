@@ -93,42 +93,7 @@
         </tr>
     </table>
     <!-- Items -->
-    @php
-        $total_weight = 0;
-    @endphp
-    <table style="width: 100%; font-family: sans-serif; border-collapse: collapse; margin: 10px 0 0 0;">
-        <tr>
-            <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; padding: 5px 0 5px 0; width: 10%;">NO.</td>
-            <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; width: 30%; text-align: left;">DESCRIPTION</td>
-            <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; width: 10%; text-align: left;">QTY</td>
-            <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; width: 30%; text-align: left;">REMARK</td>
-            <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; width: 30%; text-align: center;">WEIGHT</td>
-        </tr>
-        @foreach ($order_items as $key => $prod)
-            <tr>
-                <td style="font-size: 14px; text-align: left; padding: 5px 0;">{{ $key + 1 }}</td>
-                <td style="font-size: 14px; text-align: left;">{{ $prod->name }}</td>
-                <td style="font-size: 14px; text-align: left;">{{ $prod->quantity ?? '' }}</td>
-                <td style="font-size: 14px; text-align: left;">{{ $prod->remark }}</td>
-                <td style="font-size: 14px; text-align: center;">{{ $prod->show_weight == true ? (\App\OrderProduct::displayWeight($prod) ?? '') : '' }}</td>
-            </tr>
-            @php
-                if ($prod->show_weight == true) {
-                    $lineWeight = \App\OrderProduct::reportWeightValue($prod);
-                    if ($lineWeight !== null) {
-                        $total_weight = ($total_weight ?? 0) + $lineWeight;
-                    }
-                }
-            @endphp
-        @endforeach
-    </table>
-    <!-- Footer -->
-    <table style="width: 100%; font-family: sans-serif; border-collapse: collapse; margin: 50px 0 0 0;">
-        <tr>
-            <td style="border-top: solid 1px black; border-bottom: solid 1px black;" colspan="2"></td>
-            <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; text-align: right; padding: 5px 0 5px 0;">Total Weight : {{ $total_weight }} KG</td>
-        </tr>
-    </table>
+    @include('pdf.partials.delivery-order-lines')
     <!-- Footer -->
     <table style="width: 100%; font-family: sans-serif; border-collapse: collapse; margin: 30px 0 0 0;">
         <tr style="margin: 0 0 50px 0;">

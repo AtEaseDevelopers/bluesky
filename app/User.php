@@ -47,6 +47,8 @@ class User extends Authenticatable
         'invoice_price_permission',
         'default_driver_id',
         'sql_customer_code',
+        'ssm',
+        'tin_no',
         'autocount_sync_status',
         'autocount_synced_at',
         'fax_no',
@@ -91,11 +93,14 @@ class User extends Authenticatable
         'payment_method' => ['required', 'array'],
         'remark' => ['nullable', 'string', 'max:500'],
         'fax_no' => ['nullable', 'string', 'max:20'],
+        'ssm' => ['nullable', 'string', 'max:50'],
+        'tin_no' => ['nullable', 'string', 'max:50'],
     ];
 
     public static $payment_method = [
         'cod' => 'cod',
         'term' => 'term',
+        'in-store' => 'in-store',
         'bank-transfer' => 'bank-transfer',
         'e-wallet' => 'e-wallet',
     ];
@@ -114,6 +119,34 @@ class User extends Authenticatable
     public function isCodCustomer(): bool
     {
         return !$this->isCreditCustomer();
+    }
+
+    /** Payment methods available when admin creates an order for a registered customer. */
+    public static function adminOrderPaymentMethodKeys(User $customer): array
+    {
+        return [
+            $customer->isCreditCustomer() ? 'term' : 'cod',
+            'in-store',
+        ];
+    }
+
+    public static function walkInOrderPaymentMethodKeys(): array
+    {
+        return ['cod', 'in-store'];
+    }
+
+    public static function adminOrderPaymentMethodLabels(?User $customer): array
+    {
+        $keys = $customer
+            ? self::adminOrderPaymentMethodKeys($customer)
+            : self::walkInOrderPaymentMethodKeys();
+
+        $labels = [];
+        foreach ($keys as $key) {
+            $labels[$key] = __('user.payment_method.' . $key);
+        }
+
+        return $labels;
     }
 
     public static function paymentTermOptions(): array
@@ -252,5 +285,21 @@ class User extends Authenticatable
 
         $this->drivers()->sync($driverIds);
         $this->update(['default_driver_id' => $driverIds[0] ?? null]);
+    }
+
+    public const LOGIN_CODE_LENGTH = 10;
+
+    public static function generateLoginCode(): string
+    {
+        do {
+            $code = Helper::generateRandomString(self::LOGIN_CODE_LENGTH);
+        } while (self::where('login_code', $code)->exists());
+
+        return $code;
+    }
+
+    public function fastLoginUrl(): string
+    {
+        return url('fast-login/' . $this->login_code);
     }
 }

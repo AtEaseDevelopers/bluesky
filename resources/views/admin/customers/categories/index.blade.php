@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'All Customer Categories')
+@section('title', __('customers.categories.list'))
 @section('css')
 
     <link href="{{ asset('assets/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" type="text/css">
@@ -12,9 +12,9 @@
             <div class="card shadow no-border">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-                        <h5 class="card-title">All Customer Categories</h5>
+                        <h5 class="card-title">{{ __('customers.categories.list') }}</h5>
                         <a href="{{ route('admin.customer-categories.create') }}" class="btn btn-primary">
-                            Add New Category
+                            {{ __('customers.categories.add') }}
                         </a>
                     </div>
                     <hr>
@@ -22,10 +22,10 @@
                         <table id="uom-table" class="table table-bordered w-100">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Options</th>
-                                    <th>Category</th>
-                                    <th>Created At</th>
+                                    <th>{{ __('uom.id') }}</th>
+                                    <th>{{ __('uom.options') }}</th>
+                                    <th>{{ __('product.category') }}</th>
+                                    <th>{{ __('uom.created_at') }}</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -40,19 +40,19 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Delete Category</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">{{ __('customers.categories.delete') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure to delete this category?</p>
+                    <p>{{ __('customers.categories.delete_confirm') }}</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}">{{ __('ui.close') }}</button>
                     <form action="" method="POST" id="delete-form" class="form-wrapper">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-primary">
-                            Delete
+                            {{ __('ui.delete') }}
                             <div class="spinner-border spinner-border-sm d-none" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>

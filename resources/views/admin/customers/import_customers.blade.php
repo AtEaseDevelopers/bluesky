@@ -56,7 +56,7 @@
                     </div>
                     <ul>
                         <li>Customer Name <small class="text-danger">(required)</small></li>
-                        <li>SQL Customer Code</li>
+                        <li>{{ __('customers.customer_code') }}</li>
                         <li>Customer Email</li>
                         <li>Category</li>
                         <li>Attn. Name</li>

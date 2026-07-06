@@ -1,12 +1,107 @@
 <?php
 
 return [
-    'status' => [
-        'active' => "Published / Active",
-        'inactive' => "Unlisted / Inactive",
-        'removed' => "Removed",
+    'manage' => 'Manage Products',
+    'add' => 'Add New Product',
+    'edit' => 'Edit Product',
+    'filter' => 'Filter Products',
+    'list' => 'Products',
+    'set_daily_price' => 'Set Daily Price',
+    'export_excel' => 'Export to Excel',
+
+    'select_uom' => 'Select UOM',
+    'select_category' => 'Select Category',
+    'sku' => 'SKU',
+    'name' => 'Name',
+    'status_label' => 'Status',
+    'price_range' => 'Price Range',
+    'min' => 'Min',
+    'max' => 'Max',
+
+    'option' => 'Option',
+    'image' => 'Image',
+    'category' => 'Category',
+    'uom' => 'UOM',
+    'description' => 'Description',
+    'price' => 'Price',
+    'weight' => 'Weight',
+    'weight_in_kg' => '(in KG)',
+    'kg_unit' => 'KG',
+    'last_updated_at' => 'Last Updated At',
+    'added_at' => 'Added At',
+    'remove' => 'Remove',
+
+    'product_image' => 'Product Image',
+    'product_name' => 'Product Name',
+    'product_description' => 'Product Description',
+    'default_price' => 'Default Price (RM)',
+    'remark' => 'Remark',
+    'sell_in' => 'Sell In',
+    'sell_in_qty' => 'Quantity',
+    'sell_in_weight' => 'Weight',
+    'sell_in_qty_bill_weight' => 'Quantity (bill by weight)',
+    'estimated_weight' => 'Estimated Weight (:uom)',
+    'weight_presets' => 'Weight Presets',
+    'category_pricing' => 'Category Pricing',
+    'category_pricing_help' => 'Optional price overrides per customer category. Daily prices take priority on order day.',
+    'customer_category' => 'Customer Category',
+    'price_per_uom' => 'Price (RM per UOM)',
+    'no' => 'No',
+    'product_options' => 'Product Options',
+    'add_option' => 'Add Option',
+    'add_option_type' => 'Add Option Type',
+    'option_name' => 'Options Name',
+    'mandatory_option' => 'Is Mandatory Option',
+    'option_items' => 'Options Items (Selection)',
+    'optional' => '(Optional)',
+
+    'placeholder' => [
+        'sku' => 'SKU',
+        'name' => 'Name',
+        'product_name' => 'Enter product name',
+        'product_description' => 'Enter product description',
+        'product_sku' => 'Enter product SKU',
+        'default_price' => 'Enter default price per UOM',
+        'product_weight' => 'Enter product weight',
+        'remark' => 'Enter remark',
+        'category_price' => 'Leave empty for default price',
+        'option_name' => 'Enter option name',
+        'option_items' => 'Enter option items, separate with comma(,)',
     ],
+
+    'help' => [
+        'default_price' => 'Price per unit of measure. Used when no category or daily price is set.',
+        'weight_presets' => 'Comma or line-separated values shown as quick-select buttons when customers order by weight (e.g. 1, 1.5, 2).',
+    ],
+
+    'categories' => [
+        'list' => 'All Product Categories',
+        'add' => 'Add New Category',
+        'edit' => 'Edit Category',
+        'category_name' => 'Category Name',
+        'total_products' => 'Total Products',
+        'delete' => 'Delete Category',
+        'delete_confirm' => 'Are you sure to delete this category?',
+        'placeholder' => [
+            'category_name' => 'Enter category name',
+        ],
+    ],
+
+    'status' => [
+        'active' => 'Published / Active',
+        'inactive' => 'Unlisted / Inactive',
+        'removed' => 'Removed',
+    ],
+
     'form' => [
-        'select-default' => "Please Select",
+        'select-default' => 'Please Select',
+    ],
+
+    'js' => [
+        'remove_title' => 'Are you sure?',
+        'remove_text' => 'You won\'t be able to revert this!',
+        'remove_confirm' => 'Yes, remove it!',
+        'name_required' => 'Name is required!',
+        'option_items_required' => 'Option Items (Selection) is required!',
     ],
 ];

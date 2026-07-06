@@ -9,38 +9,116 @@ return [
             'permissions' => [
                 'dashboard' => [
                     'label' => 'Dashboard',
-                    'description' => 'View the admin dashboard and profile.',
-                    'default' => true,
+                    'description' => 'Admin dashboard and profile.',
+                    'capabilities' => [
+                        'view' => [
+                            'label' => 'View',
+                            'description' => 'Open the dashboard and profile pages.',
+                        ],
+                    ],
+                    'default' => ['view' => true],
                 ],
                 'customers' => [
                     'label' => 'Customers',
-                    'description' => 'Manage, invite, and edit customer accounts.',
-                    'default' => true,
+                    'description' => 'Customer accounts, invitations, and POS walk-in orders.',
+                    'capabilities' => [
+                        'view' => [
+                            'label' => 'View',
+                            'description' => 'List and open customer records.',
+                        ],
+                        'create' => [
+                            'label' => 'Create',
+                            'description' => 'Add customers, send invites, and use POS for new orders.',
+                        ],
+                        'edit' => [
+                            'label' => 'Edit',
+                            'description' => 'Update customer details, credit, and login links.',
+                        ],
+                    ],
+                    'default' => ['view' => true, 'create' => true, 'edit' => true],
                 ],
                 'orders' => [
                     'label' => 'Orders',
-                    'description' => 'Manage orders, delivery slots, payments, and PDFs.',
-                    'default' => true,
+                    'description' => 'Orders, delivery slots, payments, and PDF documents.',
+                    'capabilities' => [
+                        'view' => [
+                            'label' => 'View',
+                            'description' => 'List orders, view summaries, invoices, and delivery orders.',
+                        ],
+                        'create' => [
+                            'label' => 'Create',
+                            'description' => 'Add new orders from the admin portal.',
+                        ],
+                        'edit' => [
+                            'label' => 'Edit',
+                            'description' => 'Adjust orders, change status, record payments, and manage delivery slots.',
+                        ],
+                    ],
+                    'default' => ['view' => true, 'create' => true, 'edit' => true],
                 ],
                 'products' => [
                     'label' => 'Inventory / Products',
-                    'description' => 'Stock balance, stock in/out, and movement logs.',
-                    'default' => true,
+                    'description' => 'Products, stock balance, stock movements, and daily prices.',
+                    'capabilities' => [
+                        'view' => [
+                            'label' => 'View',
+                            'description' => 'View products, stock balances, and movement logs.',
+                        ],
+                        'create' => [
+                            'label' => 'Create',
+                            'description' => 'Add products and import product data.',
+                        ],
+                        'edit' => [
+                            'label' => 'Edit',
+                            'description' => 'Edit products, stock in/out, prices, and categories.',
+                        ],
+                    ],
+                    'default' => ['view' => true, 'create' => true, 'edit' => true],
                 ],
                 'reports' => [
                     'label' => 'Reports',
                     'description' => 'Daily sales and delivery order reports.',
-                    'default' => true,
+                    'capabilities' => [
+                        'view' => [
+                            'label' => 'View',
+                            'description' => 'Open and export reports.',
+                        ],
+                    ],
+                    'default' => ['view' => true],
                 ],
                 'drivers' => [
                     'label' => 'Drivers / Vehicles',
-                    'description' => 'Manage drivers and vehicle registry.',
-                    'default' => true,
+                    'description' => 'Drivers, vehicles, and lorry registry.',
+                    'capabilities' => [
+                        'view' => [
+                            'label' => 'View',
+                            'description' => 'List drivers and vehicles.',
+                        ],
+                        'create' => [
+                            'label' => 'Create',
+                            'description' => 'Add drivers and vehicles.',
+                        ],
+                        'edit' => [
+                            'label' => 'Edit',
+                            'description' => 'Update driver and vehicle records.',
+                        ],
+                    ],
+                    'default' => ['view' => true, 'create' => true, 'edit' => true],
                 ],
                 'settings' => [
                     'label' => 'System Settings',
-                    'description' => 'Areas, UOM, and order field settings.',
-                    'default' => false,
+                    'description' => 'Areas, UOM, categories, and document settings.',
+                    'capabilities' => [
+                        'view' => [
+                            'label' => 'View',
+                            'description' => 'Open settings pages.',
+                        ],
+                        'edit' => [
+                            'label' => 'Edit',
+                            'description' => 'Change areas, UOM, categories, and delivery order settings.',
+                        ],
+                    ],
+                    'default' => ['view' => false, 'edit' => false],
                 ],
             ],
         ],
@@ -146,6 +224,16 @@ return [
                     'description' => 'View uploaded payment proof files.',
                     'default' => true,
                 ],
+                'adjust_order' => [
+                    'label' => 'Adjust Order',
+                    'description' => 'Update actual qty/weight during delivery when totals change.',
+                    'default' => true,
+                ],
+                'make_payment' => [
+                    'label' => 'Make Payment',
+                    'description' => 'Show payment gateway button for customer to pay (online).',
+                    'default' => true,
+                ],
             ],
         ],
     ],
@@ -154,6 +242,7 @@ return [
         'member.products' => 'products',
         'member.products.show' => 'products',
         'member.add-to-cart' => 'products',
+        'member.add-to-cart-product-info' => 'products',
         'member.cart' => 'cart',
         'member.checkout' => 'checkout',
         'member.orders' => 'orders',
@@ -193,6 +282,7 @@ return [
         'driver.orders.index' => 'delivery_orders',
         'driver.orders.show' => 'order_detail',
         'driver.orders.update-status' => 'update_status',
+        'driver.orders.adjust' => 'adjust_order',
         'driver.orders.record-payment' => 'record_payment',
         'driver.orders.payment-proof' => 'payment_proof',
     ],

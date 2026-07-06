@@ -26,8 +26,10 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ route('admin.customers') }}">{{ __('ui.nav.manage_customers') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.customers.invite') }}">{{ __('ui.nav.invite_customer') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.customers.create') }}">{{ __('ui.nav.add_customer') }}</a></li>
+                            @if ($user->canModule('customers', 'create'))
+                                <li><a class="dropdown-item" href="{{ route('admin.customers.invite') }}">{{ __('ui.nav.invite_customer') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.customers.create') }}">{{ __('ui.nav.add_customer') }}</a></li>
+                            @endif
                         </ul>
                     </li>
                 @endif
@@ -39,8 +41,12 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ route('admin.orders') }}">{{ __('ui.nav.manage_orders') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.orders.create') }}">{{ __('ui.nav.add_order') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.delivery-slots.index') }}">{{ __('ui.nav.delivery_slots') }}</a></li>
+                            @if ($user->canModule('orders', 'create'))
+                                <li><a class="dropdown-item" href="{{ route('admin.orders.create') }}">{{ __('ui.nav.add_order') }}</a></li>
+                            @endif
+                            @if ($user->canModule('orders', 'edit'))
+                                <li><a class="dropdown-item" href="{{ route('admin.delivery-slots.index') }}">{{ __('ui.nav.delivery_slots') }}</a></li>
+                            @endif
                         </ul>
                     </li>
                 @endif
@@ -52,7 +58,9 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ route('admin.products') }}">{{ __('ui.nav.manage_products') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.products.create') }}">{{ __('ui.nav.add_product') }}</a></li>
+                            @if ($user->canModule('products', 'create'))
+                                <li><a class="dropdown-item" href="{{ route('admin.products.create') }}">{{ __('ui.nav.add_product') }}</a></li>
+                            @endif
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
@@ -62,8 +70,10 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{{ route('admin.inventory.index') }}">{{ __('ui.nav.stock_balance') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.inventory.stock-in.create') }}">{{ __('ui.nav.stock_in') }}</a></li>
-                            <li><a class="dropdown-item" href="{{ route('admin.inventory.stock-out.create') }}">{{ __('ui.nav.stock_out') }}</a></li>
+                            @if ($user->canModule('products', 'edit'))
+                                <li><a class="dropdown-item" href="{{ route('admin.inventory.stock-in.create') }}">{{ __('ui.nav.stock_in') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.inventory.stock-out.create') }}">{{ __('ui.nav.stock_out') }}</a></li>
+                            @endif
                             <li><a class="dropdown-item" href="{{ route('admin.inventory.movements') }}">{{ __('ui.nav.movement_log') }}</a></li>
                         </ul>
                     </li>
@@ -107,6 +117,7 @@
                             <li><a class="dropdown-item" href="{{ route('admin.uom.index') }}">{{ __('ui.nav.uom') }}</a></li>
                             <li><a class="dropdown-item" href="{{ route('admin.product-categories.index') }}">{{ __('ui.nav.product_categories') }}</a></li>
                             <li><a class="dropdown-item" href="{{ route('admin.customer-categories.index') }}">{{ __('ui.nav.customer_categories') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.settings.delivery-order') }}">{{ __('ui.nav.delivery_order_settings') }}</a></li>
                         </ul>
                     </li>
                 @endif

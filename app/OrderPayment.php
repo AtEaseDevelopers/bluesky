@@ -32,6 +32,7 @@ class OrderPayment extends Model
         'credit-term' => 'Credit Term',
         'customer-credit' => 'Customer Credit',
         'cod' => 'COD',
+        'in-store' => 'In-Store Payment',
     ];
 
     /** Admin-recorded payments at delivery / collection (COD customers). */
@@ -40,6 +41,7 @@ class OrderPayment extends Model
         'qr' => 'QR',
         'bank-transfer' => 'Bank Transfer',
         'cod' => 'COD',
+        'in-store' => 'In-Store Payment',
     ];
 
     /** Admin-recorded payments (credit customers — may pay after delivery). */
@@ -50,6 +52,7 @@ class OrderPayment extends Model
         'payment-gateway' => 'Payment Gateway',
         'credit-term' => 'Credit Term',
         'cash' => 'Cash',
+        'in-store' => 'In-Store Payment',
     ];
 
     /** Customer-uploaded proof at delivery (COD). */

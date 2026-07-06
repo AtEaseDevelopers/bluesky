@@ -138,8 +138,6 @@
                                         <option value="cod" {{ old('customer_type', $customer->customer_type ?? 'cod') === 'cod' ? 'selected' : '' }}>{{ __('customers.customer_type_cod') }}</option>
                                         <option value="credit" {{ old('customer_type', $customer->customer_type ?? 'cod') === 'credit' ? 'selected' : '' }}>{{ __('customers.customer_type_credit') }}</option>
                                     </select>
-                                    <small class="text-muted d-block">{{ __('customers.customer_type_cod_help') }}</small>
-                                    <small class="text-muted d-block">{{ __('customers.customer_type_credit_help') }}</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -150,9 +148,10 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="sql_customer_code">Customer Code
+                                    <label class="mb-2" for="sql_customer_code">
+                                        {{ __('customers.customer_code') }}
                                         <span data-bs-toggle="tooltip" data-bs-placement="right"
-                                            title="Optional ** Used for accounting integration purposes"
+                                            title="{{ __('customers.customer_code_tooltip') }}"
                                             style="cursor: pointer;">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
                                                 fill="currentColor" class="bi bi-info-circle text-muted mb-1"
@@ -164,8 +163,36 @@
                                             </svg>
                                         </span>
                                     </label>
-                                    <input type="text" class="form-control @error('sql_customer_code') is-invalid @enderror" name="sql_customer_code" id="sql_customer_code" value="{{ old('sql_customer_code') ?: $customer->sql_customer_code }}" placeholder="Enter SQL customer code">
+                                    <input type="text" class="form-control @error('sql_customer_code') is-invalid @enderror" name="sql_customer_code" id="sql_customer_code" value="{{ old('sql_customer_code') ?: $customer->sql_customer_code }}" placeholder="{{ __('customers.enter_customer_code') }}">
                                     @error('sql_customer_code')
+                                        <span class="text-danger" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label class="mb-2" for="ssm">{{ __('customers.ssm') }}</label>
+                                    <input type="text" class="form-control @error('ssm') is-invalid @enderror"
+                                        name="ssm" id="ssm" value="{{ old('ssm') ?: $customer->ssm }}"
+                                        placeholder="{{ __('customers.enter_ssm') }}">
+                                    @error('ssm')
+                                        <span class="text-danger" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label class="mb-2" for="tin_no">{{ __('customers.tin_no') }}</label>
+                                    <input type="text" class="form-control @error('tin_no') is-invalid @enderror"
+                                        name="tin_no" id="tin_no" value="{{ old('tin_no') ?: $customer->tin_no }}"
+                                        placeholder="{{ __('customers.enter_tin_no') }}">
+                                    @error('tin_no')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $message }}</strong>
                                         </span>

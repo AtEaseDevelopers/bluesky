@@ -85,6 +85,17 @@ class EditOrderController extends Controller
         }
 
         $user = User::find($order->user_id);
+
+        $allowedPaymentMethods = $user
+            ? User::adminOrderPaymentMethodKeys($user)
+            : User::walkInOrderPaymentMethodKeys();
+
+        if ($request->filled('payment_method') && !in_array($request->input('payment_method'), $allowedPaymentMethods, true)) {
+            return redirect()->back()->withInput()->withErrors([
+                'payment_method' => __('orders.invalid_payment_method'),
+            ]);
+        }
+
         $total = 0;
         $order->update(
             [
@@ -135,12 +146,11 @@ class EditOrderController extends Controller
         foreach ($data['product_id'] as $key => $product_id) {
             $product = Product::find($product_id);
 
-            if ($product->sell_in === Product::SELL_IN_WEIGHT) {
-                $line = $product->resolveLineInputs(null, (float) ($data['weight'][$key] ?? 0));
-            } elseif ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT) {
+            if (in_array($product->sell_in, [Product::SELL_IN_WEIGHT, Product::SELL_IN_QTY_BILL_WEIGHT], true)) {
+                $rawWeight = $data['weight'][$key] ?? null;
                 $line = $product->resolveLineInputs(
                     (float) ($data['quantity'][$key] ?? 0),
-                    (float) ($data['weight'][$key] ?? 0)
+                    ($rawWeight !== null && $rawWeight !== '') ? (float) $rawWeight : null
                 );
             } else {
                 $line = $product->resolveLineInputs((float) ($data['quantity'][$key] ?? 0), null);
@@ -184,7 +194,7 @@ class EditOrderController extends Controller
             ]
         )->save();
 
-        return redirect(route('admin.orders.summary', $order->id))->with('success', "Order has been edited!");
+        return redirect(route('admin.orders.summary', $order->id))->with('success', __('orders.edited_success'));
 
     }
 

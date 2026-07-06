@@ -3,16 +3,17 @@
 return [
     'status' => [
         'pending' => 'Pending',
+        'packing' => 'Packing',
         'customer_reviewing' => 'Customer Reviewing',
         'in_route' => 'In Route',
         'delivered' => 'Delivered',
+        'completed' => 'Completed',
         'cancelled' => 'Cancelled',
         // Legacy status kept for old records until migrated.
         'paid_completed' => 'Delivered',
         // Legacy values written before status workflow was unified.
         'processing' => 'Processing',
         'delivering' => 'In Route',
-        'completed' => 'Delivered',
     ],
     'payment_status' => [
         'unpaid' => 'Unpaid',
@@ -29,6 +30,7 @@ return [
         'registered' => 'Registered Customer',
         'walk_in' => 'Walk-in',
         'public' => 'General Link Order',
+        'pos' => 'POS',
     ],
     'file' => [
         'invoice' => 'Invoice',
@@ -44,5 +46,7 @@ return [
         'credit-term' => 'Credit Term',
         'customer-credit' => 'Customer Credit',
         'cod' => 'COD',
+        'in-store' => 'In-Store Payment',
+        'term' => 'Credit Term',
     ],
 ];

@@ -94,6 +94,36 @@ class OrderController extends Controller
             $orders->where('payment_status', $filter_payment_status);
         }
 
+        if ($phone = trim((string) $request->input('phone'))) {
+            $phoneTerm = '%' . addcslashes($phone, '%_\\') . '%';
+            $orders->where(function ($query) use ($phoneTerm) {
+                $query->where('orders.attn_contact', 'like', $phoneTerm)
+                    ->orWhere('orders.walk_in_phone', 'like', $phoneTerm)
+                    ->orWhereHas('customer', function ($customerQuery) use ($phoneTerm) {
+                        $customerQuery->where('attn_contact', 'like', $phoneTerm);
+                    });
+            });
+        }
+
+        if ($address = trim((string) $request->input('address'))) {
+            $addressTerm = '%' . addcslashes($address, '%_\\') . '%';
+            $addressColumns = [
+                'billing_address',
+                'billing_city',
+                'billing_postcode',
+                'billing_state',
+                'shipping_address',
+                'shipping_city',
+                'shipping_postcode',
+                'shipping_state',
+            ];
+            $orders->where(function ($query) use ($addressTerm, $addressColumns) {
+                foreach ($addressColumns as $column) {
+                    $query->orWhere('orders.' . $column, 'like', $addressTerm);
+                }
+            });
+        }
+
         if ($filter_status = $request->input('orderby') === 'asc' || $request->input('orderby') === 'desc') {
             $orders->orderby('created_at', $request->input('orderby'));
         } else if ($filter_status = $request->input('orderby') === 'do_no_asc' || $request->input('orderby') == 'do_no_desc') {
@@ -376,7 +406,7 @@ class OrderController extends Controller
                 'paymentMethods' => $order->allowedAdminPaymentMethods(),
                 'allPaymentMethods' => OrderPayment::$payment_methods,
                 'paymentStatusLabels' => OrderPayment::$status_labels,
-                'nextStatuses' => app(OrderStatusService::class)->nextStatuses($order->status),
+                'nextStatuses' => app(OrderStatusService::class)->nextStatuses($order),
                 'isCreditCustomer' => $order->isCreditCustomer(),
                 'drivers' => $this->driverOptionsForOrder($order),
             ]

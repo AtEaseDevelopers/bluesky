@@ -97,6 +97,8 @@ class EditCustomerController extends Controller
                 "invoice_visibility" => $request['invoice_visibility'] ?? 0,
                 "invoice_price_permission" => $request['invoice_price_permission'] ?? 0,
                 'sql_customer_code' => $request['sql_customer_code'] ?? null,
+                'ssm' => $request['ssm'] ?? null,
+                'tin_no' => $request['tin_no'] ?? null,
                 "fax_no" => $data['fax_no'] ?? null,
 
             ]
@@ -129,11 +131,7 @@ class EditCustomerController extends Controller
             return back()->withInput()->withErrors($data['field_err']);
         }
 
-        // generate login code for specific user, unique for every user
-        do {
-            $login_code = Helper::generateRandomString(100);
-            $exist = User::where('login_code', $login_code)->exists();
-        } while ($exist);
+        $login_code = User::generateLoginCode();
 
         $customer->fill(
             [
@@ -186,6 +184,8 @@ class EditCustomerController extends Controller
             'shipping_state' => ['nullable'],
             "remark" => array_merge(User::$attribute_rules['remark'], []),
             "fax_no" => array_merge(User::$attribute_rules['fax_no'], []),
+            'ssm' => array_merge(User::$attribute_rules['ssm'], []),
+            'tin_no' => array_merge(User::$attribute_rules['tin_no'], []),
         ];
 
         try {
@@ -202,15 +202,9 @@ class EditCustomerController extends Controller
 
     public function generateNewLoginLink(Request $request, User $customer)
     {
-        // generate login code for specific user, unique for every user
-        do {
-            $login_code = Helper::generateRandomString(100);
-            $exist = User::where('login_code', $login_code)->exists();
-        } while ($exist);
-
         $customer->fill(
             [
-                "login_code" => $login_code,
+                "login_code" => User::generateLoginCode(),
             ]
         )->save();
 

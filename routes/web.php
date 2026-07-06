@@ -19,6 +19,7 @@ $adminUrl = config('app.admin_url');
         function () {
             Route::get('/', 'PublicOrderController@index')->name('index');
             Route::post('/add-to-cart/{id}', 'PublicOrderController@addToCart')->name('add-to-cart');
+            Route::post('/add-to-cart-product-info', 'PublicOrderController@addToCartProductInfo')->name('add-to-cart-product-info');
             Route::post('/update-cart-item', 'PublicOrderController@updateCartItem')->name('update-cart-item');
             Route::get('/remove-cart-item/{cart_product}', 'PublicOrderController@removeCartItem')->name('remove-cart-item');
             Route::get('/cart', 'PublicOrderController@cart')->name('cart');
@@ -48,7 +49,7 @@ $adminUrl = config('app.admin_url');
                     Route::post('/add-to-cart/{product}', 'AddToCartController@addToCart')->name('add-to-cart');
                     Route::post('/update-cart-item', 'EditCartItemController@update');
                     Route::get('/remove-cart-item/{cart_product}', 'EditCartItemController@remove');
-                    Route::post('/add-to-cart-product-info', 'ProductController@add_to_cart_product_info');
+                    Route::post('/add-to-cart-product-info', 'ProductController@add_to_cart_product_info')->name('add-to-cart-product-info');
 
                     Route::get('/cart', 'CartController@index')->name('cart');
 
@@ -56,6 +57,7 @@ $adminUrl = config('app.admin_url');
                     Route::post('/customer/update-password/', 'ProfileController@updatePassword')->name('update.password');
 
                     Route::get('/checkout', 'CheckoutController@viewForm')->name('checkout');
+                    Route::get('/checkout/delivery-slots', 'CheckoutController@deliverySlotsForDate')->name('checkout.delivery-slots');
                     Route::get('/checkout/{buy_again}', 'CheckoutController@viewForm');
                     Route::post('/checkout', 'CheckoutController@checkout');
                     Route::post('/checkout/{buy_again}', 'CheckoutController@checkout');

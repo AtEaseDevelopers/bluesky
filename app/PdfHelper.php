@@ -153,9 +153,9 @@ class PdfHelper extends Model
             'date' => $order->created_at,
             'order' => $order,
             'order_items' => $order_products,
-            // 'total' => $total,
             'void' => $void,
             'do_no' => $order->do_no,
+            'show_prices' => OrderFieldSetting::deliveryOrderShowsPrices(),
         ];
 
         $pdf = PDF::loadView('pdf.delivery-order', $data);
@@ -241,6 +241,7 @@ class PdfHelper extends Model
             'total' => $total,
             'void' => $void,
             'do_no' => $order->do_no,
+            'show_prices' => OrderFieldSetting::deliveryOrderShowsPrices(),
             // Add more invoice data as needed
         ];
     

@@ -155,6 +155,7 @@
         const productIds = selected_products.map(product => product.product_id);
         var order_text = @json(__('orders.js.update_order'));
         var order_subtext = @json(__('orders.js.update_order_confirm'));
+        window.selectPaymentMethodPlaceholder = @json(__('orders.select_payment_method'));
         
         document.addEventListener('DOMContentLoaded', function () {
             toggleTransferSlip();

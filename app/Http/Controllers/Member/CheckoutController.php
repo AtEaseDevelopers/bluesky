@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Member;
 use App\Cart;
 use App\CartProduct;
 use App\DeliverySlot;
+use App\DeliveryBlackout;
 use App\Helper;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -91,7 +92,8 @@ class CheckoutController extends Controller
                 'available_credit' => app(CreditService::class)->availableCredit($user),
                 'shipping_state_options' => System::$country_state['MY'],
                 'customer' => $user,
-                'deliverySlots' => DeliverySlot::availableSlots(),
+                'deliveryDates' => DeliverySlot::availableDates(),
+                'deliverySlotsUrl' => route('member.checkout.delivery-slots'),
             ]
         );
     }
@@ -146,7 +148,7 @@ class CheckoutController extends Controller
         }
 
         $deliverySlot = DeliverySlot::findOrFail($data['delivery_slot_id']);
-        if (!$deliverySlot->isAvailable()) {
+        if (!$deliverySlot->isAvailableForDate($data['delivery_date'])) {
             return redirect()->back()->withInput()->with('error', 'Selected delivery slot is no longer available.');
         }
 
@@ -174,7 +176,7 @@ class CheckoutController extends Controller
                 "driver_id" => null,
                 "fulfillment_type" => Order::$fulfillment_types['delivery'],
                 "delivery_slot_id" => $deliverySlot->id,
-                "delivery_date" => $deliverySlot->slot_date,
+                "delivery_date" => $data['delivery_date'],
                 "delivery_time_slot" => $deliverySlot->time_label,
                 "is_estimated" => true,
             ]
@@ -294,6 +296,7 @@ class CheckoutController extends Controller
             // "shipping_state" => array_merge(Order::$attribute_rules['shipping_state'], []),
             'shipping_state' => ['nullable'],
             "transfer_slip" => array_merge(Order::$attribute_rules['transfer_slip'], []),
+            'delivery_date' => ['required', 'date', 'after_or_equal:today'],
             'delivery_slot_id' => ['required', 'exists:delivery_slots,id'],
             'payment_timing' => ['nullable', 'in:pay_now,pay_later'],
         ];
@@ -304,6 +307,21 @@ class CheckoutController extends Controller
             return [
                 'error' => $err->getMessage(),
                 'field_err' => $err->validator->errors()->getMessages(),
+            ];
+        }
+
+        if (DeliveryBlackout::isDateBlocked($data['delivery_date'])) {
+            return [
+                'error' => true,
+                'field_err' => ['delivery_date' => ['Delivery is not available on the selected date.']],
+            ];
+        }
+
+        $slot = DeliverySlot::find($data['delivery_slot_id']);
+        if (!$slot || !$slot->isAvailableForDate($data['delivery_date'])) {
+            return [
+                'error' => true,
+                'field_err' => ['delivery_slot_id' => ['Selected delivery slot is no longer available.']],
             ];
         }
 
@@ -324,5 +342,25 @@ class CheckoutController extends Controller
         }
 
         return $data;
+    }
+
+    public function deliverySlotsForDate(Request $request)
+    {
+        $data = $request->validate([
+            'date' => ['required', 'date', 'after_or_equal:today'],
+        ]);
+
+        if (DeliveryBlackout::isDateBlocked($data['date'])) {
+            return response()->json(['slots' => []]);
+        }
+
+        $slots = DeliverySlot::slotsAvailableForDate($data['date'])
+            ->map(fn (DeliverySlot $slot) => [
+                'id' => $slot->id,
+                'label' => $slot->time_label,
+            ])
+            ->values();
+
+        return response()->json(['slots' => $slots]);
     }
 }

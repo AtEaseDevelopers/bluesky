@@ -58,11 +58,7 @@ class ProfileController extends Controller
             return redirect()->back()->withInput()->withErrors($data['field_err']);
         }
 
-        // generate login code for specific user, unique for every user
-        do {
-            $login_code = Helper::generateRandomString(100);
-            $exist = User::where('login_code', $login_code)->exists();
-        } while($exist);
+        $login_code = User::generateLoginCode();
 
         $user->fill(
             [

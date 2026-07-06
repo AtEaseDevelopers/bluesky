@@ -33,7 +33,7 @@ class PublicOrderController extends Controller
     {
         $products = Product::query()
             ->withStorefrontStock()
-            ->storefrontAvailable()
+            ->storefrontCatalog()
             ->when($request->keyword, function ($q) use ($request) {
                 $q->where('products.name', 'LIKE', '%' . $request->keyword . '%');
             })
@@ -69,11 +69,11 @@ class PublicOrderController extends Controller
     {
         $product = Product::query()
             ->withStorefrontStock()
-            ->storefrontAvailable()
+            ->storefrontCatalog()
             ->where('products.id', $this->decryptId($id))
             ->firstOrFail();
 
-        $data = $this->validateAddToCart($request, $product);
+        $data = $this->validateAddToCart($request, $product, false);
         if (isset($data['error']) && $data['error']) {
             return back()->withInput()->withErrors($data['field_err']);
         }
@@ -109,6 +109,38 @@ class PublicOrderController extends Controller
         }
 
         return redirect()->route('public.guest.cart')->with('success', 'Item added to your order.');
+    }
+
+    /** Modal body HTML for add-to-cart (guest session, no login). */
+    public function addToCartProductInfo(Request $request)
+    {
+        $product = Product::query()
+            ->withStorefrontStock()
+            ->storefrontCatalog()
+            ->where('products.id', $this->decryptId($request->input('id')))
+            ->firstOrFail();
+
+        $product = $this->formatGuestProduct($product);
+        $cart = $this->currentCart($request);
+        $cartProductOptions = collect();
+
+        if ($cart) {
+            $cartProductOptions = DB::table('cart_product_options')
+                ->leftJoin('cart_products', 'cart_products.id', '=', 'cart_product_options.cart_product_id')
+                ->leftJoin('carts', 'carts.id', '=', 'cart_products.cart_id')
+                ->where('cart_products.product_id', $product->id)
+                ->where('carts.session_id', $request->session()->getId())
+                ->where('cart_products.status', CartProduct::$status['active'])
+                ->pluck('option_item', 'option');
+        }
+
+        return response()->json([
+            'view' => view('member.includes.product_info', [
+                'product' => $product,
+                'product_option' => Product::getOption($product->id, true),
+                'cart_product_options' => $cartProductOptions,
+            ])->render(),
+        ]);
     }
 
     /** Cart — renders the member cart screen. */
@@ -252,6 +284,24 @@ class PublicOrderController extends Controller
         $guest->price_permission = true;
 
         return $guest;
+    }
+
+    private function formatGuestProduct(Product $product): Product
+    {
+        $product->original_price = $product->price = Product::getPublicTodayPrice($product->id);
+        $product->image_url = Product::resolveImageUrl($product);
+        $uomName = $product->uom_name ?? optional($product->uom)->uom_name;
+        $product->storefront_available_amount = $product->storefrontAvailableAmount();
+        $product->stock_label = Product::formatStorefrontStockLabel(
+            $product,
+            (float) $product->stock_quantity,
+            (float) ($product->stock_weight ?? 0),
+            $uomName
+        );
+        $product->price_label = Product::formatUnitPrice((float) $product->price, $uomName);
+        $product->original_price_label = Product::formatUnitPrice((float) $product->original_price, $uomName);
+
+        return $product;
     }
 
     private function decryptId($id)

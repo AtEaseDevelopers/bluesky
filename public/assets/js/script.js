@@ -1,5 +1,35 @@
 const appUrl = document.querySelector('meta[name="app-url"]').getAttribute('content');
+const productInfoUrl = document.querySelector('meta[name="product-info-url"]')?.getAttribute('content')
+    || (appUrl + '/add-to-cart-product-info');
 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+function orderUi(key, fallback, replacements) {
+    var labels = window.orderUiLabels || {};
+    var text = labels[key] || fallback || '';
+
+    if (replacements) {
+        Object.keys(replacements).forEach(function (replaceKey) {
+            text = text.split(':' + replaceKey).join(replacements[replaceKey]);
+        });
+    }
+
+    return text;
+}
+
+function orderJs(key, fallback) {
+    var labels = window.orderUiLabels || {};
+    return (labels.js && labels.js[key]) || fallback || '';
+}
+
+function formatProductMetaLine(key, value) {
+    if (key === 'sell_in') {
+        var sellInLabels = (window.orderUiLabels && window.orderUiLabels.sell_in) || {};
+        var sellInLabel = orderUi('sell_in_label', 'Sell in');
+        return sellInLabel + ': ' + (sellInLabels[value] || value);
+    }
+
+    return key + ': ' + value;
+}
 
 document.addEventListener('DOMContentLoaded', function () {
     if (document.querySelectorAll(".form-wrapper")) {
@@ -65,12 +95,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (data.success) {
                             document.getElementById("productList").innerHTML = data.view;
                         } else {
-                            Swal.fire('Error', 'An error occurred.', 'error');
+                            Swal.fire(orderJs('error', 'Error'), orderJs('error_occurred', 'An error occurred.'), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        Swal.fire('Error', 'An error occurred.', 'error');
+                        Swal.fire(orderJs('error', 'Error'), orderJs('error_occurred', 'An error occurred.'), 'error');
                     });
             } else {
                 init_pre_order_data();
@@ -120,8 +150,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         var sellIn = card.getAttribute('data-sell-in') || 'qty';
                         productOptions['sell_in'] = sellIn;
 
-                        if (sellIn === 'qty_bill_weight') {
-                            productOptions['total_price'] = parseFloat(productOptions['price']) * parseFloat(productOptions['weight'] || 0);
+                        if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
+                            var qty = parseFloat(productOptions['quantity'] || 0);
+                            var wt = parseFloat(productOptions['weight'] || 0);
+                            productOptions['total_price'] = parseFloat(productOptions['price']) * qty * wt;
                         } else {
                             var qtyWeightValue = (productOptions['quantity'] == '' || productOptions['quantity'] == undefined) ? productOptions['weight'] : productOptions['quantity'];
                             productOptions['total_price'] = parseFloat(productOptions['price']) * parseFloat(qtyWeightValue || 0);
@@ -133,16 +165,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (!isValid) {
                 Swal.fire({
-                    title: 'Warning',
-                    text: "Please fill all required fields.",
+                    title: orderJs('warning', 'Warning'),
+                    text: orderJs('fill_required_fields', 'Please fill all required fields.'),
                     icon: 'warning',
                 });
             } else if (selected_products.length != 0) {
                 display_selected_products();
             } else {
                 Swal.fire({
-                    title: 'Warning',
-                    text: "Please select any product to add to the bag.",
+                    title: orderJs('warning', 'Warning'),
+                    text: orderJs('select_product_for_bag', 'Please select any product to add to the bag.'),
                     icon: 'warning',
                 });
             }
@@ -151,6 +183,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (document.getElementById('order_customer')) {
         document.getElementById('order_customer').addEventListener('change', function() {
+            if (window.__formDraftRestoring) {
+                return;
+            }
             init_customer_details();
         });
     }
@@ -185,8 +220,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     requiredFields.forEach(function(itm) {
                         if (!itm.value && itm.getAttribute('name')) {
                             Swal.fire({
-                                title: 'Warning',
-                                text: "Please fill in all the required input before proceeding.",
+                                title: orderJs('warning', 'Warning'),
+                                text: orderJs('fill_required_before_proceed', 'Please fill in all the required input before proceeding.'),
                                 icon: 'warning',
                             });
                             allow_continue = false;
@@ -204,8 +239,8 @@ document.addEventListener('DOMContentLoaded', function () {
                             var walkInPhone = document.getElementById('walk_in_phone');
                             if (!walkInName.value.trim() || !walkInPhone.value.trim()) {
                                 Swal.fire({
-                                    title: 'Warning',
-                                    text: 'Please enter walk-in customer name and phone.',
+                                    title: orderJs('warning', 'Warning'),
+                                    text: orderJs('walk_in_name_phone_required', 'Please enter walk-in customer name and phone.'),
                                     icon: 'warning',
                                 });
                                 return false;
@@ -222,8 +257,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     } else if (step === 'select_products') {
                         if (!selected_products.length) {
                             Swal.fire({
-                                title: 'Warning',
-                                text: "Please click \"Add Product\" to add product into the bag to checkout.",
+                                title: orderJs('warning', 'Warning'),
+                                text: orderJs('add_product_to_checkout', 'Please click "Add Product" to add product into the bag to checkout.'),
                                 icon: 'warning',
                             });
                             return false;
@@ -236,10 +271,18 @@ document.addEventListener('DOMContentLoaded', function () {
                             showCancelButton: true,
                             confirmButtonColor: '#28a745',
                             cancelButtonColor: '#d33',
-                            confirmButtonText: 'Yes'
+                            confirmButtonText: orderJs('yes', 'Yes')
                         }).then((result) => {
                             if (result.isConfirmed) {
-                                document.querySelector('form').submit();
+                                var form = document.getElementById('admin-order-create-form') || document.querySelector('form');
+                                if (window.FormDraft && form) {
+                                    FormDraft.clear(form);
+                                }
+                                if (form && typeof form.requestSubmit === 'function') {
+                                    form.requestSubmit();
+                                } else if (form) {
+                                    form.submit();
+                                }
                             }
                         });
                     }
@@ -333,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     modalBody.innerHTML = data.view;
                 })
                 .catch(error => {
-                    Swal.fire('Error', 'An error occurred.', 'error');
+                    Swal.fire(orderJs('error', 'Error'), orderJs('error_occurred', 'An error occurred.'), 'error');
                     console.log(error);
                 });
             });
@@ -356,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const form = new FormData();
                 form.append('id', btn.getAttribute('data-id'));
 
-                fetch(appUrl + '/add-to-cart-product-info', {
+                fetch(productInfoUrl, {
                     method: "POST",
                     body: form,
                     headers: {
@@ -386,7 +429,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .catch(error => {
                     modalBody.innerHTML = '<div class="alert alert-danger mb-0">Unable to load product details. Please try again.</div>';
                     if (typeof Swal !== 'undefined') {
-                        Swal.fire('Error', 'An error occurred.', 'error');
+                        Swal.fire(orderJs('error', 'Error'), orderJs('error_occurred', 'An error occurred.'), 'error');
                     }
                 });
             });
@@ -531,7 +574,7 @@ document.addEventListener('click', function(event) {
                 display_selected_products();
             })
             .catch(error => {
-                Swal.fire('Error', 'An error occurred.', 'error');
+                Swal.fire(orderJs('error', 'Error'), orderJs('error_occurred', 'An error occurred.'), 'error');
             });
         } else {
             selected_products.splice(index, 1);
@@ -590,22 +633,56 @@ function getOrderCustomerId() {
     return 'products_visibility';
 }
 
-function init_customer_details() {
+function populateOrderPaymentMethods(methods) {
+    var paymentMethodElement = document.getElementById('payment_method');
+    if (!paymentMethodElement) {
+        return;
+    }
+
+    var placeholder = window.selectPaymentMethodPlaceholder || '-- Select Payment Method --';
+    paymentMethodElement.innerHTML = '<option value="" selected>' + placeholder + '</option>';
+
+    Object.keys(methods).forEach(function(key) {
+        var newOption = document.createElement('option');
+        newOption.value = key;
+        newOption.textContent = methods[key];
+        paymentMethodElement.appendChild(newOption);
+    });
+
+    if (paymentMethodElement.getAttribute('data-selected')) {
+        paymentMethodElement.value = paymentMethodElement.getAttribute('data-selected');
+    }
+
+    if (window.jQuery && jQuery(paymentMethodElement).data('select2')) {
+        jQuery(paymentMethodElement).val(paymentMethodElement.value).trigger('change');
+    }
+}
+
+function init_customer_details(options) {
+    options = options || {};
     var order_customer = document.getElementById('order_customer');
     var customerInfo = document.getElementById('customer_info');
     var submitButton = document.querySelector("form button[type=submit]");
 
-    customerInfo.classList.add('d-none');
-    submitButton.classList.add('d-none');
+    if (!order_customer) {
+        return Promise.resolve(null);
+    }
+
+    if (!options.paymentMethodsOnly) {
+        customerInfo.classList.add('d-none');
+        if (submitButton) {
+            submitButton.classList.add('d-none');
+        }
+    }
 
     if (!order_customer.value) {
-        return false;
+        return Promise.resolve(null);
     }
 
     const form = new FormData();
     form.append('id', order_customer.value);
 
-    fetch(appUrl + `/admin/order/get-customer-info`, {
+    return fetch(appUrl + `/admin/order/get-customer-info`, {
         method: 'POST',
         body: form,
         headers: {
@@ -613,39 +690,36 @@ function init_customer_details() {
         }
     })
     .then(response => response.json())
-    .then(data => {                
-        Object.keys(data.customer).forEach(function(field) {
-            if (field === 'payment_method') {
-                var paymentMethodElement = document.getElementById('payment_method');
-                paymentMethodElement.innerHTML = `<option value="" selected>-- Select Payment Method --</option>`;
+    .then(data => {
+        if (data.order_payment_methods) {
+            populateOrderPaymentMethods(data.order_payment_methods);
+        }
 
-                var pm = JSON.parse(data.customer[field]);
-                if (pm != null) {
-                    pm.forEach(function(pm_val) {
-                        var newOption = document.createElement('option');
-                        newOption.value = pm_val;
-                        newOption.textContent = payment_method_options[pm_val];
-                        paymentMethodElement.appendChild(newOption);
-                    });
+        if (!options.paymentMethodsOnly) {
+            Object.keys(data.customer).forEach(function(field) {
+                if (field === 'payment_method') {
+                    return;
                 }
 
-                if (paymentMethodElement.getAttribute('data-selected')) {
-                    paymentMethodElement.value = paymentMethodElement.getAttribute('data-selected');
-                }
-            } else {
                 if (document.getElementById(field)) {
                     document.getElementById(field).value = data.customer[field];
                 }
-            }
-        });
+            });
+        }
 
         customerInfo.classList.remove('d-none');
-        document.querySelector("form button.next").classList.remove('d-none');
+        var nextBtn = document.querySelector("form button.next");
+        if (nextBtn) {
+            nextBtn.classList.remove('d-none');
+        }
         document.getElementById('transferSlipGroup').style.display = 'none';
+
+        return data;
     })
     .catch(error => {
-        Swal.fire('Error', 'An error occurred.', 'error');
+        Swal.fire(orderJs('error', 'Error'), orderJs('error_occurred', 'An error occurred.'), 'error');
         console.log(error);
+        throw error;
     });
 }
 
@@ -677,7 +751,7 @@ function display_selected_products() {
             for (var key in product) {
                 if (product.hasOwnProperty(key) && !['product_id', 'product_name', 'price', 'quantity',  'weight', 'remark', 'total_price', ''].includes(key)) {
                     optionHtml += `<input type="hidden" name="product_options[${index}][${key}]" value="${product[key]}"/>`;
-                    optionHtml1 += `<p class="mb-1">${key}: ${product[key]}</p>`;
+                    optionHtml1 += `<p class="mb-1">${formatProductMetaLine(key, product[key])}</p>`;
                     
                     if (document.getElementById('productOption-' + key)) {
                         const selectElement = document.getElementById('productOption-' + key);
@@ -694,18 +768,18 @@ function display_selected_products() {
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-2">
                         <h5>${product.product_name}</h5>
                         <div class="remove-from-bag">
-                            <a role="button"><i class="fa fa-trash"></i> Remove</a>
+                            <a role="button"><i class="fa fa-trash"></i> ${orderUi('remove', 'Remove')}</a>
                         </div>
                     </div>`;
 
         if (document.getElementById('order_customer')) {
             var sellIn = product.sell_in || 'qty';
 
-            if (sellIn === 'qty_bill_weight') {
+            if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
                 productHtml += `
                 ${optionHtml}
                 <div class="form-group mb-3">
-                    <label class="mb-2">Quantity</label>
+                    <label class="mb-2">${orderUi('quantity', 'Quantity')}</label>
                     <span class="text-danger"> *</span>
                     <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="minus">
@@ -718,20 +792,19 @@ function display_selected_products() {
                     </div>
                 </div>
                 <div class="form-group mb-3">
-                    <label class="mb-2">Weight (KG)</label>
-                    <span class="text-danger"> *</span>
+                    <label class="mb-2">${orderUi('estimated_weight', 'Estimated Weight (KG)')} ${orderUi('optional', '(Optional)')}</label>
                     <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagBillWeight_${product.product_id}" data-action="minus">
                             <i class="fa fa-minus"></i>
                         </button>
-                        <input type="number" class="form-control text-center add-products-bill-weight" id="bagBillWeight_${product.product_id}" name="weight[]" value="${product.weight || 1}" data-pid="${product.product_id}" data-price="${product.price}" data-field="bill_weight" data-sell-in="qty_bill_weight" min="0.001" step="0.001" required>
+                        <input type="number" class="form-control text-center add-products-bill-weight" id="bagBillWeight_${product.product_id}" name="weight[]" value="${product.weight || ''}" data-pid="${product.product_id}" data-price="${product.price}" data-field="bill_weight" data-sell-in="qty_bill_weight" min="0.001" step="0.001">
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagBillWeight_${product.product_id}" data-action="plus">
                             <i class="fa fa-plus"></i>
                         </button>
                     </div>
                 </div>
                 <div class="form-group mb-3">
-                    <label class="mb-2">Remark</label>
+                    <label class="mb-2">${orderUi('remark', 'Remark')}</label>
                     <textarea class="form-control" name="remark[]">${product.remark || ''}</textarea>
                 </div>
             `;
@@ -740,7 +813,7 @@ function display_selected_products() {
                  productHtml += `
                 ${optionHtml}
                 <div class="form-group mb-3">
-                    <label class="mb-2">Order Qty (KG)</label>
+                    <label class="mb-2">${orderUi('order_qty_kg', 'Order Qty (KG)')}</label>
                     <span class="text-danger"> *</span>
                     <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagWeight_${product.product_id}" data-action="minus">
@@ -753,7 +826,7 @@ function display_selected_products() {
                     </div>
                 </div>
                 <div class="form-group mb-3">
-                    <label class="mb-2">Remark</label>
+                    <label class="mb-2">${orderUi('remark', 'Remark')}</label>
                     <textarea class="form-control" name="remark[]">${product.remark || ''}</textarea>
                 </div>
             `;
@@ -763,7 +836,7 @@ function display_selected_products() {
                  productHtml += `
                 ${optionHtml}
                 <div class="form-group mb-3">
-                    <label class="mb-2">Quantity</label>
+                    <label class="mb-2">${orderUi('quantity', 'Quantity')}</label>
                     <span class="text-danger"> *</span>
                     <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="minus">
@@ -776,16 +849,20 @@ function display_selected_products() {
                     </div>
                 </div>
                 <div class="form-group mb-3">
-                    <label class="mb-2">Remark</label>
+                    <label class="mb-2">${orderUi('remark', 'Remark')}</label>
                     <textarea class="form-control" name="remark[]">${product.remark || ''}</textarea>
                 </div>
             `;
             }
            
+            var priceLine = orderUi('price_label', 'Price: RM :price', { price: product.price });
+            var totalAmountHtml = '<span id="product-' + product.product_id + '-total">' + totalPriceForProduct.toFixed(2) + '</span>';
+            var totalLine = orderUi('total_price_label', 'Total Price: RM :amount', { amount: totalAmountHtml });
+
             productHtml += `
                 ${optionHtml1}
-                <p class="mb-1">Price: RM ${product.price}</p>
-                <p class="mb-1">Total Price: <strong>RM <span id="product-${product.product_id}-total">${totalPriceForProduct.toFixed(2)}</span></strong></p>
+                <p class="mb-1">${priceLine}</p>
+                <p class="mb-1"><strong>${totalLine}</strong></p>
             `;
         }
         
@@ -823,44 +900,51 @@ function syncBagQuantityToSelectedProducts(input) {
         delete product.quantity;
     } else {
         product.quantity = value;
-        if (product.sell_in !== 'qty_bill_weight') {
+        if (product.sell_in !== 'qty_bill_weight' && product.sell_in !== 'weight') {
             delete product.weight;
         }
     }
 
-    var billAmount = product.sell_in === 'qty_bill_weight'
-        ? parseFloat(product.weight || 0)
+    var billAmount = (product.sell_in === 'qty_bill_weight' || product.sell_in === 'weight')
+        ? (parseFloat(product.quantity || 0) * parseFloat(product.weight || 0))
         : parseFloat(product.quantity || product.weight || 0);
     product.total_price = parseFloat(product.price) * billAmount;
 }
 
 function calculateTotal() {
     let total = 0;
+    const pids = new Set();
 
-    document.querySelectorAll('input[name="quantity[]"], input[name="weight[]"]').forEach(function(input) {
-        if (!input.getAttribute('data-pid')) {
+    document.querySelectorAll('input[data-pid]').forEach(function(input) {
+        pids.add(input.getAttribute('data-pid'));
+    });
+
+    pids.forEach(function(pid) {
+        const qtyInput = document.querySelector('input[data-pid="' + pid + '"][data-field="quantity"]');
+        const weightInput = document.querySelector('input[data-pid="' + pid + '"][data-field="bill_weight"]')
+            || document.querySelector('input[data-pid="' + pid + '"][data-field="weight"]');
+        const anchor = qtyInput || weightInput;
+
+        if (!anchor) {
             return;
         }
 
-        const pid = input.getAttribute('data-pid');
-        const sellIn = input.getAttribute('data-sell-in');
-        const price = parseFloat(input.getAttribute('data-price')) || 0;
-        let lineTotal = 0;
+        const sellIn = anchor.getAttribute('data-sell-in') || 'qty';
+        const price = parseFloat(anchor.getAttribute('data-price')) || 0;
+        const qty = qtyInput ? (parseFloat(qtyInput.value) || 0) : 0;
+        const weight = weightInput ? (parseFloat(weightInput.value) || 0) : 0;
+        let billAmount = weight;
 
-        if (sellIn === 'qty_bill_weight') {
-            if (input.getAttribute('data-field') !== 'bill_weight') {
-                return;
-            }
-            lineTotal = (parseFloat(input.value) || 0) * price;
-        } else {
-            if (input.name !== 'quantity[]') {
-                return;
-            }
-            lineTotal = (parseFloat(input.value) || 0) * price;
+        if (sellIn === 'qty') {
+            billAmount = qty;
+        } else if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
+            billAmount = qty * weight;
         }
 
+        const lineTotal = price * billAmount;
         total += lineTotal;
-        const totalEl = document.getElementById(`product-${pid}-total`);
+
+        const totalEl = document.getElementById('product-' + pid + '-total');
         if (totalEl) {
             totalEl.innerHTML = lineTotal.toFixed(2);
         }

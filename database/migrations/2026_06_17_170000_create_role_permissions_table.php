@@ -30,13 +30,31 @@ return new class extends Migration
 
         foreach ($portals as $role => $roleConfig) {
             foreach ($roleConfig['permissions'] ?? [] as $permission => $definition) {
-                DB::table('role_permissions')->insert([
-                    'role' => $role,
-                    'permission' => $permission,
-                    'allowed' => $definition['default'] ?? true,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
+                $defaults = $definition['default'] ?? true;
+                $rows = [];
+
+                if (is_array($defaults) && isset($definition['capabilities'])) {
+                    foreach ($definition['capabilities'] as $capability => $capDefinition) {
+                        $rows[] = [
+                            'role' => $role,
+                            'permission' => $permission . '.' . $capability,
+                            'allowed' => (bool) ($defaults[$capability] ?? false),
+                        ];
+                    }
+                } else {
+                    $rows[] = [
+                        'role' => $role,
+                        'permission' => $permission,
+                        'allowed' => (bool) $defaults,
+                    ];
+                }
+
+                foreach ($rows as $row) {
+                    DB::table('role_permissions')->insert(array_merge($row, [
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]));
+                }
             }
         }
     }

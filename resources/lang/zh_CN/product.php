@@ -1,12 +1,107 @@
 <?php
 
 return [
+    'manage' => '管理商品',
+    'add' => '新增商品',
+    'edit' => '编辑商品',
+    'filter' => '筛选商品',
+    'list' => '商品列表',
+    'set_daily_price' => '设置每日价格',
+    'export_excel' => '导出 Excel',
+
+    'select_uom' => '选择计量单位',
+    'select_category' => '选择分类',
+    'sku' => 'SKU',
+    'name' => '名称',
+    'status_label' => '状态',
+    'price_range' => '价格范围',
+    'min' => '最低',
+    'max' => '最高',
+
+    'option' => '操作',
+    'image' => '图片',
+    'category' => '分类',
+    'uom' => '计量单位',
+    'description' => '描述',
+    'price' => '价格',
+    'weight' => '重量',
+    'weight_in_kg' => '（公斤）',
+    'kg_unit' => '公斤',
+    'last_updated_at' => '最后更新时间',
+    'added_at' => '添加时间',
+    'remove' => '删除',
+
+    'product_image' => '商品图片',
+    'product_name' => '商品名称',
+    'product_description' => '商品描述',
+    'default_price' => '默认价格 (RM)',
+    'remark' => '备注',
+    'sell_in' => '销售方式',
+    'sell_in_qty' => '按数量',
+    'sell_in_weight' => '按重量',
+    'sell_in_qty_bill_weight' => '按数量（按重量计费）',
+    'estimated_weight' => '预估重量 (:uom)',
+    'weight_presets' => '重量预设',
+    'category_pricing' => '分类定价',
+    'category_pricing_help' => '可按客户分类设置不同价格。下单当日如有每日价格，则优先使用每日价格。',
+    'customer_category' => '客户分类',
+    'price_per_uom' => '价格 (RM / 计量单位)',
+    'no' => '序号',
+    'product_options' => '商品选项',
+    'add_option' => '添加选项',
+    'add_option_type' => '添加选项类型',
+    'option_name' => '选项名称',
+    'mandatory_option' => '必填选项',
+    'option_items' => '选项项目（可多选）',
+    'optional' => '（可选）',
+
+    'placeholder' => [
+        'sku' => 'SKU',
+        'name' => '名称',
+        'product_name' => '请输入商品名称',
+        'product_description' => '请输入商品描述',
+        'product_sku' => '请输入 SKU',
+        'default_price' => '请输入每计量单位的默认价格',
+        'product_weight' => '请输入商品重量',
+        'remark' => '请输入备注',
+        'category_price' => '留空则使用默认价格',
+        'option_name' => '请输入选项名称',
+        'option_items' => '请输入选项项目，用逗号 (,) 分隔',
+    ],
+
+    'help' => [
+        'default_price' => '每计量单位的价格。未设置分类价或每日价格时使用。',
+        'weight_presets' => '逗号或换行分隔的值，客户按重量下单时显示为快捷按钮（如 1, 1.5, 2）。',
+    ],
+
+    'categories' => [
+        'list' => '商品分类',
+        'add' => '新增分类',
+        'edit' => '编辑分类',
+        'category_name' => '分类名称',
+        'total_products' => '商品总数',
+        'delete' => '删除分类',
+        'delete_confirm' => '确定要删除此分类吗？',
+        'placeholder' => [
+            'category_name' => '请输入分类名称',
+        ],
+    ],
+
     'status' => [
         'active' => '已发布 / 启用',
         'inactive' => '未上架 / 停用',
         'removed' => '已删除',
     ],
+
     'form' => [
         'select-default' => '请选择',
+    ],
+
+    'js' => [
+        'remove_title' => '确定吗？',
+        'remove_text' => '此操作无法撤销！',
+        'remove_confirm' => '是的，删除！',
+        'name_required' => '名称不能为空！',
+        'option_items_required' => '选项项目不能为空！',
     ],
 ];

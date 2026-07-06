@@ -4,7 +4,9 @@
     <link href="{{ asset('assets/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" type="text/css">
 @endsection
 @section('content')
-
+@php
+    $admin = Auth::guard('web_admin')->user();
+@endphp
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="card shadow no-border">
@@ -12,7 +14,9 @@
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
                         <h5>{{ __('drivers.list') }}</h5>
                         <div class="d-flex gap-2">
-                            <a href="{{ route('admin.drivers.create') }}" class="btn btn-primary">{{ __('drivers.add') }}</a>
+                            @if ($admin->canModule('drivers', 'create'))
+                                <a href="{{ route('admin.drivers.create') }}" class="btn btn-primary">{{ __('drivers.add') }}</a>
+                            @endif
                         </div>
                     </div>
                     <div class="table-responsive">

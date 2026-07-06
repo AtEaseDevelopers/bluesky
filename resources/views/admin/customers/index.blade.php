@@ -1,7 +1,9 @@
 @extends('layouts.admin')
 @section('title', __('customers.manage'))
 @section('content')
-
+@php
+    $admin = Auth::guard('web_admin')->user();
+@endphp
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="card shadow no-border mb-0">
@@ -96,18 +98,22 @@
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="d-flex justify-content-end align-items-center flex-wrap gap-3">
-                <button type="button" id="syncAutoCountBtn" class="btn btn-outline-secondary">
-                    {{ __('customers.sync_autocount') }}
-                </button>
+                @if ($admin->canModule('customers', 'edit'))
+                    <button type="button" id="syncAutoCountBtn" class="btn btn-outline-secondary">
+                        {{ __('customers.sync_autocount') }}
+                    </button>
+                @endif
                 <button type="button" id="copyGuestLink" class="btn btn-primary" data-link="{{ route('public.guest.index') }}">
                     {{ __('customers.copy_guest_link') }}
                 </button>
-                <a href="{{ route('admin.customers.invite') }}" class="btn btn-success">
-                    {{ __('customers.invite') }}
-                </a>
-                <a href="{{ route('admin.customers.create') }}" class="btn btn-primary">
-                    {{ __('customers.add') }}
-                </a>
+                @if ($admin->canModule('customers', 'create'))
+                    <a href="{{ route('admin.customers.invite') }}" class="btn btn-success">
+                        {{ __('customers.invite') }}
+                    </a>
+                    <a href="{{ route('admin.customers.create') }}" class="btn btn-primary">
+                        {{ __('customers.add') }}
+                    </a>
+                @endif
                 <a href="{{ route('admin.customers.export') }}?{{ $query_params }}" class="btn btn-success">
                     <i class="fa fa-file-excel-o me-2" aria-hidden="true"></i> {{ __('customers.export_excel') }}
                 </a>
@@ -156,17 +162,21 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <a href="{{ route('admin.customers.edit', encrypt($user->id)) }}" class="btn btn-sm btn-primary" title="{{ __('customers.edit_customer') }}">
-                                                <i class="fa fa-edit"></i>
-                                            </a>
+                                            @if ($admin->canModule('customers', 'edit'))
+                                                <a href="{{ route('admin.customers.edit', encrypt($user->id)) }}" class="btn btn-sm btn-primary" title="{{ __('customers.edit_customer') }}">
+                                                    <i class="fa fa-edit"></i>
+                                                </a>
+                                            @endif
                                         </td>
                                         <td>
                                             @if ($user->hasCompletedRegistration())
-                                                <input type="text" class="form-control fast_link mb-2" style="width: 150px;" value="{{ url('fast-login/' . Crypt::encryptString($user->login_code)) }}" readonly />
+                                                <input type="text" class="form-control fast_link mb-2" style="min-width: 280px;" value="{{ $user->fastLoginUrl() }}" readonly />
                                                 <p>
-                                                    <a href="{{ route('admin.customers.generate-new-login-link', $user->id) }}" class="btn btn-sm btn-primary me-1" title="{{ __('customers.generate_new_login_link') }}">
-                                                        <i class="fa fa-refresh"></i>
-                                                    </a>
+                                                    @if ($admin->canModule('customers', 'edit'))
+                                                        <a href="{{ route('admin.customers.generate-new-login-link', $user->id) }}" class="btn btn-sm btn-primary me-1" title="{{ __('customers.generate_new_login_link') }}">
+                                                            <i class="fa fa-refresh"></i>
+                                                        </a>
+                                                    @endif
                                                     <a type="button" class="btn btn-sm btn-primary copylink">
                                                         <i class="fa fa-clipboard"></i>
                                                     </a>
@@ -183,7 +193,7 @@
                                                 </a>
                                             @elseif ($user->hasCompletedRegistration())
                                                 <span class="badge bg-success">{{ __('customers.registered') }}</span>
-                                            @else
+                                            @elseif ($admin->canModule('customers', 'edit'))
                                                 <a href="{{ route('admin.customers.generate-registration-link', $user->id) }}" class="btn btn-sm btn-outline-primary">{{ __('customers.generate_link') }}</a>
                                             @endif
                                         </td>

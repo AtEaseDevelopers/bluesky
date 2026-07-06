@@ -57,11 +57,17 @@ class Admin extends Authenticatable
 
     public function canAccessModule(string $module): bool
     {
+        return $this->canModule($module, 'view');
+    }
+
+    public function canModule(string $module, string $capability = 'view'): bool
+    {
         if ($this->isSuperadmin()) {
             return true;
         }
 
-        return app(\App\Services\RolePermissionService::class)->can((string) $this->role, $module);
+        return app(\App\Services\RolePermissionService::class)
+            ->canModule((string) $this->role, $module, $capability);
     }
 
     public function canManageRolePermissions(): bool

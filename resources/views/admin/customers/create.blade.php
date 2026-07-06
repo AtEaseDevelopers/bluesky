@@ -180,9 +180,6 @@
                                         <option value="cod" {{ old('customer_type', 'cod') === 'cod' ? 'selected' : '' }}>{{ __('customers.customer_type_cod') }}</option>
                                         <option value="credit" {{ old('customer_type') === 'credit' ? 'selected' : '' }}>{{ __('customers.customer_type_credit') }}</option>
                                     </select>
-                                    <small class="text-muted d-block">{{ __('customers.customer_type_cod_help') }}</small>
-                                    <small class="text-muted d-block">{{ __('customers.customer_type_credit_help') }}</small>
-                                    <small class="text-muted">{{ __('customers.customer_type_credit_help_extra') }}</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -232,6 +229,34 @@
                                         name="sql_customer_code" id="sql_customer_code"
                                         value="{{ old('sql_customer_code') }}" placeholder="{{ __('customers.enter_customer_code') }}">
                                     @error('sql_customer_code')
+                                        <span class="text-danger" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label class="mb-2" for="ssm">{{ __('customers.ssm') }}</label>
+                                    <input type="text" class="form-control @error('ssm') is-invalid @enderror"
+                                        name="ssm" id="ssm" value="{{ old('ssm') }}"
+                                        placeholder="{{ __('customers.enter_ssm') }}">
+                                    @error('ssm')
+                                        <span class="text-danger" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label class="mb-2" for="tin_no">{{ __('customers.tin_no') }}</label>
+                                    <input type="text" class="form-control @error('tin_no') is-invalid @enderror"
+                                        name="tin_no" id="tin_no" value="{{ old('tin_no') }}"
+                                        placeholder="{{ __('customers.enter_tin_no') }}">
+                                    @error('tin_no')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $message }}</strong>
                                         </span>

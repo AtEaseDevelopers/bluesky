@@ -3,11 +3,11 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class DeliverySlot extends Model
 {
     protected $fillable = [
-        'slot_date',
         'time_start',
         'time_end',
         'max_orders',
@@ -15,7 +15,6 @@ class DeliverySlot extends Model
     ];
 
     protected $casts = [
-        'slot_date' => 'date',
         'is_enabled' => 'boolean',
     ];
 
@@ -24,9 +23,18 @@ class DeliverySlot extends Model
         return date('H:i', strtotime($this->time_start)) . ' - ' . date('H:i', strtotime($this->time_end));
     }
 
-    public function isAvailable(): bool
+    public function bookedCountForDate(string $date): int
     {
-        if (!$this->is_enabled) {
+        return Order::query()
+            ->where('delivery_slot_id', $this->id)
+            ->whereDate('delivery_date', $date)
+            ->where('status', '!=', Order::$status['cancelled'])
+            ->count();
+    }
+
+    public function isAvailableForDate(string $date): bool
+    {
+        if (!$this->is_enabled || DeliveryBlackout::isDateBlocked($date)) {
             return false;
         }
 
@@ -34,20 +42,40 @@ class DeliverySlot extends Model
             return true;
         }
 
-        $used = Order::where('delivery_slot_id', $this->id)
-            ->where('status', '!=', Order::$status['cancelled'])
-            ->count();
-
-        return $used < $this->max_orders;
+        return $this->bookedCountForDate($date) < $this->max_orders;
     }
 
-    public static function availableSlots()
+    public static function enabledSlots(): Collection
     {
-        return static::where('is_enabled', true)
-            ->where('slot_date', '>=', now()->toDateString())
-            ->orderBy('slot_date')
+        return static::query()
+            ->where('is_enabled', true)
             ->orderBy('time_start')
-            ->get()
-            ->filter(fn ($slot) => $slot->isAvailable());
+            ->get();
+    }
+
+    /** @return array<int, string> */
+    public static function availableDates(int $daysAhead = 30): array
+    {
+        $dates = [];
+
+        for ($i = 0; $i < $daysAhead; $i++) {
+            $date = now()->addDays($i)->toDateString();
+            if (!DeliveryBlackout::isDateBlocked($date)) {
+                $dates[] = $date;
+            }
+        }
+
+        return $dates;
+    }
+
+    public static function slotsAvailableForDate(string $date): Collection
+    {
+        if (DeliveryBlackout::isDateBlocked($date)) {
+            return collect();
+        }
+
+        return static::enabledSlots()
+            ->filter(fn (self $slot) => $slot->isAvailableForDate($date))
+            ->values();
     }
 }

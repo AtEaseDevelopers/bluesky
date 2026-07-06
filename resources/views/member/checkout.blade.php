@@ -114,27 +114,42 @@
                         @endunless
 
                         @unless($isGuest ?? false)
-                        <h6 class="card-subtitle my-3 text-body-secondary">Delivery Slot</h6>
+                        <h6 class="card-subtitle my-3 text-body-secondary">{{ __('orders.delivery_slot') }}</h6>
                         <div class="row">
                             <div class="col-md-12">
-                                @if ($deliverySlots->isEmpty())
+                                @if (empty($deliveryDates))
                                     <div class="alert alert-warning">
-                                        No delivery slots are currently available. Please contact us to place your order.
+                                        {{ __('orders.no_delivery_dates') }}
                                     </div>
                                 @else
-                                <div class="form-group mb-4">
-                                    <label class="mb-2" for="delivery_slot_id">Select Delivery Date & Time <span class="text-danger">*</span></label>
-                                    <select name="delivery_slot_id" id="delivery_slot_id" class="form-select" required>
-                                        <option value="">Choose a slot...</option>
-                                        @foreach ($deliverySlots as $slot)
-                                            <option value="{{ $slot->id }}" {{ old('delivery_slot_id') == $slot->id ? 'selected' : '' }}>
-                                                {{ $slot->slot_date->format('d M Y') }} — {{ $slot->time_label }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('delivery_slot_id')
-                                        <span class="text-danger"><strong>{{ $message }}</strong></span>
-                                    @enderror
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-4">
+                                            <label class="mb-2" for="delivery_date">{{ __('orders.delivery_date') }} <span class="text-danger">*</span></label>
+                                            <select name="delivery_date" id="delivery_date" class="form-select" required>
+                                                <option value="">{{ __('orders.choose_delivery_date') }}</option>
+                                                @foreach ($deliveryDates as $date)
+                                                    <option value="{{ $date }}" {{ old('delivery_date') == $date ? 'selected' : '' }}>
+                                                        {{ \Carbon\Carbon::parse($date)->format('d M Y (l)') }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            @error('delivery_date')
+                                                <span class="text-danger"><strong>{{ $message }}</strong></span>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-4">
+                                            <label class="mb-2" for="delivery_slot_id">{{ __('orders.delivery_time') }} <span class="text-danger">*</span></label>
+                                            <select name="delivery_slot_id" id="delivery_slot_id" class="form-select" required disabled>
+                                                <option value="">{{ __('orders.choose_delivery_time') }}</option>
+                                            </select>
+                                            @error('delivery_slot_id')
+                                                <span class="text-danger"><strong>{{ $message }}</strong></span>
+                                            @enderror
+                                        </div>
+                                    </div>
                                 </div>
                                 @endif
                             </div>
@@ -186,6 +201,10 @@
                                 <strong>Cash on Delivery.</strong> Pay our driver when your order arrives. The final amount may adjust based on the actual weighed seafood.
                             </div>
                         @endif
+                        <div class="alert alert-light border mt-3 mb-0">
+                            @include('partials.subject_to_availability')
+                            <span class="d-block mt-1 small text-muted">{{ __('ui.storefront.subject_to_availability_note') }}</span>
+                        </div>
                         <div class="row mt-3">
                             <div class="col-md-12">
                                 <div class="d-flex justify-content-end">
@@ -269,6 +288,9 @@
                             </tfoot>
                         @endif
                     </table>
+                    <div class="mt-3 pt-2 border-top">
+                        @include('partials.subject_to_availability')
+                    </div>
                 </div>
             </div>
         </div>
@@ -293,6 +315,41 @@
 
             $('input[name="payment_timing"]').on('change', togglePayNowFields);
             togglePayNowFields();
+
+            var deliverySlotsUrl = @json($deliverySlotsUrl ?? '');
+            var oldSlotId = @json(old('delivery_slot_id'));
+
+            function loadDeliverySlots(date) {
+                var $slotSelect = $('#delivery_slot_id');
+                $slotSelect.prop('disabled', true).html('<option value="">{{ __('orders.choose_delivery_time') }}</option>');
+
+                if (!date || !deliverySlotsUrl) {
+                    return;
+                }
+
+                $.get(deliverySlotsUrl, { date: date }, function (response) {
+                    if (!response.slots || !response.slots.length) {
+                        $slotSelect.html('<option value="">{{ __('orders.no_delivery_slots_for_date') }}</option>');
+                        return;
+                    }
+
+                    var html = '<option value="">{{ __('orders.choose_delivery_time') }}</option>';
+                    response.slots.forEach(function (slot) {
+                        var selected = oldSlotId && String(oldSlotId) === String(slot.id) ? ' selected' : '';
+                        html += '<option value="' + slot.id + '"' + selected + '>' + slot.label + '</option>';
+                    });
+                    $slotSelect.html(html).prop('disabled', false);
+                });
+            }
+
+            $('#delivery_date').on('change', function () {
+                oldSlotId = null;
+                loadDeliverySlots($(this).val());
+            });
+
+            if ($('#delivery_date').val()) {
+                loadDeliverySlots($('#delivery_date').val());
+            }
         });
     </script>
 

@@ -202,7 +202,7 @@ class DailySalesReportService
     public function mapPaymentMethodToCategory(?string $method): string
     {
         return match ($method) {
-            'cash', 'cod' => 'cash',
+            'cash', 'cod', 'in-store' => 'cash',
             'qr' => 'qr',
             'bank-transfer', 'e-wallet' => 'transfer',
             'credit-term', 'customer-credit', 'term' => 'credit-term',
@@ -214,7 +214,7 @@ class DailySalesReportService
     public function methodsForCategory(string $category): array
     {
         return match ($category) {
-            'cash' => ['cash', 'cod'],
+            'cash' => ['cash', 'cod', 'in-store'],
             'qr' => ['qr'],
             'transfer' => ['bank-transfer', 'e-wallet'],
             'credit-term' => ['credit-term', 'customer-credit', 'term'],

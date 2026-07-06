@@ -30,11 +30,8 @@
                         </div>
                     @endif
                     <div class="mb-4">
-                        <h6>Available Stock:</h6>
-                        <p class="card-text">
-                            <span class="badge bg-success">{{ $product->stock_label }}</span>
-                        </p>
-                        <small class="text-muted">Same as inventory Stock Balance — quantity in {{ $product->uom_name ?? 'KG' }}.</small>
+                        <h6>Availability:</h6>
+                        <p class="card-text mb-0">@include('partials.subject_to_availability')</p>
                     </div>
                     <hr class="w-50">
                     <form method="POST" action="{{ route('member.add-to-cart', encrypt($product->id)) }}" enctype="multipart/form-data" class="form-wrapper">
@@ -85,18 +82,18 @@
                             <div class="mb-4">
                                 <label class="mb-2" for="quantity">Quantity</label>
                                 <span class="text-danger"> *</span>
-                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ $product->added_to_cart? $product->added_to_cart->quantity : 1 }}" min="0.001" max="{{ $product->storefront_available_amount }}" step="0.001">
+                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ $product->added_to_cart? $product->added_to_cart->quantity : 1 }}" min="0.001" @if ((float) $product->storefront_available_amount > 0) max="{{ $product->storefront_available_amount }}" @endif step="0.001">
                                 @error('quantity')
                                     <span class="text-danger" role="alert">
                                         <strong>{{ $message }}</strong>
                                     </span>
                                 @enderror
                             </div>
-                        @elseif ($product->sell_in == 'qty_bill_weight')
+                        @elseif (in_array($product->sell_in, ['qty_bill_weight', 'weight'], true))
                             <div class="mb-4">
-                                <label class="mb-2" for="quantity">Quantity</label>
+                                <label class="mb-2" for="quantity">{{ __('orders.quantity_label') }}</label>
                                 <span class="text-danger"> *</span>
-                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ old('quantity', $product->added_to_cart? $product->added_to_cart->quantity : 1) }}" min="0.001" max="{{ $product->storefront_available_amount }}" step="0.001">
+                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ old('quantity', $product->added_to_cart? $product->added_to_cart->quantity : 1) }}" min="0.001" @if ((float) $product->storefront_available_amount > 0) max="{{ $product->storefront_available_amount }}" @endif step="0.001" required>
                                 @error('quantity')
                                     <span class="text-danger" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -104,20 +101,8 @@
                                 @enderror
                             </div>
                             <div class="mb-4">
-                                <label class="mb-2" for="weight">Weight ({{ $product->uom_name ?? 'KG' }})</label>
-                                <span class="text-danger"> *</span>
-                                <input type="number" class="form-control @error('weight') is-invalid @enderror" id="weight" name="weight" value="{{ old('weight', $product->added_to_cart? $product->added_to_cart->weight : 1) }}" min="0.001" step="0.001">
-                                @error('weight')
-                                    <span class="text-danger" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        @else
-                            <div class="mb-4">
-                                <label class="mb-2" for="weight">Order Qty ({{ $product->uom_name ?? 'KG' }})</label>
-                                <span class="text-danger"> *</span>
-                                <input type="number" class="form-control @error('weight') is-invalid @enderror" id="weight" name="weight" value="{{ $product->added_to_cart? $product->added_to_cart->weight : 1 }}" min="0.001" max="{{ $product->storefront_available_amount }}" step="0.001">
+                                <label class="mb-2" for="weight">{{ __('product.estimated_weight', ['uom' => $product->uom_name ?? 'KG']) }} {{ __('product.optional') }}</label>
+                                <input type="number" class="form-control @error('weight') is-invalid @enderror" id="weight" name="weight" value="{{ old('weight', $product->added_to_cart? $product->added_to_cart->weight : '') }}" min="0.001" step="0.001">
                                 @error('weight')
                                     <span class="text-danger" role="alert">
                                         <strong>{{ $message }}</strong>

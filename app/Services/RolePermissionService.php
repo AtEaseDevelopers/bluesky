@@ -57,15 +57,49 @@ class RolePermissionService
         return $this->portalDefinitions($role->portal);
     }
 
+    public function capabilitiesForModule(array $definition): array
+    {
+        if (isset($definition['capabilities'])) {
+            return array_keys($definition['capabilities']);
+        }
+
+        return [];
+    }
+
+    public function flatPermissionKey(string $module, string $capability): string
+    {
+        return "{$module}.{$capability}";
+    }
+
+    public function allFlatPermissionKeys(string $portal): array
+    {
+        $keys = [];
+
+        foreach ($this->portalDefinitions($portal) as $module => $definition) {
+            $capabilities = $this->capabilitiesForModule($definition);
+            if ($capabilities === []) {
+                $keys[] = $module;
+
+                continue;
+            }
+
+            foreach ($capabilities as $capability) {
+                $keys[] = $this->flatPermissionKey($module, $capability);
+            }
+        }
+
+        return $keys;
+    }
+
     public function allowedMap(string $roleSlug): array
     {
         $role = $this->findRole($roleSlug);
-        if (!$role) {
+        if (! $role) {
             return [];
         }
 
         if ($role->is_superadmin) {
-            return array_fill_keys(array_keys($this->definitionsForRole($role)), true);
+            return $this->superadminAllowedMap($role);
         }
 
         return Cache::remember("role_permissions.map.{$roleSlug}", 300, function () use ($role, $roleSlug) {
@@ -77,11 +111,25 @@ class RolePermissionService
                 : collect();
 
             $map = [];
-            foreach ($definitions as $key => $definition) {
-                if ($stored->has($key)) {
-                    $map[$key] = (bool) $stored[$key];
-                } else {
-                    $map[$key] = $definition['default'] ?? true;
+
+            foreach ($definitions as $module => $definition) {
+                $capabilities = $this->capabilitiesForModule($definition);
+
+                if ($capabilities === []) {
+                    $map[$module] = $this->resolveStoredPermission(
+                        $stored,
+                        $module,
+                        null,
+                        (bool) ($definition['default'] ?? true)
+                    );
+
+                    continue;
+                }
+
+                foreach ($capabilities as $capability) {
+                    $key = $this->flatPermissionKey($module, $capability);
+                    $default = (bool) ($definition['default'][$capability] ?? false);
+                    $map[$key] = $this->resolveStoredPermission($stored, $key, $module, $default);
                 }
             }
 
@@ -92,7 +140,7 @@ class RolePermissionService
     public function can(string $roleSlug, string $permission): bool
     {
         $role = $this->findRole($roleSlug);
-        if (!$role) {
+        if (! $role) {
             return false;
         }
 
@@ -100,9 +148,39 @@ class RolePermissionService
             return true;
         }
 
-        $map = $this->allowedMap($roleSlug);
+        if (str_contains($permission, '.')) {
+            return $this->allowedMap($roleSlug)[$permission] ?? false;
+        }
 
-        return $map[$permission] ?? false;
+        return $this->canModule($roleSlug, $permission, 'view');
+    }
+
+    public function canModule(string $roleSlug, string $module, string $capability): bool
+    {
+        $role = $this->findRole($roleSlug);
+        if (! $role) {
+            return false;
+        }
+
+        if ($role->is_superadmin) {
+            return true;
+        }
+
+        $definition = $this->definitionsForRole($role)[$module] ?? null;
+        if (! $definition) {
+            return false;
+        }
+
+        $capabilities = $this->capabilitiesForModule($definition);
+        if ($capabilities === []) {
+            return (bool) ($this->allowedMap($roleSlug)[$module] ?? ($definition['default'] ?? false));
+        }
+
+        if (! in_array($capability, $capabilities, true)) {
+            return false;
+        }
+
+        return $this->can($roleSlug, $this->flatPermissionKey($module, $capability));
     }
 
     public function sync(Role $role, array $enabledPermissions): void
@@ -114,17 +192,49 @@ class RolePermissionService
         $definitions = $this->definitionsForRole($role);
         $enabled = array_flip($enabledPermissions);
         $now = now();
+        $flatKeys = [];
 
-        foreach ($definitions as $permission => $definition) {
-            DB::table('role_permissions')->updateOrInsert(
-                ['role' => $role->slug, 'permission' => $permission],
-                [
-                    'allowed' => isset($enabled[$permission]),
-                    'updated_at' => $now,
-                    'created_at' => $now,
-                ]
-            );
+        foreach ($definitions as $module => $definition) {
+            $capabilities = $this->capabilitiesForModule($definition);
+
+            if ($capabilities === []) {
+                $flatKeys[] = $module;
+                DB::table('role_permissions')->updateOrInsert(
+                    ['role' => $role->slug, 'permission' => $module],
+                    [
+                        'allowed' => isset($enabled[$module]),
+                        'updated_at' => $now,
+                        'created_at' => $now,
+                    ]
+                );
+
+                continue;
+            }
+
+            foreach ($capabilities as $capability) {
+                $key = $this->flatPermissionKey($module, $capability);
+                $flatKeys[] = $key;
+
+                DB::table('role_permissions')->updateOrInsert(
+                    ['role' => $role->slug, 'permission' => $key],
+                    [
+                        'allowed' => isset($enabled[$key]),
+                        'updated_at' => $now,
+                        'created_at' => $now,
+                    ]
+                );
+            }
+
+            DB::table('role_permissions')
+                ->where('role', $role->slug)
+                ->where('permission', $module)
+                ->delete();
         }
+
+        DB::table('role_permissions')
+            ->where('role', $role->slug)
+            ->whereNotIn('permission', $flatKeys)
+            ->delete();
 
         $this->forgetRoleCache($role->slug);
     }
@@ -149,7 +259,7 @@ class RolePermissionService
 
     public function updateRole(Role $role, array $data, array $enabledPermissions): Role
     {
-        if (!$role->is_system) {
+        if (! $role->is_system) {
             $role->name = $data['name'];
             $role->description = $data['description'] ?? null;
         } else {
@@ -205,20 +315,24 @@ class RolePermissionService
 
     public function memberRoutePermission(?string $routeName): ?string
     {
-        if (!$routeName) {
+        if (! $routeName) {
             return null;
         }
 
-        return config("permissions.member_routes.{$routeName}");
+        $routes = config('permissions.member_routes', []);
+
+        return $routes[$routeName] ?? null;
     }
 
     public function driverRoutePermission(?string $routeName): ?string
     {
-        if (!$routeName) {
+        if (! $routeName) {
             return null;
         }
 
-        return config("permissions.driver_routes.{$routeName}");
+        $routes = config('permissions.driver_routes', []);
+
+        return $routes[$routeName] ?? null;
     }
 
     public function memberPathPermission(string $path): ?string
@@ -241,6 +355,40 @@ class RolePermissionService
         }
 
         return null;
+    }
+
+    private function superadminAllowedMap(Role $role): array
+    {
+        $map = [];
+
+        foreach ($this->definitionsForRole($role) as $module => $definition) {
+            $capabilities = $this->capabilitiesForModule($definition);
+
+            if ($capabilities === []) {
+                $map[$module] = true;
+
+                continue;
+            }
+
+            foreach ($capabilities as $capability) {
+                $map[$this->flatPermissionKey($module, $capability)] = true;
+            }
+        }
+
+        return $map;
+    }
+
+    private function resolveStoredPermission(Collection $stored, string $key, ?string $legacyModule, bool $default): bool
+    {
+        if ($stored->has($key)) {
+            return (bool) $stored[$key];
+        }
+
+        if ($legacyModule !== null && $stored->has($legacyModule)) {
+            return (bool) $stored[$legacyModule];
+        }
+
+        return $default;
     }
 
     private function slugExists(string $slug, ?int $ignoreId = null): bool

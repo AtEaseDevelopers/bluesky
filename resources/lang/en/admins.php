@@ -40,4 +40,15 @@ return [
     'status_changed_active' => 'Status changed to active',
     'status_changed_inactive' => 'Status changed to inactive',
     'status_update_error' => 'Error updating status',
+
+    'profile' => [
+        'title' => 'Profile',
+        'edit' => 'Edit Profile',
+        'email_address' => 'Email Address',
+        'unique_username' => 'unique username',
+        'unique_email' => 'unique email address',
+        'old_password' => 'Old Password',
+        'password' => 'Password',
+        'loading' => 'Loading...',
+    ],
 ];

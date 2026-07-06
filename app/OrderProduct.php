@@ -129,7 +129,13 @@ class OrderProduct extends Model
 
     public static function displayWeight(object $product): ?string
     {
-        if (!empty($product->weight)) {
+        $sellIn = self::resolveSellInForOrderLine($product);
+
+        if ($sellIn === self::SELL_IN_QTY_BILL_WEIGHT && $product->quantity !== null && ! empty($product->weight)) {
+            return rtrim((string) ((float) $product->quantity * (float) $product->weight)) . ' KG';
+        }
+
+        if (! empty($product->weight)) {
             return rtrim((string) $product->weight) . ' KG';
         }
 

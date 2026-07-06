@@ -40,4 +40,15 @@ return [
     'status_changed_active' => '状态已更改为启用',
     'status_changed_inactive' => '状态已更改为停用',
     'status_update_error' => '更新状态时出错',
+
+    'profile' => [
+        'title' => '个人资料',
+        'edit' => '编辑资料',
+        'email_address' => '电子邮箱',
+        'unique_username' => '唯一用户名',
+        'unique_email' => '唯一电子邮箱',
+        'old_password' => '旧密码',
+        'password' => '密码',
+        'loading' => '加载中...',
+    ],
 ];

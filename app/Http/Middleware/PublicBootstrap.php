@@ -40,7 +40,7 @@ class PublicBootstrap
             'product_show_name' => null,
             'update_cart_url' => route('public.guest.update-cart-item'),
             'remove_cart_url' => url('/order/remove-cart-item'),
-            'product_info_url' => url('/add-to-cart-product-info'),
+            'product_info_url' => route('public.guest.add-to-cart-product-info'),
         ]);
 
         return $next($request);

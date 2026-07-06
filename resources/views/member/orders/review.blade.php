@@ -1,39 +1,38 @@
 @extends('layouts.member')
-@section('title', 'Review Order #' . $order->id)
+@section('title', __('orders.member.review_order_title', ['id' => $order->id]))
 @section('content')
 
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-                <h4 class="mb-0">Review Order #{{ $order->id }}</h4>
+                <h4 class="mb-0">{{ __('orders.member.review_order_title', ['id' => $order->id]) }}</h4>
                 <a href="{{ url('order/summary/' . $encryptedId) }}" class="btn btn-outline-secondary">
-                    <i class="fa fa-chevron-circle-left"></i> Back to Summary
+                    <i class="fa fa-chevron-circle-left"></i> {{ __('orders.member.back_to_summary') }}
                 </a>
             </div>
 
             <div class="alert alert-info">
-                Your order has been reviewed by our team. Please confirm the final quantities, weights, and total below.
-                Once approved, your order will proceed to delivery.
+                {{ __('orders.member.review_intro') }}
             </div>
 
             <div class="card shadow no-border">
                 <div class="card-body">
                     <div class="row mb-4">
                         <div class="col-md-6">
-                            <p><strong>Order Date:</strong> {{ $order->created_at->format('d M Y h:i a') }}</p>
-                            <p><strong>Delivery:</strong>
+                            <p><strong>{{ __('orders.member.order_date_colon') }}</strong> {{ $order->created_at->format('d M Y h:i a') }}</p>
+                            <p><strong>{{ __('orders.member.delivery_label') }}</strong>
                                 {{ $order->delivery_date ? $order->delivery_date->format('d M Y') : '-' }}
                                 {{ $order->delivery_time_slot }}
                             </p>
-                            <p><strong>Shipping Address:</strong><br>{!! nl2br(e(strip_tags($order->shipping_address))) !!}</p>
+                            <p><strong>{{ __('orders.member.shipping_address_colon') }}</strong><br>{!! nl2br(e(strip_tags($order->shipping_address))) !!}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Status:</strong> {{ __('order.status.' . $order->status) }}</p>
+                            <p><strong>{{ __('orders.member.status_colon') }}</strong> {{ __('order.status.' . $order->status) }}</p>
                             @if (Auth::guard('web')->user()->customer_type === 'credit' && $order->payment_due_date)
-                                <p><strong>Payment Due:</strong> {{ $order->payment_due_date->format('d M Y') }}</p>
+                                <p><strong>{{ __('orders.member.payment_due_colon') }}</strong> {{ $order->payment_due_date->format('d M Y') }}</p>
                             @endif
                             @if ($order->adjustment_remark)
-                                <p><strong>Adjustment Note:</strong> {{ $order->adjustment_remark }}</p>
+                                <p><strong>{{ __('orders.member.adjustment_note_colon') }}</strong> {{ $order->adjustment_remark }}</p>
                             @endif
                         </div>
                     </div>
@@ -42,11 +41,11 @@
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
-                                    <th>Product</th>
-                                    <th class="text-end">Unit Price (RM)</th>
-                                    <th>Qty</th>
-                                    <th>Weight (kg)</th>
-                                    <th class="text-end">Line Total (RM)</th>
+                                    <th>{{ __('orders.product') }}</th>
+                                    <th class="text-end">{{ __('orders.member.unit_price_rm') }}</th>
+                                    <th>{{ __('orders.qty') }}</th>
+                                    <th>{{ __('orders.member.weight_kg') }}</th>
+                                    <th class="text-end">{{ __('orders.member.line_total_header') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -68,21 +67,21 @@
                                     </tr>
                                 @endforeach
                                 <tr>
-                                    <td colspan="4" class="text-end"><strong>Subtotal</strong></td>
+                                    <td colspan="4" class="text-end"><strong>{{ __('orders.subtotal') }}</strong></td>
                                     <td class="text-end">{{ number_format($order->subtotal, 2) }}</td>
                                 </tr>
                                 <tr>
-                                    <td colspan="4" class="text-end"><strong>Delivery Fee</strong></td>
+                                    <td colspan="4" class="text-end"><strong>{{ __('orders.delivery_fee') }}</strong></td>
                                     <td class="text-end">{{ number_format($order->delivery_fee, 2) }}</td>
                                 </tr>
                                 @if ($order->amount_adjustment != 0)
                                     <tr>
-                                        <td colspan="4" class="text-end"><strong>Adjustment</strong></td>
+                                        <td colspan="4" class="text-end"><strong>{{ __('orders.adjustment') }}</strong></td>
                                         <td class="text-end">{{ number_format($order->amount_adjustment, 2) }}</td>
                                     </tr>
                                 @endif
                                 <tr>
-                                    <td colspan="4" class="text-end"><strong>Grand Total</strong></td>
+                                    <td colspan="4" class="text-end"><strong>{{ __('orders.grand_total') }}</strong></td>
                                     <td class="text-end"><strong>{{ number_format($order->total_price, 2) }}</strong></td>
                                 </tr>
                             </tbody>
@@ -91,14 +90,14 @@
 
                     <div class="d-flex justify-content-end gap-2 flex-wrap">
                         <form action="{{ route('member.orders.review.reject', $encryptedId) }}" method="POST"
-                            onsubmit="return confirm('Are you sure you want to cancel this order?');">
+                            onsubmit="return confirm(@json(__('orders.member.reject_confirm')));">
                             @csrf
-                            <button type="submit" class="btn btn-outline-danger">Reject / Cancel</button>
+                            <button type="submit" class="btn btn-outline-danger">{{ __('orders.member.reject_cancel') }}</button>
                         </form>
                         <form action="{{ route('member.orders.review.approve', $encryptedId) }}" method="POST"
-                            onsubmit="return confirm('Approve this order and proceed to delivery?');">
+                            onsubmit="return confirm(@json(__('orders.member.approve_confirm')));">
                             @csrf
-                            <button type="submit" class="btn btn-success">Approve Order</button>
+                            <button type="submit" class="btn btn-success">{{ __('orders.member.approve_order') }}</button>
                         </form>
                     </div>
                 </div>

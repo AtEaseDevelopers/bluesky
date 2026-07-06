@@ -9,7 +9,9 @@
     </style>
 @endsection
 @section('content')
-
+@php
+    $admin = Auth::guard('web_admin')->user();
+@endphp
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="card shadow no-border mb-0">
@@ -87,6 +89,18 @@
                                     </select>
                                 </div>
                             </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-4">
+                                    <label class="mb-2" for="filterPhone">{{ __('orders.search_phone') }}</label>
+                                    <input type="text" class="form-control" name="phone" id="filterPhone" value="{{ $input['phone'] ?? '' }}" placeholder="{{ __('orders.search_phone_placeholder') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-4">
+                                    <label class="mb-2" for="filterAddress">{{ __('orders.search_address') }}</label>
+                                    <input type="text" class="form-control" name="address" id="filterAddress" value="{{ $input['address'] ?? '' }}" placeholder="{{ __('orders.search_address_placeholder') }}">
+                                </div>
+                            </div>
                         </div>
                         <div class="row">
                             <div class="col-md-4">
@@ -143,7 +157,7 @@
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div>
-                    @if (Auth::guard('web_admin')->user()->canAccessModule('orders'))
+                    @if (Auth::guard('web_admin')->user()->canModule('orders', 'create'))
                         <a href="{{ route('admin.orders.create') }}" class="btn btn-primary">
                             <i class="fa fa-plus" aria-hidden="true"></i> {{ __('orders.add') }}
                         </a>
@@ -156,9 +170,11 @@
                     </button>
                 </div>
                 <div class="d-flex">
-                    <button type="button" id="syncAutoCountBtn" class="btn btn-outline-secondary me-1">
-                        {{ __('orders.sync_autocount') }}
-                    </button>
+                    @if ($admin->canModule('orders', 'edit'))
+                        <button type="button" id="syncAutoCountBtn" class="btn btn-outline-secondary me-1">
+                            {{ __('orders.sync_autocount') }}
+                        </button>
+                    @endif
                     <form action="{{ route('admin.orders.export') . $query_params }}">
                         <input type="hidden" class="orders_id" name="orders_id">
                         <button type="submit" class="btn btn-success btn-download-excel me-1">
@@ -229,7 +245,7 @@
                                                     <li>
                                                         <a class="dropdown-item" href="{{ route('admin.orders.summary', $order->id) }}">{{ __('orders.order_summary') }}</a>
                                                     </li>
-                                                    @if (Order::canAdjustQuantities($order->status))
+                                                    @if (Order::canAdjustQuantities($order->status) && $admin->canModule('orders', 'edit'))
                                                         <li>
                                                             <a class="dropdown-item" href="{{ route('admin.orders.review', $order->id) }}">{{ __('orders.adjust_order') }}</a>
                                                         </li>
@@ -244,12 +260,14 @@
                                                             <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">{{ __('orders.view_do') }}</a>
                                                         </li>
                                                     @endif
-                                                    <li>
-                                                        <a class="dropdown-item btn-change-lorry" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-lorry="{{ $order->driver_id }}" data-bs-toggle="modal" data-bs-target="#change-lorry">{{ __('orders.change_lorry') }}</a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item btn-add-order-weight" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-bs-toggle="modal" data-bs-target="#add-weight">{{ __('orders.order_weight') }}</a>
-                                                    </li>
+                                                    @if ($admin->canModule('orders', 'edit'))
+                                                        <li>
+                                                            <a class="dropdown-item btn-change-lorry" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-lorry="{{ $order->driver_id }}" data-bs-toggle="modal" data-bs-target="#change-lorry">{{ __('orders.change_lorry') }}</a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item btn-add-order-weight" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-bs-toggle="modal" data-bs-target="#add-weight">{{ __('orders.order_weight') }}</a>
+                                                        </li>
+                                                    @endif
                                                 </ul>
                                             </div>
                                         </td>

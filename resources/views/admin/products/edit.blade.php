@@ -1,12 +1,12 @@
 @extends('layouts.admin')
-@section('title', 'Edit Product')
+@section('title', __('product.edit'))
 @section('content')
 
     <div class="row">
         <div class="col-md-12">
             <div class="card shadow no-border">
                 <div class="card-body">
-                    <h5 class="mb-4">Edit Product</h5>
+                    <h5 class="mb-4">{{ __('product.edit') }}</h5>
                     <form method="POST" action="{{ route('admin.products.update', encrypt($product->id)) }}" enctype="multipart/form-data" class="form-wrapper">
                         @csrf
 
@@ -18,10 +18,10 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="product_category_id">Select Category</label>
+                                    <label class="mb-2" for="product_category_id">{{ __('product.select_category') }}</label>
                                     <span class="text-danger"> *</span>
                                     <select class="form-select @error('product_category_id') is-invalid @enderror"  id="product_category_id" name="product_category_id">
-                                        <option value="">Choose...</option>
+                                        <option value="">{{ __('orders.choose') }}</option>
                                         @foreach ($product_categories as $category)
                                             <option value="{{ $category->id }}" {{ $product->product_category_id == $category->id ? 'selected' : '' }}>
                                                 {{ $category->category_name }}
@@ -37,10 +37,10 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="uom_id">Select UOM</label>
+                                    <label class="mb-2" for="uom_id">{{ __('product.select_uom') }}</label>
                                     <span class="text-danger"> *</span>
                                     <select class="form-select @error('uom_id') is-invalid @enderror"  id="uom_id" name="uom_id">
-                                        <option value="">Choose...</option>
+                                        <option value="">{{ __('orders.choose') }}</option>
                                         @foreach ($uoms as $uom)
                                             <option value="{{ $uom->id }}" {{ $product->uom_id == $uom->id ? 'selected' : '' }}>
                                                 {{ $uom->uom_name }}
@@ -58,15 +58,15 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="productImage">Product Image</label>
+                                    <label class="mb-2" for="productImage">{{ __('product.product_image') }}</label>
                                     <input type="file" class="form-control" name="images" id="productImage" accept="image/*">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="productName">Product Name</label>
+                                    <label class="mb-2" for="productName">{{ __('product.product_name') }}</label>
                                     <span class="text-danger"> *</span>
-                                    <input type="text" class="form-control" name="name" id="productName" value="{{ old('name')? : $product->name }}" placeholder="Enter product name" required>
+                                    <input type="text" class="form-control" name="name" id="productName" value="{{ old('name')? : $product->name }}" placeholder="{{ __('product.placeholder.product_name') }}" required>
                                     @if ($errors->has('name'))
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $errors->first('name') }}</strong>
@@ -78,8 +78,8 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="productDescription">Product Description</label>
-                                    <textarea class="form-control" name="description" id="productDescription" value="" placeholder="Enter product description"
+                                    <label class="mb-2" for="productDescription">{{ __('product.product_description') }}</label>
+                                    <textarea class="form-control" name="description" id="productDescription" value="" placeholder="{{ __('product.placeholder.product_description') }}"
                                         >{{ old('description')? : $product->description }}</textarea>
                                     @if ($errors->has('description'))
                                         <span class="text-danger" role="alert">
@@ -92,8 +92,8 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="productSku">SKU</label>
-                                    <input type="text" class="form-control" name="sku" id="productSku" value="{{ old('sku')? : $product->sku }}" placeholder="Enter product SKU">
+                                    <label class="mb-2" for="productSku">{{ __('product.sku') }}</label>
+                                    <input type="text" class="form-control" name="sku" id="productSku" value="{{ old('sku')? : $product->sku }}" placeholder="{{ __('product.placeholder.product_sku') }}">
                                     @if ($errors->has('sku'))
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $errors->first('sku') }}</strong>
@@ -103,10 +103,10 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="productPrice">Default Price (RM)</label>
+                                    <label class="mb-2" for="productPrice">{{ __('product.default_price') }}</label>
                                     <span class="text-danger"> *</span>
-                                    <input type="number" step="0.01" class="form-control" name="price" id="productPrice" value="{{ old('price')? : $product->price }}" placeholder="Enter default price per UOM" required>
-                                    <small class="text-muted">Price per unit of measure. Used when no category or daily price is set.</small>
+                                    <input type="number" step="0.01" class="form-control" name="price" id="productPrice" value="{{ old('price')? : $product->price }}" placeholder="{{ __('product.placeholder.default_price') }}" required>
+                                    <small class="text-muted">{{ __('product.help.default_price') }}</small>
                                     @if ($errors->has('price'))
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $errors->first('price') }}</strong>
@@ -118,9 +118,9 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="weight">Weight</label>
-                                    <span> (in KG)</span>
-                                    <input type="number" step="0.01" min="0" class="form-control" name="weight" id="weight" value="{{ $product->weight }}" placeholder="Enter product weight">
+                                    <label class="mb-2" for="weight">{{ __('product.weight') }}</label>
+                                    <span>{{ __('product.weight_in_kg') }}</span>
+                                    <input type="number" step="0.01" min="0" class="form-control" name="weight" id="weight" value="{{ $product->weight }}" placeholder="{{ __('product.placeholder.product_weight') }}">
                                     @if ($errors->has('weight'))
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $errors->first('weight') }}</strong>
@@ -130,7 +130,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="productStatus">Status</label>
+                                    <label class="mb-2" for="productStatus">{{ __('product.status_label') }}</label>
                                     <span class="text-danger"> *</span>
                                     <select id="productStatus" class="form-select" name="status">
                                         <option value="active"{{ (old('status')? : $product->status) == 'active'? " selected" : "" }}>{{ __('product.status.active') }}</option>
@@ -147,8 +147,8 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="remark">Remark</label>
-                                    <textarea class="form-control" name="remark" id="remark" value="" placeholder="Enter remark"
+                                    <label class="mb-2" for="remark">{{ __('product.remark') }}</label>
+                                    <textarea class="form-control" name="remark" id="remark" value="" placeholder="{{ __('product.placeholder.remark') }}"
                                         >{{ old('remark')? : $product->remark }}</textarea>
                                     @if ($errors->has('remark'))
                                         <span class="text-danger" role="alert">
@@ -175,20 +175,20 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2">Sell In</label>
+                                    <label class="mb-2">{{ __('product.sell_in') }}</label>
                                     <span class="text-danger"> *</span>
                                     <div class="col-md-12 d-flex gap-4">
                                         <div>
                                             <input name="sell_in" id="sell_in_qty" type="radio" value="qty" {{ $product->sell_in == 'qty' ? 'checked' : '' }} />
-                                            <label class="mb-2" for="sell_in_qty">Quantity</label>
+                                            <label class="mb-2" for="sell_in_qty">{{ __('product.sell_in_qty') }}</label>
                                         </div>
                                         <div>
                                             <input name="sell_in" id="sell_in_weight" type="radio" value="weight" {{ $product->sell_in == 'weight' ? 'checked' : '' }} />
-                                            <label class="mb-2" for="sell_in_weight">Weight</label>
+                                            <label class="mb-2" for="sell_in_weight">{{ __('product.sell_in_weight') }}</label>
                                         </div>
                                         <div>
                                             <input name="sell_in" id="sell_in_qty_bill_weight" type="radio" value="qty_bill_weight" {{ $product->sell_in == 'qty_bill_weight' ? 'checked' : '' }} />
-                                            <label class="mb-2" for="sell_in_qty_bill_weight">Quantity (bill by weight)</label>
+                                            <label class="mb-2" for="sell_in_qty_bill_weight">{{ __('product.sell_in_qty_bill_weight') }}</label>
                                         </div>
                                     </div>
                                 </div>
@@ -197,9 +197,9 @@
                         <div class="row" id="weight-presets-wrap">
                             <div class="col-md-12">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="weight_presets">Weight Presets</label>
+                                    <label class="mb-2" for="weight_presets">{{ __('product.weight_presets') }}</label>
                                     <textarea class="form-control @error('weight_presets') is-invalid @enderror" name="weight_presets" id="weight_presets" rows="3" placeholder="1, 1.5, 2, 2.5, 3">{{ old('weight_presets', \App\Product::formatWeightPresetsForForm($product->weight_presets)) }}</textarea>
-                                    <small class="text-muted">Comma or line-separated values shown as quick-select buttons when customers order by weight (e.g. 1, 1.5, 2).</small>
+                                    <small class="text-muted">{{ __('product.help.weight_presets') }}</small>
                                     @error('weight_presets')
                                         <span class="text-danger" role="alert"><strong>{{ $message }}</strong></span>
                                     @enderror
@@ -209,15 +209,15 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="mb-4">
-                                    <h5 class="mb-1">Category Pricing</h5>
-                                    <p class="text-muted small mb-3">Optional price overrides per customer category. Daily prices take priority on order day.</p>
+                                    <h5 class="mb-1">{{ __('product.category_pricing') }}</h5>
+                                    <p class="text-muted small mb-3">{{ __('product.category_pricing_help') }}</p>
                                     <div class="table-responsive">
                                         <table class="table bottom-bordered">
                                             <thead>
                                                 <tr>
-                                                    <th width="50">No</th>
-                                                    <th>Customer Category</th>
-                                                    <th>Price (RM per UOM)</th>
+                                                    <th width="50">{{ __('product.no') }}</th>
+                                                    <th>{{ __('product.customer_category') }}</th>
+                                                    <th>{{ __('product.price_per_uom') }}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -229,7 +229,7 @@
                                                         <td>{{ $loop->iteration }}</td>
                                                         <td>{{ $category }}</td>
                                                         <td>
-                                                            <input type="number" step="0.01" min="0" class="form-control" name="category_prices[{{ $category }}]" placeholder="Leave empty for default price" value="{{ $categoryPrice->price ?? old('category_prices.' . $category) }}">
+                                                            <input type="number" step="0.01" min="0" class="form-control" name="category_prices[{{ $category }}]" placeholder="{{ __('product.placeholder.category_price') }}" value="{{ $categoryPrice->price ?? old('category_prices.' . $category) }}">
                                                         </td>
                                                     </tr>
                                                 @endforeach
@@ -243,9 +243,9 @@
                             <div class="col-md-12">
                                 <div class="mb-4">
                                     <div class="product-option-group my-3">
-                                        <label class="mb-2">Product Options</label><br/>
+                                        <label class="mb-2">{{ __('product.product_options') }}</label><br/>
                                         <a class="btn btn-outline-primary mr-auto" type="button" data-bs-toggle="modal" data-bs-target="#addOptionModal">
-                                            <i class="fa fa-plus" aria-hidden="true"></i> Add Option
+                                            <i class="fa fa-plus" aria-hidden="true"></i> {{ __('product.add_option') }}
                                         </a>
                                         <div class="row product-option mt-4"></div>
                                     </div>
@@ -255,9 +255,9 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="d-flex justify-content-end">
-                                    <a href="{{ route('admin.products') }}" class="btn btn-secondary me-2 mb-1">Back</a>
+                                    <a href="{{ route('admin.products') }}" class="btn btn-secondary me-2 mb-1">{{ __('ui.back') }}</a>
                                     <button type="submit" class="btn btn-primary mb-1">
-                                        Save
+                                        {{ __('ui.save') }}
                                         <div class="spinner-border spinner-border-sm d-none" role="status">
                                             <span class="visually-hidden">Loading...</span>
                                         </div>
@@ -275,25 +275,25 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addOptionModalLabel">Add Option Type</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="addOptionModalLabel">{{ __('product.add_option_type') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
                 </div>
                 <div class="modal-body">
-                    <label for="optionName">Options Name</label>
-                    <input type="text" class="form-control" id="optionName" placeholder="Enter option name" required>
+                    <label for="optionName">{{ __('product.option_name') }}</label>
+                    <input type="text" class="form-control" id="optionName" placeholder="{{ __('product.placeholder.option_name') }}" required>
                     <hr/>
                     <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="isMandatory" checked="checked">
-                    <label class="form-check-label" for="isMandatory">Is Mandatory Option</label>
+                    <label class="form-check-label" for="isMandatory">{{ __('product.mandatory_option') }}</label>
                     </div>
                     <hr/>
-                    <label for="optionItems">Options Items (Selection)</label>
-                    <textarea class="form-control" id="optionItems" placeholder="Enter option items, separate with comma(,)"
+                    <label for="optionItems">{{ __('product.option_items') }}</label>
+                    <textarea class="form-control" id="optionItems" placeholder="{{ __('product.placeholder.option_items') }}"
                         required></textarea>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close</button>
-                    <button type="button" class="btn btn-primary" id="saveOptionType">Add</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}">{{ __('ui.close') }}</button>
+                    <button type="button" class="btn btn-primary" id="saveOptionType">{{ __('ui.add') }}</button>
                 </div>
             </div>
         </div>
@@ -332,11 +332,11 @@
                 const optionName = $('#optionName').val();
                 const optionItems = $('#optionItems').val();
                 if(optionName == ""){
-                    alert("Name is required!");
+                    alert(@json(__('product.js.name_required')));
                     return false;
                 }
                 else if(optionItems == ""){
-                    alert("Option Items (Selection) is required!");
+                    alert(@json(__('product.js.option_items_required')));
                     return false;
                 }
 
@@ -374,7 +374,7 @@
                                         <div>
                                             <input type="hidden" name="product_option[`+ optionName +`]" value="`+ optionItems.trim() +`" />
                                             <input type="hidden" name="product_option_mandatory[`+ optionName +`]" value="`+ ($('#isMandatory').is(':checked')? "1" : "" ) +`" />
-                                            <p><b>`+ optionName +`</b>`+ (isMandatory? "" : " (Optional)" ) +`<br/>`+ optionItemStr +`</p>
+                                            <p><b>`+ optionName +`</b>`+ (isMandatory? "" : " {{ __('product.optional') }}" ) +`<br/>`+ optionItemStr +`</p>
                                         </div>
                                         <a type="button" title="Remove `+ optionName +`" class="remove-item"><i class="fa fa-trash" aria-hidden="true"></i></a>
                                     </div>

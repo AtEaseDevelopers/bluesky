@@ -120,6 +120,23 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/customers', 'CustomerController@index')->name('customers');
                 Route::get('/customers/export', 'CustomerController@export')->name('customers.export');
                 Route::post('/customers/sync-autocount', 'CustomerController@syncAutoCount')->name('customers.sync-autocount');
+                Route::controller(PosController::class)->prefix('pos')->name('pos.')->group(function () {
+                    Route::post('/session', 'setSession')->name('session');
+                    Route::post('/reset', 'resetSession')->name('reset');
+                    Route::post('/exit', 'exit')->name('exit');
+                });
+                Route::controller(PosOrderController::class)->prefix('pos')->middleware('pos_bootstrap')->name('pos.')->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::post('/add-to-cart/{id}', 'addToCart')->name('add-to-cart');
+                    Route::post('/add-to-cart-product-info', 'addToCartProductInfo')->name('add-to-cart-product-info');
+                    Route::post('/update-cart-item', 'updateCartItem')->name('update-cart-item');
+                    Route::get('/remove-cart-item/{cart_product}', 'removeCartItem')->name('remove-cart-item');
+                    Route::get('/cart', 'cart')->name('cart');
+                    Route::get('/checkout', 'checkout')->name('checkout');
+                    Route::post('/checkout', 'submitCheckout')->name('checkout.submit');
+                    Route::get('/payment/{order}', 'payment')->name('payment');
+                    Route::post('/payment/{order}', 'recordPayment')->name('payment.store');
+                });
                 Route::get('/customer/add', 'AddCustomerController@showForm')->name('customers.create');
                 Route::post('/customer/add', 'AddCustomerController@addCustomer')->name('customers.store');
                 Route::get('/customer/invite', 'CustomerInviteController@create')->name('customers.invite');
@@ -163,7 +180,20 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::resource('delivery-slots', 'DeliverySlotController');
                 Route::controller('DeliverySlotController')->group(function () {
                     Route::post('/fetch-delivery-slots', 'fetch_delivery_slots');
+                    Route::get('/delivery-slots-for-date', 'slotsForDate')->name('delivery-slots.for-date');
                 });
+
+                Route::controller('DeliveryBlackoutController')->group(function () {
+                    Route::get('/delivery-blackouts/create', 'create')->name('delivery-blackouts.create');
+                    Route::post('/delivery-blackouts', 'store')->name('delivery-blackouts.store');
+                    Route::get('/delivery-blackouts/{id}/edit', 'edit')->name('delivery-blackouts.edit');
+                    Route::put('/delivery-blackouts/{id}', 'update')->name('delivery-blackouts.update');
+                    Route::delete('/delivery-blackouts/{id}', 'destroy')->name('delivery-blackouts.destroy');
+                    Route::post('/fetch-delivery-blackouts', 'fetch')->name('delivery-blackouts.fetch');
+                });
+
+                Route::get('/settings/delivery-order', 'DeliveryOrderSettingsController@edit')->name('settings.delivery-order');
+                Route::put('/settings/delivery-order', 'DeliveryOrderSettingsController@update')->name('settings.delivery-order.update');
 
                 // order
                 Route::get('/orders', 'OrderController@index')->name('orders');

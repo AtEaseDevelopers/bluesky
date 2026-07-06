@@ -68,39 +68,113 @@
     </div>
     @endif
 
-    {{-- Order items --}}
+    {{-- Order items / adjust --}}
     <div class="card driver-card mb-3">
         <div class="card-body">
             <h5 class="display-font mb-3" style="font-size:1.15rem;">{{ __('driver_portal.deliveries.order_items') }}</h5>
-            @forelse ($order->products as $item)
-                <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--line);">
-                    <div>
-                        <div>{{ $item->product_name }}</div>
-                        <div class="text-muted-ink" style="font-size:.9rem;">
-                            @php
-                                $qtyText = (string) $item->quantity;
-                                if ($item->weight) {
-                                    $qtyText .= ' · ' . $item->weight;
-                                }
-                            @endphp
-                            {{ __('driver_portal.deliveries.qty', ['qty' => $qtyText]) }}
-                        </div>
-                    </div>
-                    <div class="text-end fw-semibold">RM {{ number_format((float) $item->price, 2) }}</div>
-                </div>
-            @empty
-                <div class="text-muted-ink">{{ __('driver_portal.deliveries.no_items') }}</div>
-            @endforelse
 
-            <div class="d-flex justify-content-between mt-3 fw-bold" style="font-size:1.1rem;">
-                <div>{{ __('driver_portal.deliveries.total_amount') }}</div>
-                <div>RM {{ number_format($total, 2) }}</div>
-            </div>
+            @if ($canAdjustOrder && $driverCan('adjust_order'))
+                <p class="text-muted-ink mb-3" style="font-size:.92rem;">{{ __('driver_portal.deliveries.adjust_order_help') }}</p>
+                <form action="{{ route('driver.orders.adjust', $order->id) }}" method="POST" id="driver-adjust-form">
+                    @csrf
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0" id="driver-adjust-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('orders.product') }}</th>
+                                    <th>{{ __('driver_portal.deliveries.unit_price') }}</th>
+                                    <th>{{ __('driver_portal.deliveries.estimated') }}</th>
+                                    <th>{{ __('driver_portal.deliveries.actual_qty') }}</th>
+                                    <th>{{ __('driver_portal.deliveries.actual_weight') }}</th>
+                                    <th class="text-end">{{ __('driver_portal.deliveries.line_total') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($orderProducts as $item)
+                                    @php
+                                        $catalogProduct = $productsById->get($item->product_id);
+                                        $sellIn = \App\Product::resolveSellInForOrderLine($item, $catalogProduct);
+                                        $needsQty = \App\Product::lineNeedsQuantityInput($sellIn);
+                                        $needsWeight = \App\Product::lineNeedsWeightInput($sellIn);
+                                        $estLabel = \App\Product::formatOrderLineQtyLabel($item, $catalogProduct);
+                                        $reviewQty = $needsQty ? $item->quantity : null;
+                                        $reviewWeight = $needsWeight ? ($item->weight ?? $item->product_weight) : null;
+                                        $initialLineTotal = (float) $item->price;
+                                        if ($catalogProduct) {
+                                            $calcProduct = clone $catalogProduct;
+                                            $calcProduct->sell_in = $sellIn;
+                                            $initialLineTotal = $calcProduct->calculateLinePrice(
+                                                (float) $item->unit_price,
+                                                $reviewQty !== null ? (float) $reviewQty : null,
+                                                $reviewWeight !== null ? (float) $reviewWeight : null
+                                            );
+                                        }
+                                    @endphp
+                                    <tr class="driver-adjust-line" data-unit-price="{{ $item->unit_price }}" data-sell-in="{{ $sellIn }}">
+                                        <td>{{ $item->product_name }}</td>
+                                        <td>{{ number_format((float) $item->unit_price, 2) }}</td>
+                                        <td>{{ $estLabel }}</td>
+                                        <td>
+                                            @if ($needsQty)
+                                                <input type="number" step="0.001" min="0.001" class="form-control form-control-sm line-qty"
+                                                    name="line_items[{{ $item->id }}][quantity]" value="{{ $item->quantity }}" required>
+                                            @else
+                                                <span class="text-muted-ink">—</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($needsWeight)
+                                                <input type="number" step="0.001" min="0.001" class="form-control form-control-sm line-weight"
+                                                    name="line_items[{{ $item->id }}][weight]" value="{{ $item->weight ?? $item->product_weight }}" required>
+                                            @else
+                                                <span class="text-muted-ink">—</span>
+                                            @endif
+                                        </td>
+                                        <td class="line-total text-end">RM {{ number_format($initialLineTotal, 2) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="5" class="text-end fw-bold">{{ __('driver_portal.deliveries.total_amount') }}</td>
+                                    <td class="text-end fw-bold" id="driver-adjust-grand-total">RM {{ number_format($total, 2) }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <button type="submit" class="btn btn-brand btn-block-tall w-100 mt-3">
+                        <i class="fa fa-save me-1"></i> {{ __('driver_portal.deliveries.save_adjustments') }}
+                    </button>
+                </form>
+            @else
+                @forelse ($orderProducts as $item)
+                    @php
+                        $catalogProduct = $productsById->get($item->product_id);
+                        $qtyLabel = \App\Product::formatOrderLineQtyLabel($item, $catalogProduct);
+                    @endphp
+                    <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--line);">
+                        <div>
+                            <div>{{ $item->product_name }}</div>
+                            <div class="text-muted-ink" style="font-size:.9rem;">
+                                {{ __('driver_portal.deliveries.qty', ['qty' => $qtyLabel]) }}
+                            </div>
+                        </div>
+                        <div class="text-end fw-semibold">RM {{ number_format((float) $item->price, 2) }}</div>
+                    </div>
+                @empty
+                    <div class="text-muted-ink">{{ __('driver_portal.deliveries.no_items') }}</div>
+                @endforelse
+
+                <div class="d-flex justify-content-between mt-3 fw-bold" style="font-size:1.1rem;">
+                    <div>{{ __('driver_portal.deliveries.total_amount') }}</div>
+                    <div>RM {{ number_format($total, 2) }}</div>
+                </div>
+            @endif
         </div>
     </div>
 
-    {{-- Payment status (COD only) --}}
-    @if ($order->isCodCustomer() && ($driverCan('record_payment') || $driverCan('payment_proof')))
+    {{-- Payment status --}}
+    @if ($driverCan('record_payment') || $driverCan('payment_proof') || ($driverCan('make_payment') && $balance > 0.001))
     <div class="card driver-card mb-3">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -112,6 +186,15 @@
                 <div class="col-4"><div class="detail-label">{{ __('driver_portal.deliveries.paid') }}</div><div class="fw-semibold">RM {{ number_format($paid, 2) }}</div></div>
                 <div class="col-4"><div class="detail-label">{{ __('driver_portal.deliveries.balance') }}</div><div class="fw-semibold">RM {{ number_format(max($balance, 0), 2) }}</div></div>
             </div>
+            @if ($driverCan('make_payment') && $balance > 0.001)
+                <div class="mt-3 pt-3" style="border-top:1px solid var(--line);">
+                    <button type="button" class="btn btn-accent btn-block-tall w-100" disabled>
+                        <i class="fa fa-credit-card me-1"></i> {{ __('driver_portal.deliveries.make_payment') }}
+                    </button>
+                    <p class="text-muted-ink mb-0 mt-2" style="font-size:.88rem;">{{ __('driver_portal.deliveries.payment_gateway_coming_soon') }}</p>
+                </div>
+            @endif
+            @if ($order->isCodCustomer())
             @php
                 $latestPayment = $order->payments->where('status', 'confirmed')->sortByDesc('id')->first();
                 $methodKey = $latestPayment ? 'order.payment_methods.' . $latestPayment->payment_method : null;
@@ -133,6 +216,7 @@
                         </a>
                     </div>
                 @endif
+            @endif
             @endif
         </div>
     </div>
@@ -197,8 +281,52 @@
     @endif
 
 @endsection
-@if ($order->isCodCustomer() && $driverCan('record_payment'))
+@if (($canAdjustOrder && $driverCan('adjust_order')) || ($order->isCodCustomer() && $driverCan('record_payment')))
 @section('script')
+    @if ($canAdjustOrder && $driverCan('adjust_order'))
+    <script>
+        (function () {
+            function driverBillAmount(row) {
+                var sellIn = row.dataset.sellIn || 'weight';
+                var qtyInput = row.querySelector('.line-qty');
+                var weightInput = row.querySelector('.line-weight');
+                var qty = qtyInput ? (parseFloat(qtyInput.value) || 0) : 0;
+                var weight = weightInput ? (parseFloat(weightInput.value) || 0) : 0;
+
+                if (sellIn === 'qty') {
+                    return qty;
+                }
+                if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
+                    return qty * weight;
+                }
+
+                return weight;
+            }
+
+            function recalculateDriverAdjustTotals() {
+                var deliveryFee = {{ number_format((float) ($order->delivery_fee ?? 0), 2, '.', '') }};
+                var adjustment = {{ number_format((float) ($order->amount_adjustment ?? 0), 2, '.', '') }};
+                var subtotal = 0;
+
+                document.querySelectorAll('#driver-adjust-table tbody tr.driver-adjust-line').forEach(function (row) {
+                    var unitPrice = parseFloat(row.dataset.unitPrice) || 0;
+                    var lineTotal = unitPrice * driverBillAmount(row);
+                    row.querySelector('.line-total').textContent = 'RM ' + lineTotal.toFixed(2);
+                    subtotal += lineTotal;
+                });
+
+                var grandTotal = Math.max(0, subtotal + deliveryFee + adjustment);
+                document.getElementById('driver-adjust-grand-total').textContent = 'RM ' + grandTotal.toFixed(2);
+            }
+
+            document.querySelectorAll('#driver-adjust-table .line-qty, #driver-adjust-table .line-weight').forEach(function (el) {
+                el.addEventListener('input', recalculateDriverAdjustTotals);
+            });
+            recalculateDriverAdjustTotals();
+        })();
+    </script>
+    @endif
+    @if ($order->isCodCustomer() && $driverCan('record_payment'))
     <script>
         (function () {
             var proofRequired = @json($proofRequiredMethods);
@@ -215,5 +343,6 @@
             toggleProof();
         })();
     </script>
+    @endif
 @endsection
 @endif

@@ -66,6 +66,7 @@ class Kernel extends HttpKernel
         'driver_bootstrap' => \App\Http\Middleware\DriverBootstrap::class,
         'bootstrap' => \App\Http\Middleware\MemberBootstrap::class,
         'public_bootstrap' => \App\Http\Middleware\PublicBootstrap::class,
+        'pos_bootstrap' => \App\Http\Middleware\PosBootstrap::class,
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'bindings' => \Illuminate\Routing\Middleware\SubstituteBindings::class,
         'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,

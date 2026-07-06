@@ -2,7 +2,7 @@
 @section('title', __('orders.add'))
 @section('content')
 
-    <form method="POST" action="{{ route('admin.orders.store') }}" enctype="multipart/form-data" class="form-wrapper">
+    <form method="POST" action="{{ route('admin.orders.store') }}" enctype="multipart/form-data" class="form-wrapper" id="admin-order-create-form" data-form-draft="order-create" data-form-draft-defer>
         @csrf
         <input type="hidden" id="id" name="customer_id" value="" />
         <div class="row">
@@ -31,12 +31,20 @@
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="mb-2">{{ __('orders.delivery_slot') }}</label>
-                                <select name="delivery_slot_id" class="form-select">
+                                <label class="mb-2">{{ __('orders.delivery_date') }}</label>
+                                <select name="delivery_date" id="create_delivery_date" class="form-select">
                                     <option value="">{{ __('orders.none') }}</option>
-                                    @foreach ($deliverySlots as $slot)
-                                        <option value="{{ $slot->id }}">{{ $slot->slot_date->format('d-m-Y') }} — {{ $slot->time_label }}</option>
+                                    @foreach ($deliveryDates as $date)
+                                        <option value="{{ $date }}" {{ old('delivery_date') == $date ? 'selected' : '' }}>
+                                            {{ \Carbon\Carbon::parse($date)->format('d-m-Y') }}
+                                        </option>
                                     @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="mb-2">{{ __('orders.delivery_time') }}</label>
+                                <select name="delivery_slot_id" id="create_delivery_slot_id" class="form-select" disabled>
+                                    <option value="">{{ __('orders.none') }}</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -186,7 +194,36 @@
         var selected_products = [];
         var order_text = @json(__('orders.js.create_order'));
         var order_subtext = @json(__('orders.js.create_order_confirm'));
+        var selectPaymentMethodPlaceholder = @json(__('orders.select_payment_method'));
+        window.selectPaymentMethodPlaceholder = selectPaymentMethodPlaceholder;
+        var walkInPaymentMethodKeys = @json(\App\User::walkInOrderPaymentMethodKeys());
         
+        var deliverySlotsUrl = @json($deliverySlotsUrl ?? '');
+        var oldCreateSlotId = @json(old('delivery_slot_id'));
+
+        function loadCreateDeliverySlots(date) {
+            var $slotSelect = $('#create_delivery_slot_id');
+            $slotSelect.prop('disabled', true).html('<option value="">{{ __('orders.none') }}</option>');
+
+            if (!date || !deliverySlotsUrl) {
+                return;
+            }
+
+            $.get(deliverySlotsUrl, { date: date }, function (response) {
+                if (!response.slots || !response.slots.length) {
+                    $slotSelect.html('<option value="">{{ __('orders.no_delivery_slots_for_date') }}</option>');
+                    return;
+                }
+
+                var html = '<option value="">{{ __('orders.none') }}</option>';
+                response.slots.forEach(function (slot) {
+                    var selected = oldCreateSlotId && String(oldCreateSlotId) === String(slot.id) ? ' selected' : '';
+                    html += '<option value="' + slot.id + '"' + selected + '>' + slot.label + '</option>';
+                });
+                $slotSelect.html(html).prop('disabled', false);
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             toggleTransferSlip();
             toggleCreateDriverField();
@@ -240,6 +277,138 @@
             @if (old('is_walk_in'))
                 $('#is_walk_in').prop('checked', true).trigger('change');
             @endif
+
+            $('#create_delivery_date').on('change', function () {
+                oldCreateSlotId = null;
+                loadCreateDeliverySlots($(this).val());
+            });
+
+            var orderForm = document.getElementById('admin-order-create-form');
+            if (orderForm && window.FormDraft) {
+                FormDraft.restore(orderForm).then(function (restored) {
+                    if (!restored && $('#create_delivery_date').val()) {
+                        loadCreateDeliverySlots($('#create_delivery_date').val());
+                    }
+                });
+            }
+        });
+
+        function applyWalkInUiForRestore() {
+            $('#walk_in_fields').removeClass('d-none');
+            $('#order_customer_row').addClass('d-none');
+            $('#order_customer').prop('disabled', true);
+            $('#id').val('');
+
+            var paymentMethod = document.getElementById('payment_method');
+            var html = '<option value="">' + selectPaymentMethodPlaceholder + '</option>';
+            walkInPaymentMethodKeys.forEach(function(key) {
+                html += '<option value="' + key + '">' + payment_method_options[key] + '</option>';
+            });
+            paymentMethod.innerHTML = html;
+
+            $('#customer_info').removeClass('d-none');
+            $('form button.next').removeClass('d-none');
+        }
+
+        function applyOrderCreateStepUi(currentStep) {
+            var customerInfo = document.getElementById('customer_info');
+            var addProductInfo = document.getElementById('add-product-info');
+            var backBtn = document.querySelector('button.back');
+            var orderCustomer = document.getElementById('order_customer');
+
+            if (currentStep === 'select_products') {
+                customerInfo.classList.add('d-none');
+                addProductInfo.classList.remove('d-none');
+                if (backBtn) {
+                    backBtn.classList.remove('d-none');
+                }
+                if (orderCustomer) {
+                    orderCustomer.disabled = true;
+                    if (window.jQuery) {
+                        jQuery(orderCustomer).trigger('change.select2');
+                    }
+                }
+            } else {
+                customerInfo.classList.remove('d-none');
+                addProductInfo.classList.add('d-none');
+                if (backBtn) {
+                    backBtn.classList.add('d-none');
+                }
+                if (orderCustomer && !document.getElementById('is_walk_in').checked) {
+                    orderCustomer.disabled = false;
+                    if (window.jQuery) {
+                        jQuery(orderCustomer).trigger('change.select2');
+                    }
+                }
+            }
+        }
+
+        function finishOrderCreateRestore(fields, extra) {
+            if (extra && extra.payment_method) {
+                var paymentMethod = document.getElementById('payment_method');
+                if (paymentMethod) {
+                    paymentMethod.value = extra.payment_method;
+                    if (window.jQuery && jQuery(paymentMethod).data('select2')) {
+                        jQuery(paymentMethod).val(extra.payment_method).trigger('change');
+                    }
+                    toggleTransferSlip();
+                }
+            }
+
+            applyOrderCreateStepUi(extra && extra.step ? extra.step : 'customer_info');
+
+            if (selected_products.length) {
+                display_selected_products();
+            }
+
+            if (fields && fields.delivery_date) {
+                oldCreateSlotId = fields.delivery_slot_id || null;
+                loadCreateDeliverySlots(fields.delivery_date);
+            }
+        }
+
+        FormDraft.registerHook('order-create', {
+            save: function () {
+                var orderCustomer = document.getElementById('order_customer');
+                return {
+                    step: step,
+                    selected_products: selected_products,
+                    payment_method: document.getElementById('payment_method') ? document.getElementById('payment_method').value : null,
+                    customer: orderCustomer ? orderCustomer.value : '',
+                    customer_id: document.getElementById('id') ? document.getElementById('id').value : '',
+                };
+            },
+            restore: function (form, fields, extra) {
+                extra = extra || {};
+                step = extra.step || 'customer_info';
+                selected_products = extra.selected_products || [];
+
+                if (document.getElementById('is_walk_in').checked) {
+                    applyWalkInUiForRestore();
+                    finishOrderCreateRestore(fields, extra);
+                    return Promise.resolve(true);
+                }
+
+                var customerId = fields.customer || extra.customer || document.getElementById('order_customer').value;
+                if (customerId) {
+                    $('#order_customer').val(customerId);
+                    document.getElementById('id').value = fields.customer_id || extra.customer_id || customerId;
+                    $('#order_customer').trigger('change.select2');
+                }
+
+                if (!customerId) {
+                    finishOrderCreateRestore(fields, extra);
+                    return Promise.resolve(true);
+                }
+
+                return init_customer_details({ paymentMethodsOnly: true }).then(function () {
+                    finishOrderCreateRestore(fields, extra);
+                    return true;
+                }).catch(function () {
+                    finishOrderCreateRestore(fields, extra);
+                    return false;
+                });
+            },
         });
 
         function enableWalkInMode() {
@@ -249,7 +418,11 @@
             $('#id').val('');
 
             var paymentMethod = document.getElementById('payment_method');
-            paymentMethod.innerHTML = '<option value="cod" selected>{{ __('order.payment_methods.cod') }}</option>';
+            var html = '<option value="">' + selectPaymentMethodPlaceholder + '</option>';
+            walkInPaymentMethodKeys.forEach(function(key) {
+                html += '<option value="' + key + '">' + payment_method_options[key] + '</option>';
+            });
+            paymentMethod.innerHTML = html;
 
             $('#customer_info').removeClass('d-none');
             $('form button.next').removeClass('d-none');

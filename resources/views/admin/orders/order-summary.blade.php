@@ -1,7 +1,9 @@
 @extends('layouts.admin')
 @section('title', __('orders.summary'))
 @section('content')
-
+@php
+    $admin = Auth::guard('web_admin')->user();
+@endphp
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
@@ -10,7 +12,7 @@
                     <a href="{{ route('admin.orders') }}" class="btn btn-secondary">
                         <i class="fa fa-chevron-circle-left"></i> {{ __('ui.back') }}
                     </a>
-                    @if (Order::canAdjustQuantities($order->status))
+                    @if (Order::canAdjustQuantities($order->status) && $admin->canModule('orders', 'edit'))
                         <a href="{{ route('admin.orders.review', $order->id) }}" class="btn btn-primary">{{ __('orders.adjust_order') }}</a>
                     @endif
                     @if ($order->canShowInvoice() || $order->canShowDeliveryOrder())
@@ -229,12 +231,12 @@
                             @else
                                 <p class="text-muted mb-0">{{ __('orders.no_status_changes') }}</p>
                             @endif
-                            @if ($order->status !== Order::$status['cancelled'] && !($order->status === Order::$status['delivered'] && $order->isFullyPaid()))
+                            @if ($order->status !== Order::$status['cancelled'] && !($order->isFulfilled() && $order->isFullyPaid()))
                                 <button type="button" class="btn btn-outline-danger w-100 mt-2 btn-change-status" data-status="cancelled">
                                     {{ __('orders.cancel_order') }}
                                 </button>
                             @endif
-                            @if ($order->status === Order::$status['delivered'] && $order->isFullyPaid())
+                            @if ($order->status === Order::$status['delivered'] && $order->isFullyPaid() && !$order->isPosOrder())
                                 <form action="{{ route('admin.orders.sync-autocount', $order->id) }}" method="POST" class="mt-3">
                                     @csrf
                                     <button type="submit" class="btn btn-outline-secondary w-100">{{ __('orders.sync_autocount') }}</button>

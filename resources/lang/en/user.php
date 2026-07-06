@@ -8,8 +8,14 @@ return [
     ],
     'payment_method' => [
         'cod' => 'Cash On Delivery',
-        'term' => 'Payment Terms',
+        'term' => 'Credit Term',
+        'in-store' => 'In-Store Payment',
         'bank-transfer' => 'Bank Transfers',
         'e-wallet' => 'E-wallet',
+    ],
+    'profile' => [
+        'email_address' => 'Email Address',
+        'attn' => 'Attn.',
+        'confirm_password' => 'Confirm Password',
     ],
 ];

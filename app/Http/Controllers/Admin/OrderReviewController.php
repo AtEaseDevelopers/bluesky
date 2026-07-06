@@ -45,6 +45,7 @@ class OrderReviewController extends Controller
             'customerName' => app(OrderService::class)->displayCustomerName($order),
             'canAdjustAmount' => app(OrderService::class)->canAdjustAmount(Auth::guard('web_admin')->user()),
             'isCreditCustomer' => $order->isCreditCustomer(),
+            'isPosOrder' => $order->isPosOrder(),
         ]);
     }
 
@@ -107,6 +108,7 @@ class OrderReviewController extends Controller
         }
 
         $wasPending = $order->status === Order::$status['pending'];
+        $wasCustomerReviewing = $order->status === Order::$status['customer_reviewing'];
 
         $orderService->applyReviewAdjustments(
             $order,
@@ -123,10 +125,10 @@ class OrderReviewController extends Controller
         );
 
         $message = $request->boolean('send_to_customer')
-            ? ($wasPending
-                ? 'Order reviewed and sent to customer for confirmation.'
-                : 'Adjustments saved and customer invoice updated.')
-            : 'Order adjustments saved successfully.';
+            ? (($wasPending || $wasCustomerReviewing)
+                ? __('orders.review_moved_to_packing')
+                : __('orders.review_invoice_updated'))
+            : __('orders.review_adjustments_saved');
 
         return redirect(route('admin.orders.summary', $order->id))->with('success', $message);
     }

@@ -118,6 +118,7 @@
                                     </div>
                                 </div>
                             @endif
+                            @if (!$isPosOrder)
                             <div class="col-md-4">
                                 <div class="mb-4">
                                     <label class="mb-2">{{ __('orders.fulfillment_type') }}</label>
@@ -138,6 +139,9 @@
                                     </select>
                                 </div>
                             </div>
+                            @else
+                                <input type="hidden" name="fulfillment_type" value="pickup">
+                            @endif
                             <div class="col-md-8">
                                 <div class="mb-4">
                                     <label class="mb-2">{{ __('orders.adjustment_remark') }}</label>
@@ -148,8 +152,8 @@
 
                         <div class="d-flex justify-content-end gap-2">
                             <button type="submit" name="send_to_customer" value="0" class="btn btn-secondary">{{ __('orders.save_adjustments') }}</button>
-                            @if ($order->status === Order::$status['pending'])
-                                <button type="submit" name="send_to_customer" value="1" class="btn btn-primary">{{ __('orders.send_to_customer_review') }}</button>
+                            @if ($order->status === Order::$status['pending'] || $order->status === Order::$status['customer_reviewing'])
+                                <button type="submit" name="send_to_customer" value="1" class="btn btn-primary">{{ __('orders.save_and_move_to_packing') }}</button>
                             @else
                                 <button type="submit" name="send_to_customer" value="1" class="btn btn-primary">{{ __('orders.save_update_customer_invoice') }}</button>
                             @endif
@@ -172,6 +176,10 @@
 
             if (sellIn === 'qty') {
                 return qty;
+            }
+
+            if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
+                return qty * weight;
             }
 
             return weight;
@@ -203,12 +211,20 @@
         recalculateReviewTotals();
 
         function toggleReviewDriverField() {
-            var isPickup = document.getElementById('fulfillment_type').value === 'pickup';
+            var fulfillmentEl = document.getElementById('fulfillment_type');
+            if (!fulfillmentEl) {
+                return;
+            }
+
+            var isPickup = fulfillmentEl.value === 'pickup';
             document.getElementById('review-driver-wrap').style.display = isPickup ? 'none' : '';
             document.getElementById('driver_id').disabled = isPickup;
         }
 
-        document.getElementById('fulfillment_type').addEventListener('change', toggleReviewDriverField);
-        toggleReviewDriverField();
+        var fulfillmentTypeEl = document.getElementById('fulfillment_type');
+        if (fulfillmentTypeEl) {
+            fulfillmentTypeEl.addEventListener('change', toggleReviewDriverField);
+            toggleReviewDriverField();
+        }
     </script>
 @endsection

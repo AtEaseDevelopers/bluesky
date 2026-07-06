@@ -9,18 +9,17 @@ use Illuminate\Validation\ValidationException;
 
 trait ValidatesProductCartInput
 {
-    protected function validateAddToCart(Request $request, Product $product): array
+    protected function validateAddToCart(Request $request, Product $product, bool $enforceStockLimit = true): array
     {
         $rules = [
             'remark' => ['nullable', 'max:200'],
         ];
         $customMessages = [];
 
-        if ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT) {
+        if ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT || $product->sell_in === Product::SELL_IN_WEIGHT) {
             $rules['quantity'] = ['required', 'numeric', 'min:0.001'];
-            $rules['weight'] = ['required', 'numeric', 'min:0.001'];
+            $rules['weight'] = ['nullable', 'numeric', 'min:0.001'];
             $customMessages['quantity.required'] = 'The quantity is required';
-            $customMessages['weight.required'] = 'The weight is required';
         } elseif ($product->requiresQuantityInput()) {
             $rules['quantity'] = ['required', 'numeric', 'min:0.001'];
             $customMessages['quantity.required'] = 'The quantity is required';
@@ -65,7 +64,7 @@ trait ValidatesProductCartInput
         }
 
         $available = Product::availableStockAmount($product, $stock);
-        if ($requested > $available) {
+        if ($enforceStockLimit && $requested > $available) {
             $field = $product->requiresQuantityInput() ? 'quantity' : 'weight';
             throw ValidationException::withMessages([
                 $field => 'Only '.Product::formatStorefrontStockLabel(

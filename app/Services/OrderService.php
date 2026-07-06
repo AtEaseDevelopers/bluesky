@@ -62,7 +62,7 @@ class OrderService
 
         $order = $order->fresh();
 
-        if ($order->status === Order::$status['delivered'] && $order->isFullyPaid()) {
+        if ($order->isFulfilled() && $order->isFullyPaid()) {
             if (!$order->completed_at) {
                 $order->update(['completed_at' => now()]);
             }
@@ -242,6 +242,53 @@ class OrderService
                 $adminId,
                 $driverId,
                 $order->requiresExactPayment()
+            );
+        }
+
+        if (empty($recorded)) {
+            throw new \InvalidArgumentException('At least one valid payment is required.');
+        }
+
+        return $recorded;
+    }
+
+    public function recordPosPayments(Order $order, array $payments, int $adminId): array
+    {
+        if ($order->status === Order::$status['cancelled'] || $order->balanceDue() <= 0) {
+            throw new \InvalidArgumentException('Payment cannot be recorded for this order.');
+        }
+
+        $totalAmount = 0;
+        foreach ($payments as $paymentData) {
+            $totalAmount += (float) ($paymentData['amount'] ?? 0);
+        }
+
+        if ($order->requiresExactPayment()) {
+            $balanceDue = $order->balanceDue();
+            if (abs($totalAmount - $balanceDue) > 0.009) {
+                throw new \InvalidArgumentException(
+                    'COD orders require the full exact balance (RM ' . number_format($balanceDue, 2) . ').'
+                );
+            }
+        }
+
+        $recorded = [];
+
+        foreach ($payments as $paymentData) {
+            $amount = (float) ($paymentData['amount'] ?? 0);
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $recorded[] = $this->recordPayment(
+                $order->fresh(),
+                $paymentData['payment_method'],
+                $amount,
+                $paymentData['proof'] ?? null,
+                $paymentData['notes'] ?? null,
+                $adminId,
+                null,
+                true
             );
         }
 
@@ -548,16 +595,93 @@ class OrderService
 
             if (!empty($data['send_to_customer'])) {
                 $order = $order->fresh();
-                if ($order->status === Order::$status['pending']) {
+                if (in_array($order->status, [
+                    Order::$status['pending'],
+                    Order::$status['customer_reviewing'],
+                ], true)) {
                     app(OrderStatusService::class)->transition(
                         $order,
-                        Order::$status['customer_reviewing'],
+                        Order::$status['packing'],
                         $adminId
                     );
                 } else {
                     PdfHelper::GenerateOrderInvoice($order);
                     PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
                 }
+            }
+
+            return $order->fresh();
+        });
+    }
+
+    public function applyDriverAdjustments(Order $order, array $lineItems): Order
+    {
+        return DB::transaction(function () use ($order, $lineItems) {
+            foreach ($lineItems as $orderProductId => $item) {
+                $orderProduct = OrderProduct::where('order_id', $order->id)
+                    ->where('id', $orderProductId)
+                    ->first();
+
+                if (!$orderProduct) {
+                    continue;
+                }
+
+                $product = Product::find($orderProduct->product_id);
+
+                $qtyInput = isset($item['quantity']) && $item['quantity'] !== ''
+                    ? (float) $item['quantity']
+                    : null;
+                $weightInput = isset($item['weight']) && $item['weight'] !== ''
+                    ? (float) $item['weight']
+                    : null;
+
+                if ($product) {
+                    $sellIn = Product::resolveSellInForOrderLine($orderProduct, $product);
+
+                    if (!Product::lineNeedsQuantityInput($sellIn)) {
+                        $qtyInput = null;
+                    }
+                    if (!Product::lineNeedsWeightInput($sellIn)) {
+                        $weightInput = null;
+                    }
+
+                    $productForCalc = clone $product;
+                    $productForCalc->sell_in = $sellIn;
+
+                    $line = $productForCalc->resolveLineInputs($qtyInput, $weightInput);
+                    $lineTotal = $productForCalc->calculateLinePrice(
+                        (float) $orderProduct->unit_price,
+                        $line['quantity'],
+                        $line['weight']
+                    );
+
+                    $orderProduct->update([
+                        'quantity' => $line['quantity'],
+                        'weight' => $line['weight'],
+                        'product_weight' => $line['product_weight'],
+                        'price' => $lineTotal,
+                    ]);
+                } else {
+                    $quantity = (float) ($qtyInput ?? $orderProduct->quantity ?? 0);
+                    $orderProduct->update([
+                        'quantity' => $quantity,
+                        'weight' => $weightInput,
+                        'product_weight' => $weightInput,
+                        'price' => (float) $orderProduct->unit_price * $quantity,
+                    ]);
+                }
+            }
+
+            $order = $this->recalculateTotals($order->fresh());
+
+            if (in_array($order->status, [
+                Order::$status['packing'],
+                Order::$status['customer_reviewing'],
+                Order::$status['in_route'],
+                Order::$status['delivered'],
+            ], true)) {
+                PdfHelper::GenerateOrderInvoice($order);
+                PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
             }
 
             return $order->fresh();
@@ -574,6 +698,7 @@ class OrderService
         $order = $this->recalculateTotals($order->fresh());
 
         if (in_array($order->status, [
+            Order::$status['packing'],
             Order::$status['customer_reviewing'],
             Order::$status['in_route'],
         ], true)) {
@@ -620,7 +745,7 @@ class OrderService
 
     public function canAdjustAmount($admin): bool
     {
-        return $admin->isSuperadmin() || $admin->canAccessModule('orders');
+        return $admin->isSuperadmin() || $admin->canModule('orders', 'edit');
     }
 
     private function resolvePaymentDueDate(Order $order, ?string $requestedDate): ?string

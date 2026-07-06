@@ -213,8 +213,8 @@ class DemoDataSeeder extends Seeder
                     'weight' => $item['weight'],
                     'status' => Product::$status['active'],
                     'show_weight' => 1,
-                    'show_qty' => 0,
-                    'sell_in' => 'weight',
+                    'show_qty' => 1,
+                    'sell_in' => 'qty_bill_weight',
                 ]
             );
 
@@ -254,24 +254,32 @@ class DemoDataSeeder extends Seeder
 
     private function seedDeliverySlots(): array
     {
+        $windows = [
+            ['08:00:00', '11:00:00'],
+            ['14:00:00', '17:00:00'],
+        ];
+
         $slots = [];
-        foreach ([0, 1, 2] as $dayOffset) {
-            $date = now()->addDays($dayOffset)->toDateString();
-            foreach ([
-                ['08:00:00', '11:00:00'],
-                ['14:00:00', '17:00:00'],
-            ] as [$start, $end]) {
-                $id = DB::table('delivery_slots')->insertGetId([
-                    'slot_date' => $date,
-                    'time_start' => $start,
-                    'time_end' => $end,
-                    'max_orders' => 20,
-                    'is_enabled' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-                $slots[] = (object) ['id' => $id, 'slot_date' => $date, 'time_start' => $start, 'time_end' => $end];
+        foreach ($windows as [$start, $end]) {
+            $existing = DB::table('delivery_slots')
+                ->where('time_start', $start)
+                ->where('time_end', $end)
+                ->first();
+
+            if ($existing) {
+                $slots[] = (object) ['id' => $existing->id, 'time_start' => $start, 'time_end' => $end];
+                continue;
             }
+
+            $id = DB::table('delivery_slots')->insertGetId([
+                'time_start' => $start,
+                'time_end' => $end,
+                'max_orders' => 20,
+                'is_enabled' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            $slots[] = (object) ['id' => $id, 'time_start' => $start, 'time_end' => $end];
         }
 
         return $slots;
@@ -357,7 +365,7 @@ class DemoDataSeeder extends Seeder
                 'status' => $def['status'],
                 'driver_id' => $def['driver']->id,
                 'delivery_slot_id' => $slot->id,
-                'delivery_date' => $slot->slot_date,
+                'delivery_date' => now()->addDay()->toDateString(),
                 'delivery_time_slot' => $timeSlot,
                 'do_no' => 'DO-' . str_pad((string) ($index + 1), 4, '0', STR_PAD_LEFT),
                 'do_date' => now()->toDateString(),

@@ -1,8 +1,8 @@
 @extends('layouts.member')
-@section('title', 'Cart')
+@section('title', __('ui.nav.cart'))
 @section('content')
 
-    <h4 class="mb-4"><i class="fa fa-shopping-cart me-2" aria-hidden="true"></i> Cart</h4>
+    <h4 class="mb-4"><i class="fa fa-shopping-cart me-2" aria-hidden="true"></i> {{ __('ui.nav.cart') }}</h4>
     <div class="row cart-container mb-5">
         <div class="col-md-12 mb-5">
             <div class="card no-border shadow">
@@ -12,12 +12,13 @@
                             <thead class="table-light">
                                 <tr>
                                     <th></th>
-                                    <th>Product</th>
-                                    <th>Remarks</th>
-                                    <th>Quantity/Weight</th>
-                                    <th>Amount</th>
-                                    <th>Total</th>
-                                    <th>Option</th>
+                                    <th>{{ __('ui.storefront.cart.product') }}</th>
+                                    <th>{{ __('ui.storefront.cart.remarks') }}</th>
+                                    <th>{{ __('ui.storefront.cart.quantity') }}</th>
+                                    <th>{{ __('ui.storefront.cart.estimated_weight_col') }}</th>
+                                    <th>{{ __('ui.storefront.cart.amount') }}</th>
+                                    <th>{{ __('ui.storefront.cart.total') }}</th>
+                                    <th>{{ __('ui.storefront.cart.option') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -34,32 +35,26 @@
                                         </td>
                                         <td>{{ $product->remark ?? '-' }}</td>
                                         <td>
-                                            @if ($product->sell_in == 'qty')
+                                            @if (in_array($product->sell_in, ['qty', 'qty_bill_weight', 'weight'], true))
                                                 <div class="quantity-controls">
                                                     <button class="btn btn-sm btn-primary decrease-quantity" type="button">-</button>
-                                                    <input type="number" id="quantity" name="quantity" class="quantity-input" data-id="{{ $product->cart_product_id }}" data-sell-in="qty" value="{{ $product->quantity }}">
+                                                    <input type="number" name="quantity" class="quantity-input" data-id="{{ $product->cart_product_id }}" data-sell-in="{{ $product->sell_in }}" value="{{ $product->quantity }}" min="0.001" step="0.001">
                                                     <button class="btn btn-sm btn-primary increase-quantity" type="button">+</button>
                                                 </div>
-                                            @elseif ($product->sell_in == 'qty_bill_weight')
-                                                <div class="quantity-controls mb-2">
-                                                    <span class="small text-muted d-block mb-1">Qty</span>
-                                                    <button class="btn btn-sm btn-primary decrease-quantity" type="button">-</button>
-                                                    <input type="number" name="quantity" class="quantity-input" data-id="{{ $product->cart_product_id }}" data-sell-in="qty_bill_weight" value="{{ $product->quantity }}">
-                                                    <button class="btn btn-sm btn-primary increase-quantity" type="button">+</button>
-                                                </div>
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if (in_array($product->sell_in, ['qty_bill_weight', 'weight'], true))
                                                 <div class="weight-controls">
-                                                    <span class="small text-muted d-block mb-1">Weight (KG)</span>
+                                                    <small class="text-muted d-block mb-1">{{ __('product.optional') }}</small>
                                                     <button class="btn btn-sm btn-primary decrease-weight" type="button">-</button>
-                                                    <input type="number" name="weight" class="weight-input" data-id="{{ $product->cart_product_id }}" data-sell-in="qty_bill_weight" value="{{ $product->weight }}">
+                                                    <input type="number" name="weight" class="weight-input weight-input-optional" data-id="{{ $product->cart_product_id }}" data-sell-in="qty_bill_weight" value="{{ $product->weight }}" min="0.001" step="0.001" placeholder="-">
                                                     <button class="btn btn-sm btn-primary increase-weight" type="button">+</button>
                                                 </div>
                                             @else
-                                                <div class="weight-controls">
-                                                    <button class="btn btn-sm btn-primary decrease-weight" type="button">-</button>
-                                                    <input type="number" id="weight" name="weight" class="weight-input" data-id="{{ $product->cart_product_id }}" data-sell-in="weight" value="{{ $product->weight }}">
-                                                    <button class="btn btn-sm btn-primary increase-weight" type="button">+</button>
-                                                    <span class="ms-1">KG</span>
-                                                </div>
+                                                -
                                             @endif
                                         </td>
                                         <td>
@@ -87,16 +82,17 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7">
-                                            Your cart is empty. <a href='{{ $portal['products_url'] }}'>Shop now</a>
+                                        <td colspan="8">
+                                            {{ __('ui.storefront.cart.empty') }}
+                                            <a href='{{ $portal['products_url'] }}'>{{ __('ui.storefront.cart.shop_now') }}</a>
                                         </td>
                                     </tr>
                                 @endforelse
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="4"></td>
-                                    <td>Total</td>
+                                    <td colspan="5"></td>
+                                    <td>{{ __('ui.storefront.cart.total') }}</td>
                                     <td colspan="2">
                                         @if ($user->price_permission)
                                             RM <span id="total-price-value">{{ $total }}</span>
@@ -106,9 +102,13 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td colspan="7">
+                                    <td colspan="8">
+                                        <div class="alert alert-light border mb-3">
+                                            @include('partials.subject_to_availability')
+                                            <span class="d-block mt-1 small text-muted">{{ __('ui.storefront.subject_to_availability_note') }}</span>
+                                        </div>
                                         <div class="d-flex justify-content-end">
-                                            <a href="{{ $portal['checkout_url'] }}" class="btn btn-primary px-5">Proceed to Checkout</a>
+                                            <a href="{{ $portal['checkout_url'] }}" class="btn btn-primary px-5 text-nowrap">{{ __('customers.pos.proceed_checkout') }}</a>
                                         </div>
                                     </td>
                                 </tr>
@@ -129,18 +129,16 @@
             $(".remove-button").on('click', function() {
                 var cartProductId = $(this).data('id');
 
-                // Show SweetAlert for confirmation
                 Swal.fire({
-                    title: 'Confirm',
-                    text: 'Are you sure you want to remove this item from your cart?',
+                    title: @json(__('ui.storefront.cart.remove_confirm_title')),
+                    text: @json(__('ui.storefront.cart.remove_confirm_text')),
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#d33',
                     cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Yes, remove it!'
+                    confirmButtonText: @json(__('ui.storefront.cart.remove_confirm_yes'))
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // Redirect to remove cart item URL
                         window.location.href = "{{ $portal['remove_cart_url'] }}" + "/" + cartProductId;
                     }
                 });
@@ -153,6 +151,10 @@
 
                 if (sellIn === 'qty') {
                     return qty;
+                }
+
+                if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
+                    return qty * weight;
                 }
 
                 return weight;
@@ -202,47 +204,62 @@
                 });
             }
 
-            // Decrease quantity
+            function normalizeCartInput(input) {
+                var $input = $(input);
+                var raw = $input.val();
+
+                if ($input.hasClass('weight-input-optional') && raw === '') {
+                    return true;
+                }
+
+                if (raw === '' || parseFloat(raw) < 0.001) {
+                    $input.val(0.001);
+                }
+
+                return true;
+            }
+
             $(document).on('click', '.decrease-quantity', function() {
                 var quantityInput = $(this).closest('.quantity-controls').find('.quantity-input');
-                var currentQuantity = parseInt(quantityInput.val());
-                if (currentQuantity > 1) {
-                    quantityInput.val(currentQuantity - 1).trigger('input');
+                var currentQuantity = parseFloat(quantityInput.val()) || 1;
+                if (currentQuantity > 0.001) {
+                    quantityInput.val(Math.max(0.001, currentQuantity - 1)).trigger('input');
                 }
             });
 
-            // Increase quantity
             $(document).on('click', '.increase-quantity', function() {
                 var quantityInput = $(this).closest('.quantity-controls').find('.quantity-input');
-                var currentQuantity = parseInt(quantityInput.val());
+                var currentQuantity = parseFloat(quantityInput.val()) || 0;
                 quantityInput.val(currentQuantity + 1).trigger('input');
             });
 
             $(document).on('click', '.decrease-weight', function() {
                 var weightInput = $(this).closest('.weight-controls').find('.weight-input');
                 var currentWeight = parseFloat(weightInput.val());
-                if (currentWeight > 0.1) {
-                    weightInput.val(currentWeight - 1).trigger('input');
+
+                if (isNaN(currentWeight) || weightInput.val() === '') {
+                    return;
+                }
+
+                if (currentWeight > 0.001) {
+                    weightInput.val(Math.max(0.001, currentWeight - 1)).trigger('input');
                 }
             });
 
             $(document).on('click', '.increase-weight', function() {
                 var weightInput = $(this).closest('.weight-controls').find('.weight-input');
-                var currentWeight = parseFloat(weightInput.val());
-                weightInput.val(currentWeight + 1).trigger('input');
+                var currentWeight = parseFloat(weightInput.val()) || 0;
+                weightInput.val((currentWeight || 0) + 1).trigger('input');
             });
 
-            $('.quantity-input, .weight-input').on('input', function(e) {
-                if ($(this).val() < 0.1) {
-                    e.preventDefault();
-                    $(this).val(0.1);
-                    return false;
+            $('.quantity-input, .weight-input').on('input', function() {
+                if (!normalizeCartInput(this)) {
+                    return;
                 }
 
                 syncCartRow(this);
             });
 
-            // Call the updatePrices function on page load
             updatePrices();
         });
     </script>

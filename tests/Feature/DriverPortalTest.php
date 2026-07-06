@@ -235,4 +235,91 @@ class DriverPortalTest extends TestCase
         $this->assertNotNull($payment->payment_proof);
         Storage::disk('local')->assertExists(Order::$path . '/' . $order->id . '/payments/' . $payment->payment_proof);
     }
+
+    /** @test */
+    public function driver_can_adjust_order_weight_during_delivery()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, [
+            'status' => 'in_route',
+            'total_price' => 95.00,
+            'subtotal' => 95.00,
+            'delivery_fee' => 0,
+        ]);
+
+        $product = \App\Product::forceCreate([
+            'name' => 'Live Mud Crab',
+            'sku' => 'CRAB-1',
+            'sell_in' => 'weight',
+            'price' => 95.00,
+            'status' => 'active',
+        ]);
+
+        $orderProduct = \App\OrderProduct::forceCreate([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'weight' => 1,
+            'product_weight' => 1,
+            'unit_price' => 95.00,
+            'price' => 95.00,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.adjust', $order->id), [
+                'line_items' => [
+                    $orderProduct->id => ['weight' => 1.5],
+                ],
+            ])->assertRedirect()
+            ->assertSessionHas('success');
+
+        $fresh = $order->fresh();
+        $this->assertEquals(142.50, (float) $fresh->total_price);
+        $this->assertEquals(1.5, (float) $orderProduct->fresh()->weight);
+    }
+
+    /** @test */
+    public function driver_can_adjust_order_quantity_for_qty_products()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, [
+            'status' => 'in_route',
+            'total_price' => 30.00,
+            'subtotal' => 30.00,
+            'delivery_fee' => 0,
+        ]);
+
+        $product = \App\Product::forceCreate([
+            'name' => 'Frozen Prawn Pack',
+            'sku' => 'PRAWN-1',
+            'sell_in' => 'qty',
+            'show_qty' => true,
+            'show_weight' => false,
+            'price' => 10.00,
+            'status' => 'active',
+        ]);
+
+        $orderProduct = \App\OrderProduct::forceCreate([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'quantity' => 3,
+            'unit_price' => 10.00,
+            'price' => 30.00,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.adjust', $order->id), [
+                'line_items' => [
+                    $orderProduct->id => ['quantity' => 5],
+                ],
+            ])->assertRedirect()
+            ->assertSessionHas('success');
+
+        $fresh = $order->fresh();
+        $this->assertEquals(50.00, (float) $fresh->total_price);
+        $this->assertEquals(5, (float) $orderProduct->fresh()->quantity);
+    }
 }
