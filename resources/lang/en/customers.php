@@ -11,6 +11,17 @@ return [
     'copy_guest_link' => 'Copy Guest Link',
     'export_excel' => 'Export to Excel',
     'sync_autocount' => 'Sync to AutoCount',
+    'sync_status' => 'Sync Status',
+
+    'autocount_sync_status' => [
+        'pending' => 'Pending',
+        'pending_sync' => 'Pending Sync',
+        'synced' => 'Synced',
+        'synced_successfully' => 'Synced Successfully',
+        'sync_error' => 'Sync Error',
+        'skipped' => 'Skipped',
+        'not_applicable' => 'N/A',
+    ],
 
     'pos' => [
         'button' => 'POS Interface',

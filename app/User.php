@@ -302,4 +302,9 @@ class User extends Authenticatable
     {
         return url('fast-login/' . $this->login_code);
     }
+
+    public function autocountSyncStatusKey(): string
+    {
+        return $this->autocount_sync_status ?: 'pending';
+    }
 }

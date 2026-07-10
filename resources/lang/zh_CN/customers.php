@@ -11,6 +11,17 @@ return [
     'copy_guest_link' => '复制访客链接',
     'export_excel' => '导出 Excel',
     'sync_autocount' => '同步至 AutoCount',
+    'sync_status' => '同步状态',
+
+    'autocount_sync_status' => [
+        'pending' => '待处理',
+        'pending_sync' => '待同步',
+        'synced' => '已同步',
+        'synced_successfully' => '同步成功',
+        'sync_error' => '同步错误',
+        'skipped' => '已跳过',
+        'not_applicable' => '不适用',
+    ],
 
     'pos' => [
         'button' => 'POS 收银',

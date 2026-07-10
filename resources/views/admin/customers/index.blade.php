@@ -149,6 +149,7 @@
                                     <th>{{ __('customers.billing_address') }}</th>
                                     <th>{{ __('customers.shipping_address') }}</th>
                                     <th>{{ __('customers.status') }}</th>
+                                    <th>{{ __('customers.sync_status') }}</th>
                                     <th>{{ __('customers.added_at') }}</th>
                                 </tr>
                             </thead>
@@ -228,13 +229,32 @@
                                         <td>{{ $user->billing_address }}</td>
                                         <td>{{ $user->shipping_address }}</td>
                                         <td>{{ __('user.status.' . $user->status) }}</td>
+                                        <td class="text-center">
+                                            @if (!$user->hasCompletedRegistration())
+                                                <span class="badge bg-secondary">{{ __('customers.autocount_sync_status.not_applicable') }}</span>
+                                            @else
+                                                @php
+                                                    $syncStatusKey = $user->autocountSyncStatusKey();
+                                                    $syncStatusClass = match ($syncStatusKey) {
+                                                        'synced', 'synced_successfully' => 'bg-success',
+                                                        'pending_sync' => 'bg-warning text-dark',
+                                                        'sync_error' => 'bg-danger',
+                                                        'skipped' => 'bg-secondary',
+                                                        default => 'bg-light text-dark',
+                                                    };
+                                                @endphp
+                                                <span class="badge {{ $syncStatusClass }}">
+                                                    {{ __('customers.autocount_sync_status.' . $syncStatusKey) }}
+                                                </span>
+                                            @endif
+                                        </td>
                                         <td>{{ $user->created_at }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="15">
+                                    <td colspan="16">
                                         {{ $users->appends(request()->query())->links('pagination::bootstrap-4') }}
                                     </td>
                                 </tr>
