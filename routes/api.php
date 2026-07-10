@@ -15,6 +15,11 @@ Route::prefix('order')->group(function () {
     Route::post('/update-log', [AutoCountController::class, 'orderUpdateLog']);
 });
 
+Route::prefix('customers')->group(function () {
+    Route::get('/', [AutoCountController::class, 'customers']);
+    Route::post('/update', [AutoCountController::class, 'customersUpdate']);
+});
+
 Route::prefix('driver')->group(function () {
     Route::post('/login', [DriverAuthController::class, 'login']);
 

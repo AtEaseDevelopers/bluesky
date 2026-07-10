@@ -123,6 +123,92 @@ class AutoCountApiService
         }
     }
 
+    public function pendingCustomers(): array
+    {
+        return User::query()
+            ->where('autocount_sync_status', 'pending_sync')
+            ->whereNotNull('registration_completed_at')
+            ->where('status', User::$user_status['active'])
+            ->orderBy('id')
+            ->get()
+            ->map(fn (User $user) => $this->toCustomerPayload($user))
+            ->values()
+            ->all();
+    }
+
+    public function applyCustomerUpdate(array $payload): void
+    {
+        $customerId = (int) ($payload['id'] ?? 0);
+        $accNo = trim((string) ($payload['AccNo'] ?? $payload['acc_no'] ?? ''));
+
+        if (!$customerId || $accNo === '') {
+            throw new \InvalidArgumentException('Customer id and AccNo are required.');
+        }
+
+        $user = User::find($customerId);
+        if (!$user) {
+            throw new \InvalidArgumentException('Customer not found.');
+        }
+
+        $user->update([
+            'sql_customer_code' => $accNo,
+            'autocount_sync_status' => 'synced',
+            'autocount_synced_at' => now(),
+        ]);
+    }
+
+    protected function toCustomerPayload(User $user): array
+    {
+        $billing = $this->splitAddressLines($user->billing_address);
+        $shipping = $this->splitAddressLines($user->shipping_address ?: $user->billing_address);
+
+        return [
+            'id' => $user->id,
+            'api_account_no' => $user->sql_customer_code,
+            'name' => $user->name,
+            'phone_no' => $user->attn_contact,
+            'category' => $user->category,
+            'billing_address' => $user->billing_address,
+            'billing_address1' => $billing[0],
+            'billing_address2' => $billing[1],
+            'billing_address3' => $billing[2],
+            'billing_address4' => $billing[3],
+            'billing_postcode' => $user->billing_postcode,
+            'billing_state' => $user->billing_state,
+            'attn_name' => $user->attn_name,
+            'attn_contact' => $user->attn_contact,
+            'shipping_address' => $user->shipping_address,
+            'shipping_postcode' => $user->shipping_postcode,
+            'shipping_state' => $user->shipping_state,
+            'payment_method' => $user->customer_type,
+            'email' => $user->email,
+            'status' => $user->status,
+            'created_at' => $user->created_at->format('Y-m-d H:i:s'),
+            'updated_at' => $user->updated_at->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    protected function splitAddressLines(?string $address): array
+    {
+        $lines = ['', '', '', ''];
+        if (!$address) {
+            return $lines;
+        }
+
+        $parts = array_map('trim', explode(',', $address));
+        $index = 0;
+
+        foreach ($parts as $part) {
+            if ($index >= 4) {
+                break;
+            }
+
+            $lines[$index++] = mb_substr($part, 0, 40);
+        }
+
+        return $lines;
+    }
+
     protected function baseOrderQuery()
     {
         return Order::query()

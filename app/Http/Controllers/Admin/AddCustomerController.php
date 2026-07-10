@@ -93,6 +93,7 @@ class AddCustomerController extends Controller
                 'ssm' => $request['ssm'] ?? null,
                 'tin_no' => $request['tin_no'] ?? null,
                 'registration_completed_at' => now(),
+                'autocount_sync_status' => 'pending_sync',
             ]
         );
 
