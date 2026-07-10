@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class AutoCountSyncLog extends Model
 {
+    protected $table = 'autocount_sync_logs';
+
     protected $fillable = [
         'order_id',
         'invoice_number',
