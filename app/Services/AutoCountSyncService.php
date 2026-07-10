@@ -35,7 +35,7 @@ class AutoCountSyncService
         return $this->log(
             $order,
             'pending_sync',
-            'Invoice queued for AutoCount sync. Connect AutoCount API to complete integration.',
+            'Invoice queued for AutoCount sync. Waiting for AutoCount plugin to process.',
             null,
             $adminId
         );

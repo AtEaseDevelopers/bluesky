@@ -59,6 +59,7 @@ class AddCustomerController extends Controller
 
         // generate login code for specific user, unique for every user
         $login_code = User::generateLoginCode();
+        $default_password = 'ecommerce123';
         $customer = User::create(
             [
                 "name" => $data['name'],
