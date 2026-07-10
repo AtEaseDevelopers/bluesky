@@ -36,6 +36,8 @@ class Order extends Model
         'invoice_number',
         'autocount_sync_status',
         'autocount_synced_at',
+        'api_do_id',
+        'api_invoice_id',
         'is_estimated',
         'completed_at',
         'transfer_slip',
