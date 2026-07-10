@@ -161,10 +161,11 @@ class AutoCountApiService
     {
         $billing = $this->splitAddressLines($user->billing_address);
         $shipping = $this->splitAddressLines($user->shipping_address ?: $user->billing_address);
+        $customerCode = $this->normalizeCustomerCode($user->sql_customer_code);
 
         return [
             'id' => $user->id,
-            'api_account_no' => $user->sql_customer_code,
+            'api_account_no' => $customerCode,
             'name' => $user->name,
             'phone_no' => $user->attn_contact,
             'category' => $user->category,
@@ -186,6 +187,17 @@ class AutoCountApiService
             'created_at' => $user->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $user->updated_at->format('Y-m-d H:i:s'),
         ];
+    }
+
+    protected function normalizeCustomerCode(?string $code): ?string
+    {
+        $code = trim((string) $code);
+
+        if ($code === '' || strcasecmp($code, '300-0000') === 0) {
+            return null;
+        }
+
+        return $code;
     }
 
     protected function splitAddressLines(?string $address): array

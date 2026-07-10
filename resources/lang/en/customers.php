@@ -121,7 +121,7 @@ return [
     'customer_type_credit' => 'Credit',
     'enter_category_optional' => 'Enter customer category (optional)',
     'customer_code' => 'Customer Code',
-    'customer_code_tooltip' => 'Optional — used for accounting integration purposes',
+    'customer_code_tooltip' => 'Optional — leave blank to auto-generate in AutoCount (do not use 300-0000)',
     'enter_customer_code' => 'Enter customer code',
     'ssm' => 'SSM',
     'enter_ssm' => 'Enter SSM (optional)',
