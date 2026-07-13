@@ -2,10 +2,16 @@
 
 namespace App\Services;
 
+use App\CustomerCategoryProduct;
 use App\Order;
 use App\OrderProduct;
+use App\Product;
+use App\ProductCategory;
+use App\ProductStock;
+use App\Uom;
 use App\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 class AutoCountApiService
@@ -155,6 +161,299 @@ class AutoCountApiService
             'autocount_sync_status' => 'synced',
             'autocount_synced_at' => now(),
         ]);
+    }
+
+    public function importCustomers(array $payload): array
+    {
+        $rows = $payload['customers'] ?? $payload;
+        if (!is_array($rows)) {
+            throw new \InvalidArgumentException('Customers payload must be an array.');
+        }
+
+        $result = [
+            'created' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'errors' => [],
+        ];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                $result['skipped']++;
+                continue;
+            }
+
+            $accNo = $this->normalizeCustomerCode($row['AccNo'] ?? $row['acc_no'] ?? null);
+            if (!$accNo) {
+                $result['skipped']++;
+                continue;
+            }
+
+            try {
+                $user = User::query()->where('sql_customer_code', $accNo)->first();
+                $email = trim((string) ($row['email'] ?? $row['EmailAddress'] ?? ''));
+
+                if (!$user && $email !== '') {
+                    $user = User::query()->where('email', $email)->first();
+                }
+
+                $attributes = $this->mapImportedCustomer($row, $accNo);
+
+                if ($user) {
+                    $user->update($attributes);
+                    $result['updated']++;
+                    continue;
+                }
+
+                $name = (string) ($attributes['name'] ?? '');
+                if ($name !== '' && User::query()->where('name', $name)->exists()) {
+                    $attributes['name'] = mb_substr($name . ' (' . $accNo . ')', 0, 100);
+                }
+
+                User::create(array_merge($attributes, [
+                    'password' => Hash::make('ecommerce123'),
+                    'login_code' => User::generateLoginCode(),
+                    'registration_completed_at' => now(),
+                    'role_slug' => 'customer',
+                ]));
+                $result['created']++;
+            } catch (\Throwable $e) {
+                $result['errors'][] = $accNo . ': ' . $e->getMessage();
+                Log::error('AutoCount customer import failed', [
+                    'acc_no' => $accNo,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $result;
+    }
+
+    public function importProducts(array $payload): array
+    {
+        $rows = $payload['products'] ?? $payload;
+        if (!is_array($rows)) {
+            throw new \InvalidArgumentException('Products payload must be an array.');
+        }
+
+        $result = [
+            'created' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'errors' => [],
+        ];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                $result['skipped']++;
+                continue;
+            }
+
+            $sku = trim((string) ($row['sku'] ?? $row['ItemCode'] ?? $row['item_code'] ?? ''));
+            if ($sku === '') {
+                $result['skipped']++;
+                continue;
+            }
+
+            try {
+                $attributes = $this->mapImportedProduct($row, $sku);
+                $product = Product::query()->where('sku', $sku)->first();
+
+                if ($product) {
+                    $product->update($attributes);
+                    $result['updated']++;
+                    continue;
+                }
+
+                $product = Product::create($attributes);
+                ProductStock::firstOrCreate(
+                    ['product_id' => $product->id],
+                    ['quantity' => 0, 'weight' => 0]
+                );
+
+                foreach (\Illuminate\Support\Facades\DB::table('customer_categories')->pluck('id') as $categoryId) {
+                    CustomerCategoryProduct::firstOrCreate([
+                        'customer_category_id' => $categoryId,
+                        'product_id' => $product->id,
+                    ]);
+                }
+
+                $result['created']++;
+            } catch (\Throwable $e) {
+                $result['errors'][] = $sku . ': ' . $e->getMessage();
+                Log::error('AutoCount product import failed', [
+                    'sku' => $sku,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $result;
+    }
+
+    protected function mapImportedCustomer(array $row, string $accNo): array
+    {
+        $billing = $this->joinAddressLines(
+            $row['billing_address1'] ?? $row['Address1'] ?? null,
+            $row['billing_address2'] ?? $row['Address2'] ?? null,
+            $row['billing_address3'] ?? $row['Address3'] ?? null,
+            $row['billing_address4'] ?? $row['Address4'] ?? null
+        );
+        $shipping = $this->joinAddressLines(
+            $row['shipping_address1'] ?? $row['DeliverAddr1'] ?? null,
+            $row['shipping_address2'] ?? $row['DeliverAddr2'] ?? null,
+            $row['shipping_address3'] ?? $row['DeliverAddr3'] ?? null,
+            $row['shipping_address4'] ?? $row['DeliverAddr4'] ?? null
+        );
+
+        if ($billing === '') {
+            $billing = (string) ($row['billing_address'] ?? '-');
+        }
+        if ($shipping === '') {
+            $shipping = $billing;
+        }
+
+        $customerType = $this->mapImportedCustomerType($row);
+        $isActive = $this->toBool($row['IsActive'] ?? $row['is_active'] ?? $row['status'] ?? true);
+
+        return [
+            'name' => mb_substr(trim((string) ($row['name'] ?? $row['CompanyName'] ?? $row['company_name'] ?? $accNo)), 0, 100),
+            'email' => $this->nullableString($row['email'] ?? $row['EmailAddress'] ?? null),
+            'category' => $this->nullableString($row['category'] ?? $row['PriceCategory'] ?? null),
+            'customer_type' => $customerType,
+            'payment_term_days' => $customerType === 'credit'
+                ? $this->parsePaymentTermDays($row['DisplayTerm'] ?? $row['credit_term'] ?? null)
+                : null,
+            'attn_name' => $this->nullableString($row['attn_name'] ?? $row['Attention'] ?? null),
+            'attn_contact' => $this->nullableString($row['phone_no'] ?? $row['Phone1'] ?? $row['attn_contact'] ?? null),
+            'fax_no' => $this->nullableString($row['fax_no'] ?? $row['Fax1'] ?? null),
+            'billing_address' => mb_substr($billing, 0, 100),
+            'billing_postcode' => mb_substr((string) ($row['billing_postcode'] ?? ''), 0, 5),
+            'billing_state' => mb_substr((string) ($row['billing_state'] ?? ''), 0, 30),
+            'shipping_address' => mb_substr($shipping, 0, 100),
+            'shipping_postcode' => mb_substr((string) ($row['shipping_postcode'] ?? $row['billing_postcode'] ?? ''), 0, 5),
+            'shipping_state' => mb_substr((string) ($row['shipping_state'] ?? $row['billing_state'] ?? ''), 0, 30),
+            'payment_method' => json_encode($customerType === 'credit' ? [User::$payment_method['term']] : [User::$payment_method['cod']]),
+            'sql_customer_code' => $accNo,
+            'status' => $isActive ? User::$user_status['active'] : User::$user_status['locked'],
+            'autocount_sync_status' => 'synced',
+            'autocount_synced_at' => now(),
+        ];
+    }
+
+    protected function mapImportedProduct(array $row, string $sku): array
+    {
+        $uomName = trim((string) ($row['uom'] ?? $row['UOM'] ?? $row['description'] ?? 'KG'));
+        if ($uomName === '') {
+            $uomName = 'KG';
+        }
+
+        $categoryName = trim((string) ($row['category'] ?? $row['ItemGroup'] ?? $row['item_group'] ?? 'General'));
+        if ($categoryName === '') {
+            $categoryName = 'General';
+        }
+
+        $uom = Uom::firstOrCreate(['uom_name' => mb_substr($uomName, 0, 30)]);
+        $category = ProductCategory::firstOrCreate(['category_name' => mb_substr($categoryName, 0, 50)]);
+
+        $price = (float) ($row['price'] ?? $row['StandardSellingPrice'] ?? $row['standard_selling_price'] ?? 0);
+        $isActive = $this->toBool($row['IsActive'] ?? $row['is_active'] ?? $row['status'] ?? true);
+        $sellIn = $this->resolveSellIn($uomName, $row['sell_in'] ?? null);
+
+        return [
+            'uom_id' => $uom->id,
+            'product_category_id' => $category->id,
+            'name' => mb_substr(trim((string) ($row['name'] ?? $row['Description'] ?? $sku)), 0, 50),
+            'description' => mb_substr(trim((string) ($row['description'] ?? $uomName)), 0, 200),
+            'sku' => mb_substr($sku, 0, 50),
+            'price' => max(0, $price),
+            'status' => $isActive ? Product::$status['active'] : Product::$status['inactive'],
+            'sell_in' => $sellIn,
+        ];
+    }
+
+    protected function joinAddressLines(...$lines): string
+    {
+        $parts = [];
+        foreach ($lines as $line) {
+            $line = trim((string) $line);
+            if ($line !== '') {
+                $parts[] = $line;
+            }
+        }
+
+        return implode(', ', $parts);
+    }
+
+    protected function mapImportedCustomerType(array $row): string
+    {
+        $explicit = strtolower(trim((string) ($row['customer_type'] ?? $row['payment_method'] ?? '')));
+        if (in_array($explicit, ['credit', 'term'], true)) {
+            return 'credit';
+        }
+        if (in_array($explicit, ['cod', 'cash'], true)) {
+            return 'cod';
+        }
+
+        $term = trim((string) ($row['DisplayTerm'] ?? $row['credit_term'] ?? ''));
+        if ($term !== '' && !preg_match('/^(cod|cash)$/i', $term)) {
+            return 'credit';
+        }
+
+        return 'cod';
+    }
+
+    protected function parsePaymentTermDays(?string $term): int
+    {
+        $term = trim((string) $term);
+        if ($term === '') {
+            return 30;
+        }
+
+        if (preg_match('/(\d+)/', $term, $matches)) {
+            $days = (int) $matches[1];
+
+            return $days > 0 ? $days : 30;
+        }
+
+        return 30;
+    }
+
+    protected function resolveSellIn(string $uomName, ?string $explicit): string
+    {
+        $explicit = strtolower(trim((string) $explicit));
+        if (in_array($explicit, [Product::SELL_IN_QTY, Product::SELL_IN_WEIGHT, Product::SELL_IN_QTY_BILL_WEIGHT], true)) {
+            return $explicit;
+        }
+
+        $uom = strtoupper($uomName);
+        if (in_array($uom, ['KG', 'KGS', 'KILO', 'KILOGRAM'], true)) {
+            return Product::SELL_IN_WEIGHT;
+        }
+
+        return Product::SELL_IN_QTY;
+    }
+
+    protected function nullableString($value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    protected function toBool($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value !== 0;
+        }
+
+        $value = strtolower(trim((string) $value));
+
+        return !in_array($value, ['0', 'false', 'inactive', 'no', 'n'], true);
     }
 
     protected function toCustomerPayload(User $user): array

@@ -118,6 +118,28 @@ class AutoCountController extends Controller
         return response('OK');
     }
 
+    public function customersImport(Request $request)
+    {
+        if (!$this->authorized($request)) {
+            return response('Unauthorized', 401);
+        }
+
+        $result = $this->service->importCustomers($request->all());
+
+        return response()->json($result);
+    }
+
+    public function productsImport(Request $request)
+    {
+        if (!$this->authorized($request)) {
+            return response('Unauthorized', 401);
+        }
+
+        $result = $this->service->importProducts($request->all());
+
+        return response()->json($result);
+    }
+
     protected function authorized(Request $request): bool
     {
         $token = (string) config('autocount.api_token', '');

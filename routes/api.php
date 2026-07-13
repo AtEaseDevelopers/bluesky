@@ -18,6 +18,11 @@ Route::prefix('order')->group(function () {
 Route::prefix('customers')->group(function () {
     Route::get('/', [AutoCountController::class, 'customers']);
     Route::post('/update', [AutoCountController::class, 'customersUpdate']);
+    Route::post('/import', [AutoCountController::class, 'customersImport']);
+});
+
+Route::prefix('products')->group(function () {
+    Route::post('/import', [AutoCountController::class, 'productsImport']);
 });
 
 Route::prefix('driver')->group(function () {
