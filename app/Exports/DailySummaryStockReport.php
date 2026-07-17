@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Area;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -83,8 +84,8 @@ class DailySummaryStockReport implements FromCollection, WithHeadings, WithEvent
             ->when($request->customer, function ($q) {
                 return $q->where('orders.user_id', request()->customer);
             })
-            ->when($request->area, function ($q) {
-                return $q->where('orders.area', request()->area);
+            ->when($areaFilter = Area::orderFilterValue($request->input('area')), function ($q) use ($areaFilter) {
+                return $q->where('orders.area', $areaFilter);
             })
             ->groupBy('products.sku')
             ->get();

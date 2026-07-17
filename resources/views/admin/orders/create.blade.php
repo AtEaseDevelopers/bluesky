@@ -25,11 +25,11 @@
                                 <input type="text" name="walk_in_name" id="walk_in_name" class="form-control" value="{{ old('walk_in_name') }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="mb-2">{{ __('orders.walk_in_phone') }} <span class="text-danger">*</span></label>
+                                <label class="mb-2">{{ __('orders.walk_in_phone') }} {{ __('product.optional') }}</label>
                                 <input type="text" name="walk_in_phone" id="walk_in_phone" class="form-control" value="{{ old('walk_in_phone') }}">
                             </div>
                         </div>
-                        <div class="row mb-3">
+                        <div class="row mb-3" id="order_fulfillment_fields">
                             <div class="col-md-6">
                                 <label class="mb-2">{{ __('orders.delivery_date') }}</label>
                                 <select name="delivery_date" id="create_delivery_date" class="form-select">
@@ -102,9 +102,9 @@
                                         <label class="mb-2" for="area">{{ __('orders.select_area') }}</label>
                                         <select class="form-select @error('area') is-invalid @enderror"  id="area" name="area">
                                             <option value="">{{ __('orders.choose') }}</option>
-                                            @foreach ($areaList as $area)
-                                                <option value="{{ $area }}" {{ old('area') == $area ? 'selected' : '' }}>
-                                                    {{ $area }}
+                                            @foreach ($areas as $area)
+                                                <option value="{{ $area->id }}" {{ old('area') == $area->id ? 'selected' : '' }}>
+                                                    {{ $area->area_name }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -113,7 +113,7 @@
                                 <div class="col-md-12">
                                     <div class="form-group mb-4">
                                         <label class="mb-2" for="billing_address">{{ __('orders.billing_address') }}</label>
-                                        <span class="text-danger"> *</span>
+                                        <span class="text-danger" id="billing_address_required_mark"> *</span>
                                         <textarea id="billing_address" name="billing_address" value="{{ old('billing_address') }}" class="form-control" rows="3" placeholder="{{ __('orders.billing_address_placeholder') }}" required>{{ old('billing_address') }}</textarea>
                                     </div>
                                 </div>
@@ -296,8 +296,11 @@
         function applyWalkInUiForRestore() {
             $('#walk_in_fields').removeClass('d-none');
             $('#order_customer_row').addClass('d-none');
+            $('#order_fulfillment_fields').addClass('d-none');
             $('#order_customer').prop('disabled', true);
             $('#id').val('');
+            $('#billing_address').prop('required', false);
+            $('#billing_address_required_mark').addClass('d-none');
 
             var paymentMethod = document.getElementById('payment_method');
             var html = '<option value="">' + selectPaymentMethodPlaceholder + '</option>';
@@ -414,6 +417,7 @@
         function enableWalkInMode() {
             $('#walk_in_fields').removeClass('d-none');
             $('#order_customer_row').addClass('d-none');
+            $('#order_fulfillment_fields').addClass('d-none');
             $('#order_customer').prop('disabled', true).val('').trigger('change.select2');
             $('#id').val('');
 
@@ -431,12 +435,17 @@
             selected_products = [];
             $('#product_bag-item').html('');
             $('#total-price').text('0.00');
+            $('#billing_address').prop('required', false);
+            $('#billing_address_required_mark').addClass('d-none');
         }
 
         function disableWalkInMode() {
             $('#walk_in_fields').addClass('d-none');
             $('#order_customer_row').removeClass('d-none');
+            $('#order_fulfillment_fields').removeClass('d-none');
             $('#order_customer').prop('disabled', false);
+            $('#billing_address').prop('required', true);
+            $('#billing_address_required_mark').removeClass('d-none');
             $('#customer_info').addClass('d-none');
             $('form button.next').addClass('d-none');
             $('form button.back').addClass('d-none');

@@ -96,9 +96,24 @@
                             <form class="js-pay-form" method="POST" enctype="multipart/form-data"
                                 action="{{ route('driver.customers.record-payment', [$customer->id, $invoice->id]) }}">
                                 @csrf
+                                @if ($isCredit)
+                                    @php $defaultPaymentTiming = old('payment_timing', 'pay_now'); @endphp
+                                    <div class="mb-3">
+                                        <label class="form-label d-block">{{ __('driver_portal.deliveries.payment_timing_label') }}</label>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input js-pay-timing" type="radio" name="payment_timing" id="pay-now-{{ $invoice->id }}" value="pay_now" {{ $defaultPaymentTiming === 'pay_now' ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="pay-now-{{ $invoice->id }}">{{ __('driver_portal.deliveries.pay_now') }}</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input js-pay-timing" type="radio" name="payment_timing" id="pay-later-{{ $invoice->id }}" value="pay_later" {{ $defaultPaymentTiming === 'pay_later' ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="pay-later-{{ $invoice->id }}">{{ __('driver_portal.deliveries.pay_later') }}</label>
+                                        </div>
+                                    </div>
+                                    <div class="js-pay-now-fields" style="{{ $defaultPaymentTiming === 'pay_now' ? '' : 'display:none;' }}">
+                                @endif
                                 <div class="mb-3">
                                     <label class="form-label" for="method-{{ $invoice->id }}">{{ __('driver_portal.deliveries.payment_method') }}</label>
-                                    <select class="form-select js-pay-method" name="payment_method" id="method-{{ $invoice->id }}" required>
+                                    <select class="form-select js-pay-method" name="payment_method" id="method-{{ $invoice->id }}" {{ $isCredit ? '' : 'required' }}>
                                         <option value="" disabled selected>{{ __('driver_portal.deliveries.select_method') }}</option>
                                         @foreach ($paymentMethods as $value => $label)
                                             <option value="{{ $value }}">{{ $label }}</option>
@@ -107,10 +122,10 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label" for="amount-{{ $invoice->id }}">{{ __('driver_portal.deliveries.amount_collected') }}</label>
-                                    <input type="number" step="0.01" min="0.01" class="form-control"
+                                    <input type="number" step="0.01" min="0.01" class="form-control js-pay-amount"
                                         name="paid_amount" id="amount-{{ $invoice->id }}"
                                         value="{{ number_format($balance, 2, '.', '') }}"
-                                        {{ $isCredit ? '' : 'readonly' }} required>
+                                        {{ $isCredit ? '' : 'readonly required' }}>
                                     @unless ($isCredit)
                                         <div class="text-muted-ink mt-1" style="font-size:.9rem;">{{ __('driver_portal.customers.cod_full_balance') }}</div>
                                     @endunless
@@ -120,6 +135,12 @@
                                     <input type="file" class="form-control js-pay-proof" name="payment_proof"
                                         id="proof-{{ $invoice->id }}" accept=".jpg,.jpeg,.png,.pdf">
                                 </div>
+                                @if ($isCredit)
+                                    </div>
+                                    <div class="alert alert-light border mb-3 js-pay-later-info" style="{{ $defaultPaymentTiming === 'pay_later' ? '' : 'display:none;' }}">
+                                        <i class="fa fa-info-circle me-1"></i> {{ __('driver_portal.deliveries.pay_later_help') }}
+                                    </div>
+                                @endif
                                 <button type="submit" class="btn btn-brand btn-block-tall w-100">
                                     <i class="fa fa-check me-1"></i> {{ __('driver_portal.deliveries.save_payment') }}
                                 </button>
@@ -148,14 +169,50 @@
             document.querySelectorAll('.js-pay-form').forEach(function (form) {
                 var method = form.querySelector('.js-pay-method');
                 var proof = form.querySelector('.js-pay-proof');
-                if (!method || !proof) {
-                    return;
+                var amount = form.querySelector('.js-pay-amount');
+                var payNowFields = form.querySelector('.js-pay-now-fields');
+                var payLaterInfo = form.querySelector('.js-pay-later-info');
+                var timingInputs = form.querySelectorAll('.js-pay-timing');
+
+                function selectedTiming() {
+                    var selected = form.querySelector('.js-pay-timing:checked');
+                    return selected ? selected.value : 'pay_now';
                 }
-                function toggleProof() {
-                    proof.required = proofRequired.indexOf(method.value) !== -1;
+
+                function toggleFields() {
+                    var isCreditForm = timingInputs.length > 0;
+                    if (!isCreditForm) {
+                        if (method && proof) {
+                            proof.required = proofRequired.indexOf(method.value) !== -1;
+                        }
+                        return;
+                    }
+
+                    var payNow = selectedTiming() === 'pay_now';
+                    if (payNowFields) {
+                        payNowFields.style.display = payNow ? '' : 'none';
+                    }
+                    if (payLaterInfo) {
+                        payLaterInfo.style.display = payNow ? 'none' : '';
+                    }
+                    if (method) {
+                        method.required = payNow;
+                    }
+                    if (amount) {
+                        amount.required = payNow;
+                    }
+                    if (proof && method) {
+                        proof.required = payNow && proofRequired.indexOf(method.value) !== -1;
+                    }
                 }
-                method.addEventListener('change', toggleProof);
-                toggleProof();
+
+                timingInputs.forEach(function (input) {
+                    input.addEventListener('change', toggleFields);
+                });
+                if (method) {
+                    method.addEventListener('change', toggleFields);
+                }
+                toggleFields();
             });
         })();
     </script>

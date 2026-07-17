@@ -131,8 +131,12 @@ class OrderProduct extends Model
     {
         $sellIn = Product::resolveSellInForOrderLine($product);
 
-        if ($sellIn === Product::SELL_IN_QTY_BILL_WEIGHT && $product->quantity !== null && ! empty($product->weight)) {
-            return rtrim((string) ((float) $product->quantity * (float) $product->weight)) . ' KG';
+        if ($sellIn === Product::SELL_IN_QTY_BILL_WEIGHT) {
+            if (! empty($product->weight)) {
+                return rtrim(rtrim(number_format((float) $product->weight, 3, '.', ''), '0'), '.') . ' KG';
+            }
+
+            return null;
         }
 
         if (! empty($product->weight)) {

@@ -44,7 +44,7 @@
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="driver">Select Lorry</label>
+                                    <label class="mb-2" for="driver">{{ __('ui.reports.driver_lorry') }}</label>
                                     <select class="form-select" name="driver" id="driver">
                                         <option value="">Choose...</option>
                                         @foreach($drivers as $driver)
@@ -73,9 +73,9 @@
                                     <label class="mb-2" for="area">Select Area</label>
                                     <select class="form-select @error('area') is-invalid @enderror"  id="area" name="area">
                                         <option value="">All</option>
-                                        @foreach ($areaList as $area)
-                                            <option value="{{ $area }}" {{ ($input['shipping_state'] ?? '') == $area ? 'selected' : '' }}>
-                                                {{ $area }}
+                                        @foreach ($areas as $area)
+                                            <option value="{{ $area->id }}" {{ ($input['area'] ?? '') == $area->id ? 'selected' : '' }}>
+                                                {{ $area->area_name }}
                                             </option>
                                         @endforeach
                                     </select>

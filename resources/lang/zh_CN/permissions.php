@@ -26,8 +26,8 @@ return [
                     'description' => '每日销售和送货单报表。',
                 ],
                 'drivers' => [
-                    'label' => '司机 / 货车',
-                    'description' => '管理司机和货车分配。',
+                    'label' => '司机',
+                    'description' => '管理司机和司机分配。',
                 ],
                 'settings' => [
                     'label' => '系统设置',

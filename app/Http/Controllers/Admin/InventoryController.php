@@ -144,6 +144,9 @@ class InventoryController extends Controller
 
         $records = $query->offset($start)->limit($limit)->orderBy($orderCol, $dir)->get();
 
+        $admin = Auth::guard('web_admin')->user();
+        $canEditInventory = $admin && $admin->canModule('products', 'edit');
+
         $data = [];
         foreach ($records as $record) {
             $quantity = (float) $record->quantity;
@@ -154,19 +157,21 @@ class InventoryController extends Controller
 
             $data[] = [
                 'id' => $record->id,
-                'options' => '<a href="' . route('admin.inventory.stock-in.create') . '?product_id=' . $record->id . '" class="btn btn-sm btn-success me-1" title="' . e(__('inventory.stock_in_action')) . '"><i class="fa fa-plus"></i></a>'
-                    . '<a href="' . route('admin.inventory.stock-out.create') . '?product_id=' . $record->id . '" class="btn btn-sm btn-warning me-1" title="' . e(__('inventory.stock_out')) . '"><i class="fa fa-minus"></i></a>'
-                    . '<button type="button" class="btn btn-sm btn-primary btn-edit-stock" title="' . e(__('inventory.edit_stock_action')) . '"'
-                    . ' data-product-id="' . $record->id . '"'
-                    . ' data-name="' . e($record->name) . '"'
-                    . ' data-sku="' . e($record->sku ?: '-') . '"'
-                    . ' data-price="' . number_format($price, 2, '.', '') . '"'
-                    . ' data-quantity="' . number_format($quantity, 3, '.', '') . '"'
-                    . ' data-weight="' . number_format($weight, 3, '.', '') . '"'
-                    . ' data-uom="' . e($uomName) . '"'
-                    . ' data-sell-in="' . e($record->sell_in ?? 'qty') . '"'
-                    . ' data-image-url="' . e($imageUrl) . '">'
-                    . '<i class="fa fa-edit"></i></button>',
+                'options' => $canEditInventory
+                    ? '<a href="' . route('admin.inventory.stock-in.create') . '?product_id=' . $record->id . '" class="btn btn-sm btn-success me-1" title="' . e(__('inventory.stock_in_action')) . '"><i class="fa fa-plus"></i></a>'
+                        . '<a href="' . route('admin.inventory.stock-out.create') . '?product_id=' . $record->id . '" class="btn btn-sm btn-warning me-1" title="' . e(__('inventory.stock_out')) . '"><i class="fa fa-minus"></i></a>'
+                        . '<button type="button" class="btn btn-sm btn-primary btn-edit-stock" title="' . e(__('inventory.edit_stock_action')) . '"'
+                        . ' data-product-id="' . $record->id . '"'
+                        . ' data-name="' . e($record->name) . '"'
+                        . ' data-sku="' . e($record->sku ?: '-') . '"'
+                        . ' data-price="' . number_format($price, 2, '.', '') . '"'
+                        . ' data-quantity="' . number_format($quantity, 3, '.', '') . '"'
+                        . ' data-weight="' . number_format($weight, 3, '.', '') . '"'
+                        . ' data-uom="' . e($uomName) . '"'
+                        . ' data-sell-in="' . e($record->sell_in ?? 'qty') . '"'
+                        . ' data-image-url="' . e($imageUrl) . '">'
+                        . '<i class="fa fa-edit"></i></button>'
+                    : '',
                 'name' => '<div class="d-flex align-items-center gap-2">'
                     . '<img src="' . e($imageUrl) . '" alt="" class="rounded" style="width:40px;height:40px;object-fit:cover" onerror="this.src=\'' . asset('assets/images/product-default.jpg') . '\'">'
                     . '<span>' . e($record->name) . '</span></div>',

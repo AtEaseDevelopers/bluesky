@@ -41,6 +41,8 @@ return [
     'sell_in_weight' => '按重量',
     'sell_in_qty_bill_weight' => '按数量（按重量计费）',
     'estimated_weight' => '预估重量 (:uom)',
+    'estimated_weight_total' => '预估总重量 (:uom)',
+    'estimated_weight_hint' => '可选。所有件数的总重量；若留空则按数量计价。',
     'weight_presets' => '重量预设',
     'category_pricing' => '分类定价',
     'category_pricing_help' => '可按客户分类设置不同价格。下单当日如有每日价格，则优先使用每日价格。',

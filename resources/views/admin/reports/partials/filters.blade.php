@@ -95,9 +95,9 @@
                         <label class="mb-2" for="area">{{ __('ui.reports.area') }}</label>
                         <select class="form-select" id="area" name="area">
                             <option value="">{{ __('ui.all') }}</option>
-                            @foreach ($areaList as $area)
-                                <option value="{{ $area }}" {{ ($req['area'] ?? '') == $area ? 'selected' : '' }}>
-                                    {{ $area }}
+                            @foreach ($areas as $area)
+                                <option value="{{ $area->id }}" {{ ($req['area'] ?? '') == $area->id ? 'selected' : '' }}>
+                                    {{ $area->area_name }}
                                 </option>
                             @endforeach
                         </select>

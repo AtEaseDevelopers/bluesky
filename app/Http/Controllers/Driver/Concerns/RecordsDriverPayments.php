@@ -44,11 +44,11 @@ trait RecordsDriverPayments
      *
      * @return array<string, string>
      */
-    public static function driverPaymentMethodsFor(string $customerType): array
+    public static function driverPaymentMethodsFor(string $customerType, bool $immediateCollectionOnly = false): array
     {
         $methods = self::driverPaymentMethodLabels();
 
-        if ($customerType !== 'credit') {
+        if ($customerType !== 'credit' || $immediateCollectionOnly) {
             unset($methods['credit']);
         }
 
@@ -61,29 +61,51 @@ trait RecordsDriverPayments
      */
     protected function recordDriverPayment(Request $request, Order $order)
     {
-        if ($order->isCreditCustomer()) {
-            return back()->with('error', __('driver_portal.payment.credit_not_allowed'));
-        }
-
         if (!$order->canRecordAdminPayment()) {
             return back()->with('error', $order->isCodCustomer()
                 ? __('driver_portal.payment.cod_status_required')
                 : __('driver_portal.payment.cannot_record'));
         }
 
-        $data = $request->validate([
-            'payment_method' => ['required', 'in:' . implode(',', self::$driverPaymentMethodKeys)],
-            'paid_amount' => ['required', 'numeric', 'min:0.01'],
-            'payment_proof' => [
-                'nullable',
-                'required_if:payment_method,' . implode(',', self::$driverProofRequiredMethods),
-                'file',
-                'mimes:jpg,jpeg,png,pdf',
-                'max:4096',
-            ],
-        ], [
-            'payment_proof.required_if' => __('driver_portal.payment.proof_required'),
-        ]);
+        if ($order->isCreditCustomer()) {
+            $timingData = $request->validate([
+                'payment_timing' => ['required', 'in:pay_now,pay_later'],
+            ]);
+
+            if ($timingData['payment_timing'] === 'pay_later') {
+                return back()->with('success', __('driver_portal.payment.pay_later_noted'));
+            }
+
+            $payNowMethods = array_values(array_diff(self::$driverPaymentMethodKeys, ['credit']));
+            $data = $request->validate([
+                'payment_timing' => ['required', 'in:pay_now'],
+                'payment_method' => ['required', 'in:' . implode(',', $payNowMethods)],
+                'paid_amount' => ['required', 'numeric', 'min:0.01'],
+                'payment_proof' => [
+                    'nullable',
+                    'required_if:payment_method,' . implode(',', self::$driverProofRequiredMethods),
+                    'file',
+                    'mimes:jpg,jpeg,png,pdf',
+                    'max:4096',
+                ],
+            ], [
+                'payment_proof.required_if' => __('driver_portal.payment.proof_required'),
+            ]);
+        } else {
+            $data = $request->validate([
+                'payment_method' => ['required', 'in:' . implode(',', self::$driverPaymentMethodKeys)],
+                'paid_amount' => ['required', 'numeric', 'min:0.01'],
+                'payment_proof' => [
+                    'nullable',
+                    'required_if:payment_method,' . implode(',', self::$driverProofRequiredMethods),
+                    'file',
+                    'mimes:jpg,jpeg,png,pdf',
+                    'max:4096',
+                ],
+            ], [
+                'payment_proof.required_if' => __('driver_portal.payment.proof_required'),
+            ]);
+        }
 
         $method = self::$driverPaymentMethodMap[$data['payment_method']] ?? $data['payment_method'];
 

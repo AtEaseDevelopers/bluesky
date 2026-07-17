@@ -21,6 +21,27 @@ function orderJs(key, fallback) {
     return (labels.js && labels.js[key]) || fallback || '';
 }
 
+function orderLineBillAmount(sellIn, qty, weight, billByWeight) {
+    sellIn = sellIn || 'qty';
+    qty = parseFloat(qty) || 0;
+    weight = parseFloat(weight) || 0;
+    billByWeight = billByWeight !== false;
+
+    if (sellIn === 'qty') {
+        return qty;
+    }
+
+    if (sellIn === 'qty_bill_weight') {
+        return billByWeight && weight > 0 ? weight : qty;
+    }
+
+    if (sellIn === 'weight') {
+        return weight;
+    }
+
+    return qty || weight;
+}
+
 function formatProductMetaLine(key, value) {
     if (key === 'sell_in') {
         var sellInLabels = (window.orderUiLabels && window.orderUiLabels.sell_in) || {};
@@ -149,15 +170,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (isValid) {
                         var sellIn = card.getAttribute('data-sell-in') || 'qty';
                         productOptions['sell_in'] = sellIn;
-
-                        if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
-                            var qty = parseFloat(productOptions['quantity'] || 0);
-                            var wt = parseFloat(productOptions['weight'] || 0);
-                            productOptions['total_price'] = parseFloat(productOptions['price']) * qty * wt;
-                        } else {
-                            var qtyWeightValue = (productOptions['quantity'] == '' || productOptions['quantity'] == undefined) ? productOptions['weight'] : productOptions['quantity'];
-                            productOptions['total_price'] = parseFloat(productOptions['price']) * parseFloat(qtyWeightValue || 0);
-                        }
+                        productOptions['total_price'] = parseFloat(productOptions['price'])
+                            * orderLineBillAmount(sellIn, productOptions['quantity'], productOptions['weight']);
                         selected_products.push(productOptions);
                     }
                 }
@@ -237,10 +251,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (isWalkInOrder()) {
                             var walkInName = document.getElementById('walk_in_name');
                             var walkInPhone = document.getElementById('walk_in_phone');
-                            if (!walkInName.value.trim() || !walkInPhone.value.trim()) {
+                            if (!walkInName.value.trim()) {
                                 Swal.fire({
                                     title: orderJs('warning', 'Warning'),
-                                    text: orderJs('walk_in_name_phone_required', 'Please enter walk-in customer name and phone.'),
+                                    text: orderJs('walk_in_name_required', 'Please enter walk-in customer name.'),
                                     icon: 'warning',
                                 });
                                 return false;
@@ -342,10 +356,28 @@ document.addEventListener('DOMContentLoaded', function () {
     if (document.querySelector('.btn-change-lorry')) {
         document.querySelectorAll('.btn-change-lorry').forEach(function(button) {
             button.addEventListener('click', function() {
-                document.querySelector('#change-lorry .orders_id').value = this.dataset.id;
+                var modal = document.querySelector('#change-lorry');
+                modal.querySelector('.orders_id').value = this.dataset.id;
 
-                document.querySelector('#change-lorry #order_driver_id').value = this.dataset.lorry;
-                document.querySelector('#change-lorry #order_driver_id').dispatchEvent(new Event('change', { bubbles: true }));
+                var fulfillmentSelect = modal.querySelector('#modal_fulfillment_type');
+                fulfillmentSelect.value = this.dataset.fulfillment || 'delivery';
+                fulfillmentSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+                var dateSelect = modal.querySelector('#modal_delivery_date');
+                if (dateSelect) {
+                    var deliveryDate = this.dataset.deliveryDate || '';
+                    if (typeof window.ensureModalDeliveryDateOption === 'function') {
+                        window.ensureModalDeliveryDateOption(deliveryDate);
+                    }
+                    dateSelect.value = deliveryDate;
+                }
+
+                modal.querySelector('#order_driver_id').value = this.dataset.lorry || '';
+                modal.querySelector('#order_driver_id').dispatchEvent(new Event('change', { bubbles: true }));
+
+                if (typeof window.prefillChangeLorryDeliverySlots === 'function') {
+                    window.prefillChangeLorryDeliverySlots(this.dataset.deliverySlot, this.dataset.orderId);
+                }
             });
         });
     }
@@ -705,6 +737,10 @@ function init_customer_details(options) {
                     document.getElementById(field).value = data.customer[field];
                 }
             });
+
+            if (window.jQuery && jQuery('#area').length && jQuery('#area').data('select2')) {
+                jQuery('#area').trigger('change.select2');
+            }
         }
 
         customerInfo.classList.remove('d-none');
@@ -775,7 +811,7 @@ function display_selected_products() {
         if (document.getElementById('order_customer')) {
             var sellIn = product.sell_in || 'qty';
 
-            if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
+            if (sellIn === 'qty_bill_weight') {
                 productHtml += `
                 ${optionHtml}
                 <div class="form-group mb-3">
@@ -797,7 +833,7 @@ function display_selected_products() {
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagBillWeight_${product.product_id}" data-action="minus">
                             <i class="fa fa-minus"></i>
                         </button>
-                        <input type="number" class="form-control text-center add-products-bill-weight" id="bagBillWeight_${product.product_id}" name="weight[]" value="${product.weight || ''}" data-pid="${product.product_id}" data-price="${product.price}" data-field="bill_weight" data-sell-in="qty_bill_weight" min="0.001" step="0.001">
+                        <input type="number" class="form-control text-center add-products-bill-weight" id="bagBillWeight_${product.product_id}" name="weight[]" value="${product.weight || ''}" data-pid="${product.product_id}" data-price="${product.price}" data-field="bill_weight" data-sell-in="qty_bill_weight" min="0" step="0.001">
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagBillWeight_${product.product_id}" data-action="plus">
                             <i class="fa fa-plus"></i>
                         </button>
@@ -808,9 +844,8 @@ function display_selected_products() {
                     <textarea class="form-control" name="remark[]">${product.remark || ''}</textarea>
                 </div>
             `;
-            } else if(product.quantity == undefined || product.quantity == "")
-            {
-                 productHtml += `
+            } else if (sellIn === 'weight') {
+                productHtml += `
                 ${optionHtml}
                 <div class="form-group mb-3">
                     <label class="mb-2">${orderUi('order_qty_kg', 'Order Qty (KG)')}</label>
@@ -819,7 +854,7 @@ function display_selected_products() {
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagWeight_${product.product_id}" data-action="minus">
                             <i class="fa fa-minus"></i>
                         </button>
-                        <input type="number" class="form-control text-center add-products-weight" id="bagWeight_${product.product_id}" name="quantity[]" value="${product.weight}" data-pid="${product.product_id}" data-price="${product.price}" data-field="weight" min="0.001" step="0.001" required>
+                        <input type="number" class="form-control text-center add-products-weight" id="bagWeight_${product.product_id}" name="weight[]" value="${product.weight || 1}" data-pid="${product.product_id}" data-price="${product.price}" data-field="weight" data-sell-in="weight" min="0.001" step="0.001" required>
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagWeight_${product.product_id}" data-action="plus">
                             <i class="fa fa-plus"></i>
                         </button>
@@ -830,10 +865,8 @@ function display_selected_products() {
                     <textarea class="form-control" name="remark[]">${product.remark || ''}</textarea>
                 </div>
             `;
-            }
-            else
-            {
-                 productHtml += `
+            } else {
+                productHtml += `
                 ${optionHtml}
                 <div class="form-group mb-3">
                     <label class="mb-2">${orderUi('quantity', 'Quantity')}</label>
@@ -842,7 +875,7 @@ function display_selected_products() {
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="minus">
                             <i class="fa fa-minus"></i>
                         </button>
-                        <input type="number" class="form-control text-center add-products-quantity" id="bagQty_${product.product_id}" name="quantity[]" value="${product.quantity}" data-pid="${product.product_id}" data-price="${product.price}" data-field="quantity" min="0.001" step="0.001" required>
+                        <input type="number" class="form-control text-center add-products-quantity" id="bagQty_${product.product_id}" name="quantity[]" value="${product.quantity || 1}" data-pid="${product.product_id}" data-price="${product.price}" data-field="quantity" data-sell-in="qty" min="0.001" step="0.001" required>
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="plus">
                             <i class="fa fa-plus"></i>
                         </button>
@@ -905,10 +938,8 @@ function syncBagQuantityToSelectedProducts(input) {
         }
     }
 
-    var billAmount = (product.sell_in === 'qty_bill_weight' || product.sell_in === 'weight')
-        ? (parseFloat(product.quantity || 0) * parseFloat(product.weight || 0))
-        : parseFloat(product.quantity || product.weight || 0);
-    product.total_price = parseFloat(product.price) * billAmount;
+    product.total_price = parseFloat(product.price)
+        * orderLineBillAmount(product.sell_in, product.quantity, product.weight);
 }
 
 function calculateTotal() {
@@ -933,15 +964,7 @@ function calculateTotal() {
         const price = parseFloat(anchor.getAttribute('data-price')) || 0;
         const qty = qtyInput ? (parseFloat(qtyInput.value) || 0) : 0;
         const weight = weightInput ? (parseFloat(weightInput.value) || 0) : 0;
-        let billAmount = weight;
-
-        if (sellIn === 'qty') {
-            billAmount = qty;
-        } else if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
-            billAmount = qty * weight;
-        }
-
-        const lineTotal = price * billAmount;
+        const lineTotal = price * orderLineBillAmount(sellIn, qty, weight);
         total += lineTotal;
 
         const totalEl = document.getElementById('product-' + pid + '-total');
@@ -1021,7 +1044,8 @@ document.addEventListener('click', function (event) {
         const target = document.getElementById(weightBtn.dataset.target);
         if (target) {
             target.value = weightBtn.dataset.value;
-            target.dispatchEvent(new Event('change'));
+            target.dispatchEvent(new Event('input', { bubbles: true }));
+            target.dispatchEvent(new Event('change', { bubbles: true }));
         }
     }
 

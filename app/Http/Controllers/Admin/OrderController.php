@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Area;
+use App\DeliverySlot;
 use App\Driver;
 use App\Http\Controllers\Controller;
 
@@ -18,10 +20,13 @@ use App\Order;
 use App\OrderPayment;
 use App\OrderProduct;
 use App\OrderProductOption;
+use App\Product;
+use App\PdfHelper;
 use App\Services\OrderService;
 use App\Services\OrderStatusService;
 use App\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
 {
@@ -78,7 +83,7 @@ class OrderController extends Controller
             $orders->where('total_price', '<=', $to_price);
         }
 
-        if ($area = $request->input('area')) {
+        if ($area = Area::orderFilterValue($request->input('area'))) {
             $orders->where('area', $area);
         }
 
@@ -95,12 +100,16 @@ class OrderController extends Controller
         }
 
         if ($phone = trim((string) $request->input('phone'))) {
-            $phoneTerm = '%' . addcslashes($phone, '%_\\') . '%';
-            $orders->where(function ($query) use ($phoneTerm) {
-                $query->where('orders.attn_contact', 'like', $phoneTerm)
-                    ->orWhere('orders.walk_in_phone', 'like', $phoneTerm)
-                    ->orWhereHas('customer', function ($customerQuery) use ($phoneTerm) {
-                        $customerQuery->where('attn_contact', 'like', $phoneTerm);
+            $contactTerm = '%' . addcslashes($phone, '%_\\') . '%';
+            $orders->where(function ($query) use ($contactTerm) {
+                $query->where('orders.attn_contact', 'like', $contactTerm)
+                    ->orWhere('orders.walk_in_phone', 'like', $contactTerm)
+                    ->orWhere('orders.walk_in_name', 'like', $contactTerm)
+                    ->orWhere('orders.attn_name', 'like', $contactTerm)
+                    ->orWhereHas('customer', function ($customerQuery) use ($contactTerm) {
+                        $customerQuery->where('name', 'like', $contactTerm)
+                            ->orWhere('attn_name', 'like', $contactTerm)
+                            ->orWhere('attn_contact', 'like', $contactTerm);
                     });
             });
         }
@@ -191,8 +200,10 @@ class OrderController extends Controller
                 'shipping_state_options' => System::$country_state['MY'],
                 'status_options' => Order::$status,
                 'payment_status_options' => Order::$payment_status,
-                'areaList' => Helper::areaList(),
+                'areas' => Area::optionsForSelect(),
                 'customers_list' => DB::table('users')->select('id', 'name')->get()->toArray(),
+                'deliveryDates' => DeliverySlot::availableDates(),
+                'deliverySlotsUrl' => route('admin.delivery-slots.for-date'),
             ]
         );
     }
@@ -286,17 +297,54 @@ class OrderController extends Controller
             'orders_id' => 'required',
             'fulfillment_type' => 'required|in:delivery,pickup',
             'driver_id' => 'nullable|exists:drivers,id',
+            'delivery_date' => 'nullable|date',
+            'delivery_slot_id' => 'nullable|exists:delivery_slots,id',
         ]);
 
+        $order = Order::findOrFail(decrypt($data['orders_id']));
         $fulfillmentType = $data['fulfillment_type'];
         $driverId = $fulfillmentType === Order::$fulfillment_types['pickup']
             ? null
             : ($data['driver_id'] ?? null);
 
-        DB::table('orders')->where('id', decrypt($data['orders_id']))->update([
+        $update = [
             'fulfillment_type' => $fulfillmentType,
             'driver_id' => $driverId,
-        ]);
+        ];
+
+        if ($fulfillmentType === Order::$fulfillment_types['pickup']) {
+            $update['delivery_slot_id'] = null;
+            $update['delivery_date'] = null;
+            $update['delivery_time_slot'] = null;
+        } else {
+            $deliveryDate = !empty($data['delivery_date']) ? $data['delivery_date'] : null;
+            $deliverySlotId = !empty($data['delivery_slot_id']) ? (int) $data['delivery_slot_id'] : null;
+
+            if ($deliveryDate xor $deliverySlotId) {
+                return back()->with('error', __('orders.delivery_date_and_slot_required'));
+            }
+
+            if ($deliveryDate && $deliverySlotId) {
+                $slot = DeliverySlot::find($deliverySlotId);
+                if (!$slot || !$slot->is_enabled) {
+                    return back()->with('error', __('orders.delivery_slot_unavailable'));
+                }
+
+                $existingDate = $order->delivery_date ? $order->delivery_date->toDateString() : null;
+                $sameBooking = (int) $order->delivery_slot_id === $deliverySlotId
+                    && $existingDate === $deliveryDate;
+
+                if (!$sameBooking && !$slot->isAvailableForDate($deliveryDate)) {
+                    return back()->with('error', __('orders.delivery_slot_unavailable'));
+                }
+
+                $update['delivery_slot_id'] = $slot->id;
+                $update['delivery_date'] = $deliveryDate;
+                $update['delivery_time_slot'] = $slot->time_label;
+            }
+        }
+
+        $order->update($update);
 
         return back()->with('success', __('orders.delivery_assignment_updated'));
     }
@@ -355,19 +403,26 @@ class OrderController extends Controller
         $order = $order->fresh();
         $order->load('customer');
 
+        if ($order->isCreditCustomer() && !$order->payment_due_date && !$order->paysInStore()) {
+            app(OrderService::class)->applyDefaultPaymentDueDate($order);
+            $order = $order->fresh();
+        }
+
         $order_products = DB::table('order_products')
             ->select(
-                'order_products.id as order_product_id', 
-                'products.id as product_id', 
+                'order_products.id as order_product_id',
+                'products.id as product_id',
+                'products.sell_in',
                 'products.show_qty',
                 'products.show_weight',
-                'orders.id as order_id', 
-                'orders.transfer_slip as transfer_slip', 
-                'order_products.product_name as name', 
-                'order_products.quantity', 
+                'orders.id as order_id',
+                'orders.transfer_slip as transfer_slip',
+                'order_products.product_name',
+                'order_products.product_name as name',
+                'order_products.quantity',
                 'order_products.weight',
                 'order_products.product_weight',
-                'order_products.unit_price', 
+                'order_products.unit_price',
                 'order_products.price',
                 'order_products.remark'
             )
@@ -386,8 +441,7 @@ class OrderController extends Controller
                 $transfer_slip_url = url('/') . '/'.Order::$path.'/'.$value->order_id.'/'.$value->transfer_slip;
             }
             $order_products[$key]->transfer_slip_url = $transfer_slip_url;
-            
-            $total += $order_products[$key]->unit_price * $value->quantity;
+            $order_products[$key]->sell_in = Product::resolveSellInForOrderLine($value);
         }
 
         return view('admin.orders.order-summary', [
@@ -409,6 +463,8 @@ class OrderController extends Controller
                 'nextStatuses' => app(OrderStatusService::class)->nextStatuses($order),
                 'isCreditCustomer' => $order->isCreditCustomer(),
                 'drivers' => $this->driverOptionsForOrder($order),
+                'deliveryDates' => DeliverySlot::availableDates(),
+                'deliverySlotsUrl' => route('admin.delivery-slots.for-date'),
             ]
         );
     }
@@ -440,6 +496,91 @@ class OrderController extends Controller
         }
 
         return back()->with('success', 'Payment due date updated successfully.');
+    }
+
+    public function confirmPickup(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+
+        if (!$order->canConfirmPickup()) {
+            return back()->with('error', __('orders.pickup_confirm_not_allowed'));
+        }
+
+        $request->validate([
+            'pickup_proof' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
+        ], [
+            'pickup_proof.required' => __('orders.pickup_proof_required'),
+            'pickup_proof.image' => __('orders.pickup_proof_format'),
+            'pickup_proof.mimes' => __('orders.pickup_proof_format'),
+            'pickup_proof.max' => __('orders.pickup_proof_size'),
+        ]);
+
+        $extension = $request->file('pickup_proof')->getClientOriginalExtension();
+        $filename = 'pickup_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $path = Order::$path . '/' . $order->id;
+
+        Storage::disk('local')->put(
+            $path . '/' . $filename,
+            file_get_contents($request->file('pickup_proof'))
+        );
+
+        $adminId = Auth::guard('web_admin')->id();
+
+        $order->update([
+            'pickup_proof' => $filename,
+            'pickup_confirmed_at' => now(),
+            'pickup_confirmed_by' => $adminId,
+        ]);
+
+        try {
+            app(OrderStatusService::class)->transition(
+                $order->fresh(),
+                Order::$status['delivered'],
+                $adminId
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', __('orders.pickup_confirmed_success'));
+    }
+
+    public function viewPickupProof($orderId, $filename)
+    {
+        $order = Order::findOrFail($orderId);
+        $safeName = basename($filename);
+
+        if ($order->pickup_proof !== $safeName) {
+            abort(404);
+        }
+
+        $path = Order::$path . '/' . $order->id . '/' . $safeName;
+
+        if (!Storage::disk('local')->exists($path)) {
+            abort(404, __('orders.pickup_proof_not_found'));
+        }
+
+        return response(Storage::disk('local')->get($path))
+            ->header('Content-Type', Storage::disk('local')->mimeType($path));
+    }
+
+    public function viewDeliveryProof($orderId, $filename)
+    {
+        $order = Order::findOrFail($orderId);
+        $safeName = basename($filename);
+
+        if ($order->delivery_proof !== $safeName) {
+            abort(404);
+        }
+
+        $path = Order::$path . '/' . $order->id . '/' . $safeName;
+
+        if (!Storage::disk('local')->exists($path)) {
+            abort(404, __('orders.delivery_proof_not_found'));
+        }
+
+        return response(Storage::disk('local')->get($path))
+            ->header('Content-Type', Storage::disk('local')->mimeType($path));
     }
 
     public function export(Request $request)
@@ -545,7 +686,6 @@ class OrderController extends Controller
 
     public function download_do_zip(Request $request)
     {
-        // format current date or from and to date
         $fdate = $request->fdate;
         $tdate = $request->tdate;
 
@@ -553,57 +693,60 @@ class OrderController extends Controller
         $startDate = $fdate ?: $today;
         $endDate = $tdate ?: $today;
         $startDate = min($startDate, $endDate);
+        $endDate = max($fdate ?: $today, $tdate ?: $today);
 
+        $orderIds = DB::table('orders')
+            ->select('id')
+            ->whereBetween('orders.created_at', [$startDate, $endDate . ' 23:59:59'])
+            ->when($request->id, fn ($q) => $q->where('orders.id', $request->id))
+            ->when($request->status, fn ($q) => $q->where('orders.status', $request->status))
+            ->when($request->driver, fn ($q) => $q->where('orders.driver_id', $request->driver))
+            ->when($request->customer, fn ($q) => $q->where('orders.user_id', $request->customer))
+            ->when($areaFilter = Area::orderFilterValue($request->input('area')), fn ($q) => $q->where('orders.area', $areaFilter))
+            ->pluck('id');
+
+        if ($orderIds->isEmpty()) {
+            return back()->with('error', __('reports.no_do_to_download'));
+        }
+
+        $zipDir = storage_path('app/temp');
+        if (!is_dir($zipDir)) {
+            mkdir($zipDir, 0755, true);
+        }
+
+        $zipFileName = $zipDir . '/DO_Report_orders' . Carbon::now()->format('YmdHis') . '.zip';
         $zip = new ZipArchive();
-        $zipFileName = storage_path('app/public/DO_Report_orders'. Carbon::now()->format('YmdHis') .'.zip');
-    
-        if ($zip->open($zipFileName, ZipArchive::CREATE) === true) {
-            $orders = DB::table('orders')
-                ->select('id')
-                ->whereBetween('orders.created_at', [$startDate, $endDate . " 23:59:59"])
-                ->when(
-                    $request->id, function ($q) {
-                        return $q->where('orders.id', request()->id);
-                    }
-                )
-            ->when(
-                $request->status, function ($q) {
-                    return $q->where('orders.status', request()->status);
-                }
-            )
-            ->when(
-                $request->driver, function ($q) {
-                    return $q->where('orders.driver_id', request()->driver);
-                }
-            )
-            ->when(
-                $request->customer, function ($q) {
-                    return $q->where('orders.user_id', request()->customer);
-                }
-            )
-            ->when(
-                $request->shipping_state, function ($q) {
-                    return $q->where('orders.shipping_state', 'LIKE', '%' . request()->shipping_state . '%');
-                }
-            )
-            ->get()
-            ->toArray();
-    
-            foreach ($orders as $orderRow) {
-                $order = Order::find($orderRow->id);
-                if (!$order || !$order->canShowDeliveryOrder()) {
-                    continue;
-                }
 
-                $orderFile = storage_path('app/orders/' . $order->id . '/delivery-order-' . $order->id . '.pdf');
-                if (file_exists($orderFile)) {
-                    $zip->addFile($orderFile, 'do/delivery-order-' . $order->id . '.pdf');
-                }
+        if ($zip->open($zipFileName, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            return back()->with('error', __('reports.do_zip_failed'));
+        }
+
+        $added = 0;
+        foreach ($orderIds as $orderId) {
+            $order = Order::find($orderId);
+            if (!$order || !$order->canShowDeliveryOrder()) {
+                continue;
             }
 
-            $zip->close();
-    
-            return response()->download($zipFileName)->deleteFileAfterSend(true);
+            $orderFile = storage_path('app/orders/' . $order->id . '/delivery-order-' . $order->id . '.pdf');
+            if (!file_exists($orderFile)) {
+                PdfHelper::GenerateDeliveryOrder($order);
+            }
+
+            if (file_exists($orderFile)) {
+                $zip->addFile($orderFile, 'do/delivery-order-' . $order->id . '.pdf');
+                $added++;
+            }
         }
+
+        $zip->close();
+
+        if ($added === 0) {
+            @unlink($zipFileName);
+
+            return back()->with('error', __('reports.no_do_to_download'));
+        }
+
+        return response()->download($zipFileName)->deleteFileAfterSend(true);
     }
 }

@@ -99,6 +99,9 @@ return [
     | Explicit module/capability overrides for routes that do not follow defaults.
     */
     'capability_overrides' => [
+        'inventory/stock-in' => ['module' => 'products', 'capability' => 'edit'],
+        'inventory/stock-out' => ['module' => 'products', 'capability' => 'edit'],
+        'inventory/update-stock' => ['module' => 'products', 'capability' => 'edit'],
         'profile' => ['module' => 'dashboard', 'capability' => 'view'],
         'customers/export' => ['module' => 'customers', 'capability' => 'view'],
         'orders/export' => ['module' => 'orders', 'capability' => 'view'],

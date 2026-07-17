@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\DeliverySlot;
 use App\Http\Controllers\Controller;
+use App\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -77,10 +78,29 @@ class DeliverySlotController extends Controller
     public function slotsForDate(Request $request)
     {
         $data = $request->validate([
-            'date' => 'required|date|after_or_equal:today',
+            'date' => 'required|date',
+            'order_id' => 'nullable|integer|exists:orders,id',
         ]);
 
-        $slots = DeliverySlot::slotsAvailableForDate($data['date'])
+        $slots = DeliverySlot::slotsAvailableForDate($data['date']);
+
+        if (!empty($data['order_id'])) {
+            $order = Order::find($data['order_id']);
+            if ($order
+                && $order->delivery_slot_id
+                && $order->delivery_date
+                && $order->delivery_date->toDateString() === $data['date']) {
+                $currentSlot = DeliverySlot::find($order->delivery_slot_id);
+                if ($currentSlot
+                    && $currentSlot->is_enabled
+                    && !$slots->contains('id', $currentSlot->id)) {
+                    $slots->push($currentSlot);
+                    $slots = $slots->sortBy('time_start')->values();
+                }
+            }
+        }
+
+        $slots = $slots
             ->map(fn (DeliverySlot $slot) => [
                 'id' => $slot->id,
                 'label' => $slot->time_label,

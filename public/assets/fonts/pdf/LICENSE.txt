@@ -1,0 +1,6 @@
+Noto Sans SC and Noto Sans TC fonts are from Google Fonts (Noto project).
+Licensed under the SIL Open Font License, Version 1.1.
+https://scripts.sil.org/OFL
+
+Source: https://fonts.google.com/noto/specimen/Noto+Sans+SC
+        https://fonts.google.com/noto/specimen/Noto+Sans+TC

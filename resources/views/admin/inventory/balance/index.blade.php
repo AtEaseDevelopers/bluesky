@@ -4,6 +4,10 @@
     <link href="{{ asset('assets/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" type="text/css">
 @endsection
 @section('content')
+@php
+    $admin = Auth::guard('web_admin')->user();
+    $canEditInventory = $admin->canModule('products', 'edit');
+@endphp
 
     <div class="row mb-4">
         <div class="col-md-12">
@@ -12,12 +16,14 @@
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
                         <h5 class="card-title">{{ __('inventory.stock_balance') }}</h5>
                         <div class="d-flex gap-2">
-                            <a href="{{ route('admin.inventory.stock-in.create') }}" class="btn btn-success">
-                                <i class="fa fa-plus me-1"></i> {{ __('inventory.stock_in') }}
-                            </a>
-                            <a href="{{ route('admin.inventory.stock-out.create') }}" class="btn btn-warning">
-                                <i class="fa fa-minus me-1"></i> {{ __('inventory.stock_out') }}
-                            </a>
+                            @if ($canEditInventory)
+                                <a href="{{ route('admin.inventory.stock-in.create') }}" class="btn btn-success">
+                                    <i class="fa fa-plus me-1"></i> {{ __('inventory.stock_in') }}
+                                </a>
+                                <a href="{{ route('admin.inventory.stock-out.create') }}" class="btn btn-warning">
+                                    <i class="fa fa-minus me-1"></i> {{ __('inventory.stock_out') }}
+                                </a>
+                            @endif
                             <a href="{{ route('admin.inventory.movements') }}" class="btn btn-secondary">
                                 {{ __('inventory.movement_log') }}
                             </a>
@@ -29,7 +35,9 @@
                             <thead>
                                 <tr>
                                     <th>{{ __('inventory.id') }}</th>
-                                    <th>{{ __('inventory.actions') }}</th>
+                                    @if ($canEditInventory)
+                                        <th>{{ __('inventory.actions') }}</th>
+                                    @endif
                                     <th>{{ __('inventory.product') }}</th>
                                     <th>{{ __('inventory.sku') }}</th>
                                     <th>{{ __('inventory.uom') }}</th>
@@ -47,6 +55,7 @@
         </div>
     </div>
 
+    @if ($canEditInventory)
     <div class="modal fade" id="editStockModal" tabindex="-1" aria-labelledby="editStockModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -102,17 +111,37 @@
             </div>
         </div>
     </div>
+    @endif
 
 @endsection
 @section('script')
     <script src="{{ asset('assets/datatables/js/jquery.dataTables.min.js') }}"></script>
     <script src="{{ asset('assets/datatables/js/dataTables.bootstrap4.min.js') }}"></script>
     <script>
+        const canEditInventory = @json($canEditInventory);
+        const stockBalanceColumns = [
+            { data: 'id', orderable: false },
+        ];
+
+        if (canEditInventory) {
+            stockBalanceColumns.push({ data: 'options', orderable: false });
+        }
+
+        stockBalanceColumns.push(
+            { data: 'name', orderable: true },
+            { data: 'sku', orderable: true },
+            { data: 'uom_name', orderable: true },
+            { data: 'price', orderable: true, searchable: false },
+            { data: 'quantity', orderable: true },
+            { data: 'weight', orderable: true },
+            { data: 'updated_at', orderable: true },
+        );
+
         const stockBalanceTable = $('#stock-balance-table').DataTable({
             processing: true,
             serverSide: true,
             responsive: true,
-            order: [[2, 'asc']],
+            order: [[canEditInventory ? 2 : 1, 'asc']],
             columnDefs: [{ visible: false, targets: [0] }],
             ajax: {
                 url: appUrl + '/admin/fetch-stock-balances',
@@ -120,19 +149,10 @@
                 type: 'POST',
                 data: { _token: csrfToken },
             },
-            columns: [
-                { data: 'id', orderable: false },
-                { data: 'options', orderable: false },
-                { data: 'name', orderable: true },
-                { data: 'sku', orderable: true },
-                { data: 'uom_name', orderable: true },
-                { data: 'price', orderable: true, searchable: false },
-                { data: 'quantity', orderable: true },
-                { data: 'weight', orderable: true },
-                { data: 'updated_at', orderable: true },
-            ]
+            columns: stockBalanceColumns,
         });
 
+        if (canEditInventory) {
         const editStockModal = new bootstrap.Modal(document.getElementById('editStockModal'));
         const skuLabel = @json(__('inventory.sku'));
 
@@ -210,5 +230,6 @@
                     spinner.addClass('d-none');
                 });
         });
+        }
     </script>
 @endsection

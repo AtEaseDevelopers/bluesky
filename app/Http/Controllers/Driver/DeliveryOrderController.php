@@ -18,8 +18,8 @@ class DeliveryOrderController extends Controller
 {
     use RecordsDriverPayments;
 
-    /** Statuses a driver may set (canonical order workflow values). */
-    public static $driver_status_keys = ['in_route', 'delivered'];
+    /** Status value drivers may submit (admin dispatches to in_route). */
+    public static $driver_settable_status_keys = ['delivered'];
 
     /** Legacy DB values kept for display/filter compatibility. */
     public static $legacy_status_map = [
@@ -87,29 +87,54 @@ class DeliveryOrderController extends Controller
             'orderProducts' => $orderProducts,
             'productsById' => $productsById,
             'canAdjustOrder' => Order::canDriverAdjustQuantities($order->status),
-            'driverStatuses' => self::driverStatusLabels(),
+            'driverStatuses' => self::driverStatusesForOrder($order),
             'paymentMethods' => self::driverPaymentMethodsFor(
-                optional($order->customer)->isCreditCustomer() ? 'credit' : 'cod'
+                optional($order->customer)->isCreditCustomer() ? 'credit' : 'cod',
+                optional($order->customer)->isCreditCustomer()
             ),
             'proofRequiredMethods' => self::$driverProofRequiredMethods,
         ]);
     }
 
     /**
-     * Update delivery status (In Route / Delivered).
+     * Mark order as delivered (only allowed after admin has set in route).
      */
     public function updateStatus(Request $request, $id)
     {
         $order = $this->findAssignedOrder($id);
 
         $data = $request->validate([
-            'status' => ['required', 'in:' . implode(',', self::$driver_status_keys)],
+            'status' => ['required', 'in:' . implode(',', self::$driver_settable_status_keys)],
+            'delivery_proof' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
+        ], [
+            'delivery_proof.required' => __('driver_portal.deliveries.delivery_proof_required'),
+            'delivery_proof.image' => __('driver_portal.deliveries.delivery_proof_format'),
+            'delivery_proof.mimes' => __('driver_portal.deliveries.delivery_proof_format'),
+            'delivery_proof.max' => __('driver_portal.deliveries.delivery_proof_size'),
+        ]);
+
+        if (!self::canDriverMarkDelivered($order)) {
+            return back()->with('error', __('driver_portal.deliveries.delivered_requires_in_route'));
+        }
+
+        $extension = $request->file('delivery_proof')->getClientOriginalExtension();
+        $filename = 'delivery_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $path = Order::$path . '/' . $order->id;
+
+        Storage::disk('local')->put(
+            $path . '/' . $filename,
+            file_get_contents($request->file('delivery_proof'))
+        );
+
+        $order->update([
+            'delivery_proof' => $filename,
+            'delivery_confirmed_at' => now(),
         ]);
 
         try {
             app(OrderStatusService::class)->transition(
-                $order,
-                Order::$status[$data['status']],
+                $order->fresh(),
+                Order::$status['delivered'],
                 null
             );
         } catch (\InvalidArgumentException $e) {
@@ -216,6 +241,28 @@ class DeliveryOrderController extends Controller
     }
 
     /**
+     * Serve the uploaded delivery proof for an assigned order.
+     */
+    public function downloadDeliveryProof($id)
+    {
+        $order = $this->findAssignedOrder($id);
+
+        if (!$order->delivery_proof) {
+            abort(404, __('driver_portal.deliveries.delivery_proof_not_found'));
+        }
+
+        $path = Order::$path . '/' . $order->id . '/' . $order->delivery_proof;
+        if (!Storage::disk('local')->exists($path)) {
+            abort(404, __('driver_portal.errors.file_not_found'));
+        }
+
+        $mime = Storage::disk('local')->mimeType($path);
+        $file = Storage::disk('local')->get($path);
+
+        return response($file)->header('Content-Type', $mime);
+    }
+
+    /**
      * Fetch an order ensuring it belongs to the logged-in driver.
      */
     protected function findAssignedOrder($id)
@@ -236,11 +283,30 @@ class DeliveryOrderController extends Controller
         };
     }
 
+    public static function canDriverMarkDelivered(Order $order): bool
+    {
+        $canonical = self::$legacy_status_map[$order->status] ?? $order->status;
+
+        return $canonical === Order::$status['in_route'];
+    }
+
+    /** @return array<string, string> */
+    public static function driverStatusesForOrder(Order $order): array
+    {
+        if (!self::canDriverMarkDelivered($order)) {
+            return [];
+        }
+
+        return [
+            'delivered' => self::statusLabel('delivered'),
+        ];
+    }
+
     /** @return array<string, string> */
     public static function driverStatusLabels(): array
     {
         $labels = [];
-        foreach (self::$driver_status_keys as $status) {
+        foreach (self::$driver_settable_status_keys as $status) {
             $labels[$status] = self::statusLabel($status);
         }
 

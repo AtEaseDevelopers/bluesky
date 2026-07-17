@@ -50,7 +50,7 @@
                                                 <div class="weight-controls">
                                                     <small class="text-muted d-block mb-1">{{ __('product.optional') }}</small>
                                                     <button class="btn btn-sm btn-primary decrease-weight" type="button">-</button>
-                                                    <input type="number" name="weight" class="weight-input weight-input-optional" data-id="{{ $product->cart_product_id }}" data-sell-in="qty_bill_weight" value="{{ $product->weight }}" min="0.001" step="0.001" placeholder="-">
+                                                    <input type="number" name="weight" class="weight-input weight-input-optional" data-id="{{ $product->cart_product_id }}" data-sell-in="qty_bill_weight" value="{{ $product->weight }}" min="0" step="0.001" placeholder="-">
                                                     <button class="btn btn-sm btn-primary increase-weight" type="button">+</button>
                                                 </div>
                                             @elseif ($product->sell_in == 'weight')
@@ -143,8 +143,12 @@
                     return qty;
                 }
 
-                if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
-                    return qty * weight;
+                if (sellIn === 'qty_bill_weight') {
+                    return weight > 0 ? weight : qty;
+                }
+
+                if (sellIn === 'weight') {
+                    return weight;
                 }
 
                 return weight;

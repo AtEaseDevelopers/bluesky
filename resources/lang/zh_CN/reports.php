@@ -16,7 +16,10 @@ return [
     'payment_method' => '付款方式',
     'billing_address' => '账单地址',
     'shipping_address' => '送货地址',
-    'lorry' => '货车',
+    'lorry' => '司机',
     'last_updated_at' => '最后更新时间',
+    'actions' => '操作',
     'driver_deleted' => '司机已删除',
+    'no_do_to_download' => '所选条件下没有可下载的送货单。',
+    'do_zip_failed' => '无法创建送货单下载文件，请重试。',
 ];

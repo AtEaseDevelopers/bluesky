@@ -71,7 +71,7 @@ class CustomerController extends Controller
             'invoices' => $invoices,
             'outstanding' => self::outstandingTotal($invoices),
             'overdueCount' => self::overdueCount($invoices),
-            'paymentMethods' => self::driverPaymentMethodsFor($customerType),
+            'paymentMethods' => self::driverPaymentMethodsFor($customerType, $customer->isCreditCustomer()),
             'proofRequiredMethods' => self::$driverProofRequiredMethods,
         ]);
     }

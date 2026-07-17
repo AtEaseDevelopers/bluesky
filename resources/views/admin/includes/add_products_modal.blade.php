@@ -51,6 +51,7 @@
             fill_required_fields: @json(__('orders.js.fill_required_fields')),
             select_product_for_bag: @json(__('orders.js.select_product_for_bag')),
             fill_required_before_proceed: @json(__('orders.js.fill_required_before_proceed')),
+            walk_in_name_required: @json(__('orders.js.walk_in_name_required')),
             walk_in_name_phone_required: @json(__('orders.js.walk_in_name_phone_required')),
             add_product_to_checkout: @json(__('orders.js.add_product_to_checkout')),
             error_occurred: @json(__('orders.js.error_occurred')),

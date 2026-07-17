@@ -106,7 +106,8 @@
                                             $initialLineTotal = $calcProduct->calculateLinePrice(
                                                 (float) $item->unit_price,
                                                 $reviewQty !== null ? (float) $reviewQty : null,
-                                                $reviewWeight !== null ? (float) $reviewWeight : null
+                                                $reviewWeight !== null ? (float) $reviewWeight : null,
+                                                true
                                             );
                                         }
                                     @endphp
@@ -194,9 +195,16 @@
                     <p class="text-muted-ink mb-0 mt-2" style="font-size:.88rem;">{{ __('driver_portal.deliveries.payment_gateway_coming_soon') }}</p>
                 </div>
             @endif
-            @if ($order->isCodCustomer())
             @php
                 $latestPayment = $order->payments->where('status', 'confirmed')->sortByDesc('id')->first();
+            @endphp
+            @if ($order->preferredPaymentMethodLabel() && !$latestPayment && in_array($order->payment_method, \App\OrderPayment::codDeliveryPreferenceKeys(), true))
+                <div class="alert alert-warning py-2 px-3 mb-0 mt-3" style="font-size:.92rem;">
+                    <i class="fa fa-info-circle me-1"></i>
+                    {{ __('driver_portal.deliveries.expected_payment', ['method' => $order->preferredPaymentMethodLabel()]) }}
+                </div>
+            @endif
+            @php
                 $methodKey = $latestPayment ? 'order.payment_methods.' . $latestPayment->payment_method : null;
                 $methodLabel = $methodKey ? __($methodKey) : null;
                 if ($methodLabel === $methodKey) {
@@ -217,7 +225,6 @@
                     </div>
                 @endif
             @endif
-            @endif
         </div>
     </div>
     @endif
@@ -227,32 +234,65 @@
     <div class="card driver-card mb-3">
         <div class="card-body">
             <h5 class="display-font mb-3" style="font-size:1.15rem;">{{ __('driver_portal.deliveries.update_status') }}</h5>
-            <form action="{{ route('driver.orders.update-status', $order->id) }}" method="POST">
-                @csrf
-                <div class="d-flex gap-2">
-                    @foreach ($driverStatuses as $value => $label)
-                        <button type="submit" name="status" value="{{ $value }}"
-                            class="btn btn-block-tall flex-fill {{ $canonicalStatus === $value ? 'btn-brand' : 'btn-outline-brand' }}">
-                            @if ($value === 'in_route') <i class="fa fa-truck me-1"></i> @else <i class="fa fa-check-circle me-1"></i> @endif
-                            {{ $label }}
-                        </button>
-                    @endforeach
-                </div>
-            </form>
+            @if (count($driverStatuses))
+                <form action="{{ route('driver.orders.update-status', $order->id) }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="mb-3">
+                        <label class="form-label" for="delivery_proof">{{ __('driver_portal.deliveries.delivery_proof') }} <span class="text-danger">*</span></label>
+                        <input type="file"
+                               class="form-control @error('delivery_proof') is-invalid @enderror"
+                               name="delivery_proof"
+                               id="delivery_proof"
+                               accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                               required>
+                        @error('delivery_proof')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="d-flex gap-2">
+                        @foreach ($driverStatuses as $value => $label)
+                            <button type="submit" name="status" value="{{ $value }}"
+                                class="btn btn-block-tall flex-fill btn-outline-brand">
+                                <i class="fa fa-check-circle me-1"></i>
+                                {{ $label }}
+                            </button>
+                        @endforeach
+                    </div>
+                </form>
+            @elseif ($canonicalStatus !== 'delivered')
+                <p class="text-muted-ink mb-0">{{ __('driver_portal.deliveries.wait_for_in_route') }}</p>
+            @elseif ($order->delivery_proof)
+                <a href="{{ route('driver.orders.delivery-proof', $order->id) }}" target="_blank" class="btn btn-outline-brand w-100">
+                    <i class="fa fa-file-image-o me-1"></i> {{ __('driver_portal.deliveries.view_delivery_proof') }}
+                </a>
+            @endif
         </div>
     </div>
     @endif
 
-    {{-- Record payment (COD only) --}}
-    @if ($order->isCodCustomer() && $driverCan('record_payment'))
+    {{-- Record payment --}}
+    @if ($driverCan('record_payment') && $order->canRecordAdminPayment())
     <div class="card driver-card mb-3">
         <div class="card-body">
             <h5 class="display-font mb-3" style="font-size:1.15rem;">{{ __('driver_portal.deliveries.record_payment') }}</h5>
-            <form action="{{ route('driver.orders.record-payment', $order->id) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('driver.orders.record-payment', $order->id) }}" method="POST" enctype="multipart/form-data" id="driver-record-payment-form">
                 @csrf
+                @if ($order->isCreditCustomer())
+                    @php $defaultPaymentTiming = old('payment_timing', 'pay_now'); @endphp
+                    <div class="mb-3">
+                        <label class="form-label d-block">{{ __('driver_portal.deliveries.payment_timing_label') }}</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="payment_timing" id="payment_timing_pay_now" value="pay_now" {{ $defaultPaymentTiming === 'pay_now' ? 'checked' : '' }}>
+                            <label class="form-check-label" for="payment_timing_pay_now">{{ __('driver_portal.deliveries.pay_now') }}</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="payment_timing" id="payment_timing_pay_later" value="pay_later" {{ $defaultPaymentTiming === 'pay_later' ? 'checked' : '' }}>
+                            <label class="form-check-label" for="payment_timing_pay_later">{{ __('driver_portal.deliveries.pay_later') }}</label>
+                        </div>
+                    </div>
+                    <div id="driverPayNowFields" style="{{ $defaultPaymentTiming === 'pay_now' ? '' : 'display:none;' }}">
+                @endif
                 <div class="mb-3">
                     <label class="form-label" for="payment_method">{{ __('driver_portal.deliveries.payment_method') }}</label>
-                    <select class="form-select @error('payment_method') is-invalid @enderror" name="payment_method" id="payment_method" required>
+                    <select class="form-select @error('payment_method') is-invalid @enderror" name="payment_method" id="payment_method" {{ $order->isCreditCustomer() ? '' : 'required' }}>
                         <option value="" disabled {{ old('payment_method', $order->payment_method) ? '' : 'selected' }}>{{ __('driver_portal.deliveries.select_method') }}</option>
                         @foreach ($paymentMethods as $value => $label)
                             <option value="{{ $value }}" {{ old('payment_method', $order->payment_method) === $value ? 'selected' : '' }}>{{ $label }}</option>
@@ -263,7 +303,7 @@
                 <div class="mb-3">
                     <label class="form-label" for="paid_amount">{{ __('driver_portal.deliveries.amount_collected') }}</label>
                     <input type="number" step="0.01" min="0" class="form-control @error('paid_amount') is-invalid @enderror"
-                        name="paid_amount" id="paid_amount" value="{{ old('paid_amount', $order->paid_amount ?: number_format($total, 2, '.', '')) }}" required>
+                        name="paid_amount" id="paid_amount" value="{{ old('paid_amount', $order->paid_amount ?: number_format($total, 2, '.', '')) }}" {{ $order->isCreditCustomer() ? '' : 'required' }}>
                     @error('paid_amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="mb-3" id="proof-wrapper">
@@ -272,6 +312,12 @@
                         name="payment_proof" id="payment_proof" accept=".jpg,.jpeg,.png,.pdf">
                     @error('payment_proof')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
+                @if ($order->isCreditCustomer())
+                    </div>
+                    <div id="driverPayLaterInfo" class="alert alert-light border mb-3" style="{{ $defaultPaymentTiming === 'pay_later' ? '' : 'display:none;' }}">
+                        <i class="fa fa-info-circle me-1"></i> {{ __('driver_portal.deliveries.pay_later_help') }}
+                    </div>
+                @endif
                 <button type="submit" class="btn btn-accent btn-block-tall w-100">
                     <i class="fa fa-check me-1"></i> {{ __('driver_portal.deliveries.save_payment') }}
                 </button>
@@ -281,7 +327,7 @@
     @endif
 
 @endsection
-@if (($canAdjustOrder && $driverCan('adjust_order')) || ($order->isCodCustomer() && $driverCan('record_payment')))
+@if (($canAdjustOrder && $driverCan('adjust_order')) || ($driverCan('record_payment') && $order->canRecordAdminPayment()))
 @section('script')
     @if ($canAdjustOrder && $driverCan('adjust_order'))
     <script>
@@ -296,8 +342,11 @@
                 if (sellIn === 'qty') {
                     return qty;
                 }
-                if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
-                    return qty * weight;
+                if (sellIn === 'qty_bill_weight') {
+                    return weight > 0 ? weight : qty;
+                }
+                if (sellIn === 'weight') {
+                    return weight;
                 }
 
                 return weight;
@@ -326,21 +375,55 @@
         })();
     </script>
     @endif
-    @if ($order->isCodCustomer() && $driverCan('record_payment'))
+    @if ($driverCan('record_payment') && $order->canRecordAdminPayment())
     <script>
         (function () {
             var proofRequired = @json($proofRequiredMethods);
             var methodEl = document.getElementById('payment_method');
             var proofInput = document.getElementById('payment_proof');
-            if (!methodEl || !proofInput) {
-                return;
+            var amountInput = document.getElementById('paid_amount');
+            var payNowFields = document.getElementById('driverPayNowFields');
+            var payLaterInfo = document.getElementById('driverPayLaterInfo');
+            var isCredit = @json($order->isCreditCustomer());
+
+            function selectedTiming() {
+                var selected = document.querySelector('input[name="payment_timing"]:checked');
+                return selected ? selected.value : 'pay_now';
             }
 
-            function toggleProof() {
-                proofInput.required = proofRequired.indexOf(methodEl.value) !== -1;
+            function toggleCreditPaymentFields() {
+                if (!isCredit) {
+                    if (methodEl && proofInput) {
+                        proofInput.required = proofRequired.indexOf(methodEl.value) !== -1;
+                    }
+                    return;
+                }
+
+                var payNow = selectedTiming() === 'pay_now';
+                if (payNowFields) {
+                    payNowFields.style.display = payNow ? '' : 'none';
+                }
+                if (payLaterInfo) {
+                    payLaterInfo.style.display = payNow ? 'none' : '';
+                }
+                if (methodEl) {
+                    methodEl.required = payNow;
+                }
+                if (amountInput) {
+                    amountInput.required = payNow;
+                }
+                if (proofInput && methodEl) {
+                    proofInput.required = payNow && proofRequired.indexOf(methodEl.value) !== -1;
+                }
             }
-            methodEl.addEventListener('change', toggleProof);
-            toggleProof();
+
+            document.querySelectorAll('input[name="payment_timing"]').forEach(function (el) {
+                el.addEventListener('change', toggleCreditPaymentFields);
+            });
+            if (methodEl) {
+                methodEl.addEventListener('change', toggleCreditPaymentFields);
+            }
+            toggleCreditPaymentFields();
         })();
     </script>
     @endif

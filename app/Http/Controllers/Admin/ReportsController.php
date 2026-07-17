@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Area;
 use App\Driver;
 use App\Http\Controllers\Controller;
 
@@ -13,6 +14,7 @@ use App\Exports\DailySaleReport;
 use Illuminate\Http\Request;
 use App\System;
 use App\Helper;
+use App\Order;
 use App\Exports\SqlDoExportReport;
 use App\Services\DailySalesReportService;
 
@@ -85,8 +87,8 @@ class ReportsController extends Controller
             ->when($request->customer, function ($q) {
                 return $q->where('orders.user_id', request()->customer);
             })
-            ->when($request->area, function ($q) {
-                return $q->where('orders.area', request()->area);
+            ->when($areaFilter = Area::orderFilterValue($request->input('area')), function ($q) use ($areaFilter) {
+                return $q->where('orders.area', $areaFilter);
             })
             ->get()
             ->toArray();
@@ -141,8 +143,8 @@ class ReportsController extends Controller
             ->when($request->customer, function ($q) {
                 return $q->where('orders.user_id', request()->customer);
             })
-            ->when($request->area, function ($q) {
-                return $q->where('orders.area', request()->area);
+            ->when($areaFilter = Area::orderFilterValue($request->input('area')), function ($q) use ($areaFilter) {
+                return $q->where('orders.area', $areaFilter);
             })
             ->groupBy('order_products.product_name', 'products.sku') // group properly
             ->get()
@@ -230,11 +232,16 @@ class ReportsController extends Controller
             ->when($request->customer, function ($q) {
                 return $q->where('orders.user_id', request()->customer);
             })
-            ->when($request->area, function ($q) {
-                return $q->where('orders.area', request()->area);
+            ->when($areaFilter = Area::orderFilterValue($request->input('area')), function ($q) use ($areaFilter) {
+                return $q->where('orders.area', $areaFilter);
             })
             ->get()
             ->toArray();
+
+        $data['orderModels'] = Order::whereIn(
+            'id',
+            collect($data['orders'])->pluck('id')
+        )->get()->keyBy('id');
 
         $drivers_arr = Driver::optionsForSelect();
         $data['order_drivers'] = $drivers_arr;

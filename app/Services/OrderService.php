@@ -99,9 +99,51 @@ class OrderService
             throw new \InvalidArgumentException('Payment due date cannot be changed on a fully paid order.');
         }
 
-        $order->update(['payment_due_date' => $paymentDueDate ?: null]);
+        $order->update([
+            'payment_due_date' => $this->resolvePaymentDueDate($order, $paymentDueDate),
+        ]);
 
         return $this->refreshPaymentStatus($order->fresh());
+    }
+
+    public function applyDefaultPaymentDueDate(Order $order, ?string $requestedDate = null): Order
+    {
+        if (!$order->isCreditCustomer() || $order->paysInStore()) {
+            return $order;
+        }
+
+        if (!$requestedDate && $order->payment_due_date) {
+            return $order;
+        }
+
+        $dueDate = $this->resolvePaymentDueDate($order, $requestedDate);
+        if (!$dueDate) {
+            return $order;
+        }
+
+        $order->update(['payment_due_date' => $dueDate]);
+
+        return $this->refreshPaymentStatus($order->fresh());
+    }
+
+    public function resolvePaymentDueDate(Order $order, ?string $requestedDate = null): ?string
+    {
+        if ($requestedDate) {
+            return $requestedDate;
+        }
+
+        if (!$order->isCreditCustomer() || $order->paysInStore()) {
+            return null;
+        }
+
+        $customer = $order->customer;
+        if (!$customer) {
+            return null;
+        }
+
+        $baseDate = ($order->created_at ?? now())->copy()->startOfDay();
+
+        return $baseDate->addDays($customer->paymentTermDays())->toDateString();
     }
 
     private function isPaymentOverdue(Order $order, float $paid, float $total): bool
@@ -554,11 +596,12 @@ class OrderService
                         $weightInput = null;
                     }
 
-                    $line = $product->resolveLineInputs($qtyInput, $weightInput);
+                    $line = $product->resolveLineInputs($qtyInput, $weightInput, true);
                     $lineTotal = $product->calculateLinePrice(
                         (float) $orderProduct->unit_price,
-                        $line['quantity'],
-                        $line['weight']
+                        $qtyInput,
+                        $weightInput,
+                        true
                     );
 
                     $orderProduct->update([
@@ -648,11 +691,12 @@ class OrderService
                     $productForCalc = clone $product;
                     $productForCalc->sell_in = $sellIn;
 
-                    $line = $productForCalc->resolveLineInputs($qtyInput, $weightInput);
+                    $line = $productForCalc->resolveLineInputs($qtyInput, $weightInput, true);
                     $lineTotal = $productForCalc->calculateLinePrice(
                         (float) $orderProduct->unit_price,
-                        $line['quantity'],
-                        $line['weight']
+                        $qtyInput,
+                        $weightInput,
+                        true
                     );
 
                     $orderProduct->update([
@@ -746,19 +790,5 @@ class OrderService
     public function canAdjustAmount($admin): bool
     {
         return $admin->isSuperadmin() || $admin->canModule('orders', 'edit');
-    }
-
-    private function resolvePaymentDueDate(Order $order, ?string $requestedDate): ?string
-    {
-        if ($requestedDate) {
-            return $requestedDate;
-        }
-
-        $customer = $order->customer;
-        if ($customer && $customer->isCreditCustomer()) {
-            return now()->addDays($customer->paymentTermDays())->toDateString();
-        }
-
-        return null;
     }
 }

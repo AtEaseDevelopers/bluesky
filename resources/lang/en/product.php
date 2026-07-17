@@ -41,6 +41,8 @@ return [
     'sell_in_weight' => 'Weight',
     'sell_in_qty_bill_weight' => 'Quantity (bill by weight)',
     'estimated_weight' => 'Estimated Weight (:uom)',
+    'estimated_weight_total' => 'Estimated Total Weight (:uom)',
+    'estimated_weight_hint' => 'Optional. Total weight for all pieces; if empty, price is based on quantity.',
     'weight_presets' => 'Weight Presets',
     'category_pricing' => 'Category Pricing',
     'category_pricing_help' => 'Optional price overrides per customer category. Daily prices take priority on order day.',

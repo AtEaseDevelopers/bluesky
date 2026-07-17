@@ -28,7 +28,7 @@ return [
     'placeholder' => [
         'driver_name' => 'Enter driver name',
         'phone' => 'Enter phone number',
-        'vehicle_number' => 'Enter vehicle / lorry number',
+        'vehicle_number' => 'Enter vehicle number',
         'vehicle_description' => 'Optional notes',
         'username' => 'Enter login username',
         'password' => 'Enter login password',

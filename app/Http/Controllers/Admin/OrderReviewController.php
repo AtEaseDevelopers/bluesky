@@ -46,6 +46,7 @@ class OrderReviewController extends Controller
             'canAdjustAmount' => app(OrderService::class)->canAdjustAmount(Auth::guard('web_admin')->user()),
             'isCreditCustomer' => $order->isCreditCustomer(),
             'isPosOrder' => $order->isPosOrder(),
+            'defaultPaymentDueDate' => app(OrderService::class)->resolvePaymentDueDate($order, null),
         ]);
     }
 
@@ -62,10 +63,13 @@ class OrderReviewController extends Controller
             'amount_adjustment' => 'nullable|numeric',
             'adjustment_remark' => 'nullable|string|max:500',
             'payment_due_date' => 'nullable|date',
-            'driver_id' => 'nullable|exists:drivers,id',
-            'fulfillment_type' => 'required|in:delivery,pickup',
             'line_items' => 'required|array',
         ];
+
+        if (!$order->isInStoreOrder() && !$order->isPosOrder()) {
+            $rules['driver_id'] = 'nullable|exists:drivers,id';
+            $rules['fulfillment_type'] = 'required|in:delivery,pickup';
+        }
 
         $orderProducts = OrderProduct::query()
             ->select('order_products.id', 'order_products.product_id')
@@ -91,8 +95,10 @@ class OrderReviewController extends Controller
                 $rules['line_items.' . $lineId . '.quantity'] = 'nullable';
             }
 
-            if ($product->requiresWeightInput()) {
+            if ($product->sell_in === Product::SELL_IN_WEIGHT) {
                 $rules['line_items.' . $lineId . '.weight'] = 'required|numeric|min:0.001';
+            } elseif ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT) {
+                $rules['line_items.' . $lineId . '.weight'] = 'nullable|numeric|min:0';
             } else {
                 $rules['line_items.' . $lineId . '.weight'] = 'nullable|numeric|min:0';
             }
@@ -118,7 +124,12 @@ class OrderReviewController extends Controller
                 'amount_adjustment' => $amountAdjustment,
                 'adjustment_remark' => $request->input('adjustment_remark'),
                 'payment_due_date' => $request->input('payment_due_date'),
-                'driver_id' => $request->input('driver_id'),
+                'driver_id' => $order->isInStoreOrder()
+                    ? null
+                    : $request->input('driver_id'),
+                'fulfillment_type' => $order->isInStoreOrder()
+                    ? Order::$fulfillment_types['pickup']
+                    : $request->input('fulfillment_type'),
                 'send_to_customer' => $request->input('send_to_customer') === '1',
             ],
             Auth::guard('web_admin')->id()

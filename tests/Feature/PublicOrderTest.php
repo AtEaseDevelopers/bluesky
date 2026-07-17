@@ -126,7 +126,9 @@ class PublicOrderTest extends TestCase
         $this->post(route('public.guest.checkout.submit'), [
             'attn_name' => 'Walk In Wong',
             'attn_contact' => '0191234567',
+            'contact_method' => 'whatsapp',
             'billing_address' => '88 Pasar Road, KL',
+            'payment_method' => 'cash',
         ])->assertRedirect();
 
         $order = Order::first();
@@ -134,7 +136,7 @@ class PublicOrderTest extends TestCase
         $this->assertNull($order->user_id);
         $this->assertEquals(1, (int) $order->is_general);
         $this->assertSame('pending', $order->status);
-        $this->assertSame('cod', $order->payment_method);
+        $this->assertSame('cash', $order->payment_method);
         $this->assertSame('Walk In Wong', $order->attn_name);
         $this->assertSame('0191234567', $order->attn_contact);
         $this->assertSame('88 Pasar Road, KL', $order->shipping_address);
@@ -152,7 +154,7 @@ class PublicOrderTest extends TestCase
     }
 
     /** @test */
-    public function public_order_payment_method_is_forced_to_cod()
+    public function public_order_rejects_invalid_cod_payment_preference()
     {
         $product = $this->makeProduct();
         $this->addToCart($product, ['weight' => 1]);
@@ -160,11 +162,12 @@ class PublicOrderTest extends TestCase
         $this->post(route('public.guest.checkout.submit'), [
             'attn_name' => 'Sneaky Sam',
             'attn_contact' => '0170000000',
+            'contact_method' => 'whatsapp',
             'billing_address' => '1 Term St',
             'payment_method' => 'term',
-        ])->assertRedirect();
+        ])->assertSessionHasErrors('payment_method');
 
-        $this->assertSame('cod', Order::first()->payment_method);
+        $this->assertNull(Order::first());
     }
 
     /** @test */
@@ -187,7 +190,9 @@ class PublicOrderTest extends TestCase
         $this->post(route('public.guest.checkout.submit'), [
             'attn_name' => 'ADMIN-VISIBLE-GUEST',
             'attn_contact' => '0181112222',
+            'contact_method' => 'whatsapp',
             'billing_address' => '5 Admin Way',
+            'payment_method' => 'cash',
         ]);
 
         $admin = Admin::forceCreate([
@@ -212,7 +217,9 @@ class PublicOrderTest extends TestCase
         $this->post(route('public.guest.checkout.submit'), [
             'attn_name' => 'Summary Guest',
             'attn_contact' => '0181113333',
+            'contact_method' => 'whatsapp',
             'billing_address' => '77 Delivery Lane, KL',
+            'payment_method' => 'qr',
         ]);
 
         $order = Order::first();

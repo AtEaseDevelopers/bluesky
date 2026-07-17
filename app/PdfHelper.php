@@ -14,6 +14,17 @@ class PdfHelper extends Model
     /**
      * Common method to handle PDF return options
      */
+    private static function configurePdf($pdf)
+    {
+        $pdf->setOption('isFontSubsettingEnabled', true);
+        $pdf->setOption('defaultFont', 'Noto Sans SC');
+
+        return $pdf;
+    }
+
+    /**
+     * Common method to handle PDF return options
+     */
     private static function handlePdfReturn($pdf, $filename, $path, $id, $returnPdf)
     {
         // Always save to storage
@@ -114,7 +125,7 @@ class PdfHelper extends Model
             'payment_method_labels' => OrderPayment::$payment_methods,
         ];
 
-        $pdf = PDF::loadView('pdf.invoice', $data);
+        $pdf = self::configurePdf(PDF::loadView('pdf.invoice', $data));
         $pdf->setPaper('a4', 'portrait');
 
         $invoiceFilename = 'invoice-' . $order->id . '.pdf';
@@ -136,7 +147,7 @@ class PdfHelper extends Model
             'type' => 'order',
         ];
 
-        $pdf = PDF::loadView('pdf.invoicewithoutprice', $data);
+        $pdf = self::configurePdf(PDF::loadView('pdf.invoicewithoutprice', $data));
         $pdf->setPaper('a4', 'portrait');
 
         $invoiceFilename = 'invoice2-' . $order->id . '.pdf';
@@ -158,7 +169,7 @@ class PdfHelper extends Model
             'show_prices' => OrderFieldSetting::deliveryOrderShowsPrices(),
         ];
 
-        $pdf = PDF::loadView('pdf.delivery-order', $data);
+        $pdf = self::configurePdf(PDF::loadView('pdf.delivery-order', $data));
         $pdf->setPaper('a4', 'portrait');
 
         $invoiceFilename = 'delivery-order-' . $order->id . '.pdf';
@@ -245,7 +256,7 @@ class PdfHelper extends Model
             // Add more invoice data as needed
         ];
     
-        $pdf = PDF::loadView('pdf.delivery-order2', $data);
+        $pdf = self::configurePdf(PDF::loadView('pdf.delivery-order2', $data));
         $pdf->setPaper('a4', 'portrait'); // A4 size in portrait mode
     
         $invoiceFilename = 'delivery-order-' . $order->id . '.pdf';

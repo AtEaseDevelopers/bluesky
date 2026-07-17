@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Area;
 use App\Order;
 use App\OrderPayment;
 use Illuminate\Database\Query\Builder;
@@ -61,7 +62,7 @@ class DailySalesReportService
             'payment_methods' => $this->summaryCategoryLabels(),
             'drivers' => DB::table('drivers')->select('id', 'name', 'username')->orderBy('name')->get(),
             'customers' => DB::table('users')->select('id', 'name', 'email')->orderBy('name')->get(),
-            'areaList' => \App\Helper::areaList(),
+            'areas' => Area::optionsForSelect(),
         ];
     }
 
@@ -179,7 +180,10 @@ class DailySalesReportService
         }
 
         if ($request->filled('area')) {
-            $query->where("{$ordersAlias}.area", $request->input('area'));
+            $area = Area::orderFilterValue($request->input('area'));
+            if ($area) {
+                $query->where("{$ordersAlias}.area", $area);
+            }
         }
 
         if ($request->filled('payment_method')) {

@@ -270,9 +270,15 @@ class StockService
             $this->deductForOrder($order, $adminId);
         }
 
+        if ($newStatus === Order::$status['delivered']
+            && $previousStatus !== Order::$status['delivered']
+            && $order->isPickupFulfillmentOrder()) {
+            $this->deductForOrder($order, $adminId);
+        }
+
         if ($newStatus === Order::$status['completed']
             && $previousStatus !== Order::$status['completed']
-            && $order->isPosOrder()) {
+            && $order->isInStoreOrder()) {
             $this->deductForOrder($order, $adminId);
         }
 

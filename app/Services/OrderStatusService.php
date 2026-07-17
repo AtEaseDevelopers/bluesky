@@ -17,20 +17,41 @@ class OrderStatusService
         'cancelled' => [],
     ];
 
-    private static array $posTransitions = [
+    private static array $pickupTransitions = [
         'pending' => ['packing', 'cancelled'],
-        'packing' => ['completed', 'cancelled'],
+        'packing' => ['cancelled'],
+        'customer_reviewing' => ['packing', 'cancelled'],
+        'delivered' => [],
+        'cancelled' => [],
+    ];
+
+    private static array $inStoreTransitions = [
+        'pending' => ['packing', 'cancelled'],
+        'packing' => ['handed_to_customer', 'cancelled'],
+        'handed_to_customer' => ['completed', 'cancelled'],
         'completed' => [],
         'cancelled' => [],
     ];
 
     public function transitionsFor(Order $order): array
     {
-        return $order->isPosOrder() ? self::$posTransitions : self::$deliveryTransitions;
+        if ($order->isInStoreOrder()) {
+            return self::$inStoreTransitions;
+        }
+
+        if ($order->isPickupFulfillmentOrder()) {
+            return self::$pickupTransitions;
+        }
+
+        return self::$deliveryTransitions;
     }
 
     public function canTransition(Order $order, string $from, string $to): bool
     {
+        if ($to === Order::$status['delivered'] && $order->isPickupFulfillmentOrder()) {
+            return $from === Order::$status['packing'];
+        }
+
         return in_array($to, $this->transitionsFor($order)[$from] ?? [], true);
     }
 
@@ -48,12 +69,22 @@ class OrderStatusService
             );
         }
 
+        if ($order->isInStoreOrder()) {
+            if ($newStatus === Order::$status['completed'] && !$order->isFullyPaid()) {
+                throw new InvalidArgumentException(__('orders.in_store_payment_required_for_complete'));
+            }
+        }
+
         $order->update(['status' => $newStatus]);
 
         if ($newStatus === Order::$status['packing']) {
             $order->update(['is_estimated' => false]);
             PdfHelper::GenerateOrderInvoice($order);
             PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
+
+            if ($order->isPickupFulfillmentOrder()) {
+                PdfHelper::GenerateDeliveryOrder($order->fresh());
+            }
         }
 
         if ($newStatus === Order::$status['in_route']) {
@@ -90,6 +121,17 @@ class OrderStatusService
 
     public function nextStatuses(Order $order): array
     {
-        return $this->transitionsFor($order)[$order->status] ?? [];
+        $statuses = $this->transitionsFor($order)[$order->status] ?? [];
+
+        if ($order->isInStoreOrder()
+            && in_array(Order::$status['completed'], $statuses, true)
+            && !$order->isFullyPaid()) {
+            $statuses = array_values(array_filter(
+                $statuses,
+                fn ($status) => $status !== Order::$status['completed']
+            ));
+        }
+
+        return $statuses;
     }
 }

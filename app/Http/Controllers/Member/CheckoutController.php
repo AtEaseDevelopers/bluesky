@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Order;
 use App\OrderProduct;
 use App\OrderProductOption;
+use App\OrderPayment;
 use App\PdfHelper;
 use App\Product;
 use App\System;
@@ -19,7 +20,6 @@ use App\Services\OrderService;
 use App\Services\CreditService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
@@ -94,6 +94,7 @@ class CheckoutController extends Controller
                 'customer' => $user,
                 'deliveryDates' => DeliverySlot::availableDates(),
                 'deliverySlotsUrl' => route('member.checkout.delivery-slots'),
+                'codDeliveryMethods' => OrderPayment::codDeliveryPreferenceOptions(),
             ]
         );
     }
@@ -169,6 +170,8 @@ class CheckoutController extends Controller
                 "delivery_fee" => 0,
                 "attn_name" => $data['attn_name'],
                 "attn_contact" => $data['attn_contact'],
+                "contact_method" => $data['contact_method'],
+                "wechat_id" => $data['contact_method'] === Order::$contact_methods['wechat'] ? ($data['wechat_id'] ?? null) : null,
                 "billing_address" => $data['billing_address'],
                 "shipping_address" => $data['shipping_address'] ?? "",
                 "status" => Order::$status['pending'],
@@ -179,31 +182,20 @@ class CheckoutController extends Controller
                 "delivery_date" => $data['delivery_date'],
                 "delivery_time_slot" => $deliverySlot->time_label,
                 "is_estimated" => true,
+                "payment_method" => $this->resolveCheckoutPaymentMethod($user, $data),
             ]
         );
-
-        $image = null;
-        if (isset($data['transfer_slip']) && $data['transfer_slip']) {
-            do {
-                $extension = $data['transfer_slip']->getClientOriginalExtension();
-                $filename = time().rand().".".$extension;
-                $path = Order::$path.'/'.$order->id;
-            } while (Storage::disk('local')->exists($path."/".$filename));
-            
-            Storage::disk('local')->put($path."/".$filename, file_get_contents($data['transfer_slip']));
-            $image = $filename;
-        }
-        if ($image) {
-            $order->fill(
-                [
-                'transfer_slip' => $image
-                ]
-            )->save();
-        }
 
         $order_weight = 0;
         foreach ($cart_products as $key => $value) {
             $product = Product::find($value->product_id);
+            $linePrice = $product
+                ? $product->calculateLinePrice(
+                    (float) $value->unit_price,
+                    $value->quantity !== null ? (float) $value->quantity : null,
+                    $value->weight !== null ? (float) $value->weight : null
+                )
+                : (float) $value->price;
             $line = $product
                 ? $product->resolveLineInputs(
                     $value->quantity !== null ? (float) $value->quantity : null,
@@ -225,7 +217,7 @@ class CheckoutController extends Controller
                     "weight" => $line['weight'],
                     'product_weight' => $line['product_weight'],
                     "unit_price" => $value->unit_price,
-                    "price" => $value->price,
+                    "price" => $linePrice,
                     "remark" => $value->remark,
                     "status" => OrderProduct::$status['active'],
                 ]
@@ -254,21 +246,16 @@ class CheckoutController extends Controller
 
         app(OrderService::class)->assignDoNumber($order);
 
+        $user->update([
+            'contact_method' => $data['contact_method'],
+            'wechat_id' => $data['contact_method'] === Order::$contact_methods['wechat'] ? ($data['wechat_id'] ?? null) : null,
+        ]);
+
         $creditApplied = app(CreditService::class)->applyAvailableCredit($order->fresh());
         $order = $order->fresh();
 
-        if (($data['payment_timing'] ?? 'pay_later') === 'pay_now' && $user->isCreditCustomer()) {
-            $balanceDue = $order->balanceDue();
-            if ($balanceDue > 0 && isset($data['transfer_slip']) && $data['transfer_slip']) {
-                app(OrderService::class)->submitCheckoutPrepayment(
-                    $order,
-                    $user,
-                    $data['payment_method'] ?? 'bank-transfer',
-                    $balanceDue,
-                    $data['transfer_slip']
-                );
-            }
-        }
+        app(OrderService::class)->applyDefaultPaymentDueDate($order);
+        $order = $order->fresh();
 
         $message = "Thank you! Your order has been submitted and is pending review.";
         if ($creditApplied > 0) {
@@ -283,6 +270,8 @@ class CheckoutController extends Controller
         $rules = [
             "attn_name" => array_merge(Order::$attribute_rules['attn_name'], []),
             "attn_contact" => array_merge(Order::$attribute_rules['attn_contact'], []),
+            "contact_method" => Order::$attribute_rules['contact_method'],
+            "wechat_id" => Order::$attribute_rules['wechat_id'],
             // "payment_method" => array_merge(Order::$attribute_rules['payment_method'], []),
             'payment_method' => ['nullable'],
             "billing_address" => array_merge(Order::$attribute_rules['billing_address'], []),
@@ -295,10 +284,8 @@ class CheckoutController extends Controller
             'shipping_postcode' => ['nullable'],
             // "shipping_state" => array_merge(Order::$attribute_rules['shipping_state'], []),
             'shipping_state' => ['nullable'],
-            "transfer_slip" => array_merge(Order::$attribute_rules['transfer_slip'], []),
             'delivery_date' => ['required', 'date', 'after_or_equal:today'],
             'delivery_slot_id' => ['required', 'exists:delivery_slots,id'],
-            'payment_timing' => ['nullable', 'in:pay_now,pay_later'],
         ];
 
         try {
@@ -326,22 +313,27 @@ class CheckoutController extends Controller
         }
 
         $user = $request->user('web');
-        if (($data['payment_timing'] ?? 'pay_later') === 'pay_now' && $user && $user->isCreditCustomer()) {
-            if (!$request->hasFile('transfer_slip')) {
-                return [
-                    'error' => true,
-                    'field_err' => ['transfer_slip' => ['Transfer slip is required when paying now.']],
-                ];
-            }
-            if (empty($data['payment_method'])) {
-                return [
-                    'error' => true,
-                    'field_err' => ['payment_method' => ['Payment method is required when paying now.']],
-                ];
-            }
+
+        if ($user && empty($data['payment_method'])) {
+            return [
+                'error' => true,
+                'field_err' => ['payment_method' => [__('orders.member.checkout.cod_payment_required')]],
+            ];
+        }
+
+        if ($user && !in_array($data['payment_method'] ?? '', OrderPayment::codDeliveryPreferenceKeys(), true)) {
+            return [
+                'error' => true,
+                'field_err' => ['payment_method' => [__('orders.member.checkout.cod_payment_required')]],
+            ];
         }
 
         return $data;
+    }
+
+    private function resolveCheckoutPaymentMethod(User $user, array $data): string
+    {
+        return $data['payment_method'];
     }
 
     public function deliverySlotsForDate(Request $request)

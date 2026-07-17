@@ -216,7 +216,7 @@ class PosService
             $qty = ($value->quantity !== null && $value->quantity !== '') ? (float) $value->quantity : null;
             $weight = ($value->weight !== null && $value->weight !== '') ? (float) $value->weight : null;
             $linePrice = $product
-                ? $product->calculateLinePrice((float) $products[$key]->unit_price, $qty, $weight)
+                ? $product->calculateLinePrice((float) $products[$key]->unit_price, $qty, $weight, true)
                 : 0;
             $products[$key]->price = $linePrice;
             $total += $linePrice;

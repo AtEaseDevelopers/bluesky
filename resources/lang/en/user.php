@@ -12,6 +12,8 @@ return [
         'in-store' => 'In-Store Payment',
         'bank-transfer' => 'Bank Transfers',
         'e-wallet' => 'E-wallet',
+        'payment-gateway' => 'Payment Gateway',
+        'credit-term' => 'Credit Term',
     ],
     'profile' => [
         'email_address' => 'Email Address',

@@ -1,28 +1,6 @@
 @extends('layouts.member')
-@section('title', 'Checkout')
+@section('title', __('orders.member.checkout.title'))
 @section('css')
-
-    <style>
-        .payment-instructions {
-            background-color: #f9f9f9;
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-
-        .payment-instructions h2 {
-            color: #333;
-        }
-
-        .bank-details p {
-            margin-bottom: 10px;
-        }
-
-        .bank-details p strong {
-            margin-right: 10px;
-        }
-    </style>
 
 @endsection
 @section('content')
@@ -31,14 +9,14 @@
         <div class="col-md-8">
             <div class="card no-border shadow">
                 <div class="card-body">
-                    <h5 class="mb-4">Checkout</h5>
+                    <h5 class="mb-4">{{ __('orders.member.checkout.title') }}</h5>
                     <form action="" method="POST" enctype="multipart/form-data" class="form-wrapper">
                         @csrf
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="attn_name">Attn. Name @if($isGuest ?? false)<span class="text-danger ml-1">*</span>@endif</label>
-                                    <input type="text" class="form-control" name="attn_name" id="attn_name" value="{{ old('attn_name')? : $customer->attn_name }}" placeholder="Enter Attn. Name @unless($isGuest ?? false)(optional)@endunless" @if($isGuest ?? false) required @endif>
+                                    <label class="mb-2" for="attn_name">{{ __('orders.attn_name') }} @if($isGuest ?? false)<span class="text-danger ml-1">*</span>@endif</label>
+                                    <input type="text" class="form-control" name="attn_name" id="attn_name" value="{{ old('attn_name')? : $customer->attn_name }}" placeholder="{{ ($isGuest ?? false) ? __('orders.member.checkout.attn_name_placeholder_required') : __('orders.attn_name_placeholder') }}" @if($isGuest ?? false) required @endif>
                                     @error('attn_name')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $errors->first('attn_name') }}</strong>
@@ -48,8 +26,8 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="attn_contact">Attn. Contact @if($isGuest ?? false)<span class="text-danger ml-1">*</span>@endif</label>
-                                    <input type="text" class="form-control" name="attn_contact" id="attn_contact" value="{{ old('attn_contact')? : $customer->attn_contact }}" placeholder="Enter Attn. Contact @unless($isGuest ?? false)(optional)@endunless" @if($isGuest ?? false) required @endif>
+                                    <label class="mb-2" for="attn_contact">{{ __('orders.attn_contact') }} @if($isGuest ?? false)<span class="text-danger ml-1">*</span>@endif</label>
+                                    <input type="text" class="form-control" name="attn_contact" id="attn_contact" value="{{ old('attn_contact')? : $customer->attn_contact }}" placeholder="{{ ($isGuest ?? false) ? __('orders.member.checkout.attn_contact_placeholder_required') : __('orders.attn_contact_placeholder') }}" @if($isGuest ?? false) required @endif>
                                     @error('attn_contact')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $errors->first('attn_contact') }}</strong>
@@ -59,12 +37,49 @@
                             </div>
                         </div>
 
-                        <h6 class="card-subtitle my-3 text-body-secondary">{{ ($isGuest ?? false) ? 'Delivery Info' : 'Billing Info' }}</h6>
+                        @php
+                            $selectedContactMethod = old('contact_method', $customer->contact_method ?? 'whatsapp');
+                        @endphp
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="billing_address">{{ ($isGuest ?? false) ? 'Delivery Address' : 'Billing Address' }}<span class="text-danger ml-1">*</span></label>
-                                    <textarea id="billing_address" name="billing_address" value="{{ old('billing_address')? : $customer->billing_address }}" class="form-control" rows="3" placeholder="Enter your billing address" required>{{ old('billing_address')? : $customer->billing_address }}</textarea>
+                                    <label class="mb-2 d-block">{{ __('orders.contact_using') }}</label>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="contact_method" id="contact_method_whatsapp" value="whatsapp" {{ $selectedContactMethod === 'whatsapp' ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="contact_method_whatsapp">{{ __('orders.contact_method.whatsapp') }}</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="contact_method" id="contact_method_wechat" value="wechat" {{ $selectedContactMethod === 'wechat' ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="contact_method_wechat">{{ __('orders.contact_method.wechat') }}</label>
+                                    </div>
+                                    @error('contact_method')
+                                        <span class="text-danger d-block" role="alert">
+                                            <strong>{{ $errors->first('contact_method') }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row" id="wechatIdGroup" style="{{ $selectedContactMethod === 'wechat' ? '' : 'display:none;' }}">
+                            <div class="col-md-6">
+                                <div class="form-group mb-4">
+                                    <label class="mb-2" for="wechat_id">{{ __('orders.wechat_id') }} <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="wechat_id" id="wechat_id" value="{{ old('wechat_id', $customer->wechat_id) }}" placeholder="{{ __('orders.wechat_id_placeholder') }}">
+                                    @error('wechat_id')
+                                        <span class="text-danger" role="alert">
+                                            <strong>{{ $errors->first('wechat_id') }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6 class="card-subtitle my-3 text-body-secondary">{{ ($isGuest ?? false) ? __('customers.pos.delivery_info') : __('orders.member.checkout.billing_info') }}</h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-4">
+                                    <label class="mb-2" for="billing_address">{{ ($isGuest ?? false) ? __('customers.pos.delivery_address') : __('orders.billing_address') }}<span class="text-danger ml-1">*</span></label>
+                                    <textarea id="billing_address" name="billing_address" value="{{ old('billing_address')? : $customer->billing_address }}" class="form-control" rows="3" placeholder="{{ __('orders.billing_address_placeholder') }}" required>{{ old('billing_address')? : $customer->billing_address }}</textarea>
                                     @error('billing_address')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $errors->first('billing_address') }}</strong>
@@ -75,40 +90,37 @@
                         </div>
 
                         @unless($isGuest ?? false)
-                        <h6 class="card-subtitle my-3 text-body-secondary">Payment</h6>
+                        <h6 class="card-subtitle my-3 text-body-secondary">{{ __('orders.member.checkout.payment_heading') }}</h6>
                         <div class="row">
                             <div class="col-md-12">
-                                @if ($user->isCreditCustomer())
-                                    <div class="mb-3">
-                                        <label class="mb-2 d-block">When would you like to pay?</label>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="payment_timing" id="pay_later" value="pay_later" {{ old('payment_timing', 'pay_later') === 'pay_later' ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="pay_later">Pay Later (invoice / credit terms)</label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="payment_timing" id="pay_now" value="pay_now" {{ old('payment_timing') === 'pay_now' ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="pay_now">Pay Now (upload transfer slip)</label>
-                                        </div>
+                                <div class="alert alert-info mb-3">
+                                    <i class="fa fa-money" aria-hidden="true"></i>
+                                    {{ $user->isCreditCustomer() ? __('orders.member.checkout.credit_delivery_intro') : __('orders.member.checkout.cod_intro') }}
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label class="mb-2 d-block">{{ __('orders.member.checkout.cod_payment_label') }} <span class="text-danger">*</span></label>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        @foreach ($codDeliveryMethods ?? \App\OrderPayment::codDeliveryPreferenceOptions() as $methodKey => $methodLabel)
+                                            @php
+                                                $checkoutLabelKey = 'orders.member.checkout.cod_methods.' . $methodKey;
+                                                $displayLabel = __($checkoutLabelKey);
+                                                if ($displayLabel === $checkoutLabelKey) {
+                                                    $displayLabel = $methodLabel;
+                                                }
+                                            @endphp
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="payment_method" id="cod_payment_{{ $methodKey }}" value="{{ $methodKey }}" {{ old('payment_method', 'cash') === $methodKey ? 'checked' : '' }} required>
+                                                <label class="form-check-label" for="cod_payment_{{ $methodKey }}">{{ $displayLabel }}</label>
+                                            </div>
+                                        @endforeach
                                     </div>
-                                    <div id="payNowFields" style="{{ old('payment_timing') === 'pay_now' ? '' : 'display:none;' }}">
-                                        <div class="form-group mb-4">
-                                            <label class="mb-2" for="payment_method">Payment Method</label>
-                                            <select name="payment_method" id="payment_method" class="form-select">
-                                                @foreach ($payment_method as $method)
-                                                    @if (in_array($method, ['bank-transfer', 'e-wallet', 'payment-gateway']))
-                                                        <option value="{{ $method }}" {{ old('payment_method') === $method ? 'selected' : '' }}>{{ __('user.payment_method.'.$method) }}</option>
-                                                    @endif
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </div>
-                                @else
-                                    <input type="hidden" name="payment_timing" value="pay_later">
-                                    <div class="alert alert-info mb-4">
-                                        <i class="fa fa-money" aria-hidden="true"></i>
-                                        <strong>Cash on Delivery.</strong> Pay our driver when your order arrives unless online payment is enabled for your account.
-                                    </div>
-                                @endif
+                                    <small class="text-muted d-block mt-2">{{ $user->isCreditCustomer() ? __('orders.member.checkout.credit_delivery_payment_help') : __('orders.member.checkout.cod_payment_help') }}</small>
+                                    @error('payment_method')
+                                        <span class="text-danger d-block" role="alert">
+                                            <strong>{{ $errors->first('payment_method') }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
                         @endunless
@@ -155,12 +167,12 @@
                             </div>
                         </div>
 
-                        <h6 class="card-subtitle my-3 text-body-secondary">Shipping Info</h6>
+                        <h6 class="card-subtitle my-3 text-body-secondary">{{ __('orders.member.checkout.shipping_info') }}</h6>
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="shipping_address">Shipping Address</label>
-                                    <textarea id="shipping_address" name="shipping_address" value="{{ old('shipping_address')? : $customer->shipping_address }}" class="form-control" rows="3" placeholder="Enter your shipping address" >{{ old('shipping_address')? : $customer->shipping_address }}</textarea>
+                                    <label class="mb-2" for="shipping_address">{{ __('orders.shipping_address') }}</label>
+                                    <textarea id="shipping_address" name="shipping_address" value="{{ old('shipping_address')? : $customer->shipping_address }}" class="form-control" rows="3" placeholder="{{ __('orders.shipping_address_placeholder') }}" >{{ old('shipping_address')? : $customer->shipping_address }}</textarea>
                                     @error('shipping_address')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $errors->first('shipping_address') }}</strong>
@@ -169,36 +181,35 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="row" id="transferSlipGroup" style="display: none;">
-                            <div class="col-md-12">
-                                <div class="form-group mb-4">
-                                    <label class="mb-2" for="transfer_slip">Upload Transfer Slip<span class="text-danger ml-1">*</span></label>
-                                    <input type="file" id="transfer_slip" name="transfer_slip" class="form-control" accept="image/*">
-                                    @error('transfer_slip')
-                                        <span class="text-danger" role="alert">
-                                            <strong>{{ $errors->first('transfer_slip') }}</strong>
-                                        </span>
-                                    @enderror
-            
-                                    <div class="payment-instructions">
-                                        <h2>Payment Instructions</h2>
-                                        <p>Please make a bank transfer to the following account:</p>
-                                        <div class="bank-details">
-                                            <p><strong>Bank:</strong> ABC Bank</p>
-                                            <p><strong>Account Number:</strong> XXXX-XXXX-XX</p>
-                                            <p><strong>Account Holder Name:</strong> {{ config('app.name') }} Sdn Bhd</p>
-                                            <p><strong>Amount:</strong> RM{{ number_format($total, 2) }}</p>
-                                            <p><strong>Reference:</strong> Your Company Name</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                         @endunless
                         @if($isGuest ?? false)
-                            <div class="alert alert-info mt-2 mb-0">
+                            <div class="alert alert-info mb-3">
                                 <i class="fa fa-money" aria-hidden="true"></i>
-                                <strong>Cash on Delivery.</strong> Pay our driver when your order arrives. The final amount may adjust based on the actual weighed seafood.
+                                {{ __('orders.member.checkout.cod_guest_intro') }}
+                            </div>
+                            <div class="form-group mb-4">
+                                <label class="mb-2 d-block">{{ __('orders.member.checkout.cod_payment_label') }} <span class="text-danger">*</span></label>
+                                <div class="d-flex flex-wrap gap-3">
+                                    @foreach (\App\OrderPayment::codDeliveryPreferenceOptions() as $methodKey => $methodLabel)
+                                        @php
+                                            $checkoutLabelKey = 'orders.member.checkout.cod_methods.' . $methodKey;
+                                            $displayLabel = __($checkoutLabelKey);
+                                            if ($displayLabel === $checkoutLabelKey) {
+                                                $displayLabel = $methodLabel;
+                                            }
+                                        @endphp
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="guest_cod_payment_{{ $methodKey }}" value="{{ $methodKey }}" {{ old('payment_method', 'cash') === $methodKey ? 'checked' : '' }} required>
+                                            <label class="form-check-label" for="guest_cod_payment_{{ $methodKey }}">{{ $displayLabel }}</label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <small class="text-muted d-block mt-2">{{ __('orders.member.checkout.cod_payment_help') }}</small>
+                                @error('payment_method')
+                                    <span class="text-danger d-block" role="alert">
+                                        <strong>{{ $errors->first('payment_method') }}</strong>
+                                    </span>
+                                @enderror
                             </div>
                         @endif
                         <div class="alert alert-light border mt-3 mb-0">
@@ -208,11 +219,11 @@
                         <div class="row mt-3">
                             <div class="col-md-12">
                                 <div class="d-flex justify-content-end">
-                                    <a href="{{ $portal['cart_url'] }}" class="btn btn-outline-primary me-3 mb-1 px-3">My Cart</a>
+                                    <a href="{{ $portal['cart_url'] }}" class="btn btn-outline-primary me-3 mb-1 px-3">{{ __('orders.member.checkout.my_cart') }}</a>
                                     <button type="submit" class="btn btn-primary mb-1 px-3" {{ (!($isGuest ?? false) && isset($deliverySlots) && $deliverySlots->isEmpty()) ? 'disabled' : '' }}>
-                                        Place Order
+                                        {{ __('customers.pos.place_order') }}
                                         <div class="spinner-border spinner-border-sm d-none" role="status">
-                                            <span class="visually-hidden">Loading...</span>
+                                            <span class="visually-hidden">{{ __('orders.loading') }}</span>
                                         </div>
                                     </button>
                                 </div>
@@ -225,14 +236,14 @@
         <div class="col-md-4">
             <div class="card no-border shadow">
                 <div class="card-body">
-                    <h5 class="mb-4">Order Summary</h5>
+                    <h5 class="mb-4">{{ __('orders.order_summary') }}</h5>
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                                <th>Product</th>
-                                <th>Price (RM)</th>
-                                <th>Qty/Weight</th>
-                                <th>Total (RM)</th>
+                                <th>{{ __('orders.product') }}</th>
+                                <th>{{ __('orders.member.checkout.price_rm') }}</th>
+                                <th>{{ __('ui.storefront.cart.quantity_weight') }}</th>
+                                <th>{{ __('orders.member.checkout.total_rm') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -244,7 +255,7 @@
                                             {{ $opt }}: {{ $opt_itm }}<br />
                                         @endforeach
                                         @if($product->remark)
-                                            Remark: {{ $product->remark }}<br />
+                                            {{ __('orders.remark') }}: {{ $product->remark }}<br />
                                         @endif
     
                                     </td>
@@ -271,17 +282,17 @@
                                 @if ($user->isCreditCustomer() && $available_credit > 0)
                                     <tr>
                                         <td colspan="4">
-                                            <span class="badge bg-success">Credit balance RM {{ number_format($available_credit, 2) }} will be applied automatically</span>
+                                            <span class="badge bg-success">{{ __('orders.member.checkout.credit_balance_applied', ['amount' => number_format($available_credit, 2)]) }}</span>
                                         </td>
                                     </tr>
                                 @endif
                                 <tr>
-                                    <td>Total</td>
+                                    <td>{{ __('orders.total') }}</td>
                                     <td colspan="3" align="right"><strong><span id="total-price-value">{{ number_format($total, 2) }}</span></strong></td>
                                 </tr>
                                 @if ($user->isCreditCustomer() && $available_credit > 0)
                                     <tr>
-                                        <td colspan="3">Est. after credit</td>
+                                        <td colspan="3">{{ __('orders.member.checkout.est_after_credit') }}</td>
                                         <td align="right"><strong>RM {{ number_format(max(0, $total - $available_credit), 2) }}</strong></td>
                                     </tr>
                                 @endif
@@ -301,20 +312,18 @@
 
     <script>
         $(document).ready(function() {
-            function togglePayNowFields() {
-                if ($('#pay_now').is(':checked')) {
-                    $('#payNowFields').show();
-                    $('#transferSlipGroup').show();
-                    $('#transfer_slip').attr('required', true);
+            function toggleWechatIdField() {
+                if ($('#contact_method_wechat').is(':checked')) {
+                    $('#wechatIdGroup').show();
+                    $('#wechat_id').attr('required', true);
                 } else {
-                    $('#payNowFields').hide();
-                    $('#transferSlipGroup').hide();
-                    $('#transfer_slip').removeAttr('required');
+                    $('#wechatIdGroup').hide();
+                    $('#wechat_id').removeAttr('required');
                 }
             }
 
-            $('input[name="payment_timing"]').on('change', togglePayNowFields);
-            togglePayNowFields();
+            $('input[name="contact_method"]').on('change', toggleWechatIdField);
+            toggleWechatIdField();
 
             var deliverySlotsUrl = @json($deliverySlotsUrl ?? '');
             var oldSlotId = @json(old('delivery_slot_id'));

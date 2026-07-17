@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Area;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -25,7 +26,7 @@ class SqlDoExportReport implements FromCollection, WithHeadings, WithMapping
         $status = $request->status;
         $driver = $request->driver;
         $customer = $request->customer;
-        $area = $request->area;
+        $area = Area::orderFilterValue($request->area);
 
         // format current date or from and to date
         $today = now()->toDateString();

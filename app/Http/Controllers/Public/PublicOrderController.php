@@ -8,6 +8,7 @@ use App\CartProductOption;
 use App\Http\Controllers\Controller;
 use App\Http\Concerns\ValidatesProductCartInput;
 use App\Order;
+use App\OrderPayment;
 use App\OrderProduct;
 use App\OrderProductOption;
 use App\Product;
@@ -226,9 +227,11 @@ class PublicOrderController extends Controller
             'subtotal' => $total,
             'attn_name' => $data['attn_name'],
             'attn_contact' => $data['attn_contact'],
+            'contact_method' => $data['contact_method'],
+            'wechat_id' => $data['contact_method'] === Order::$contact_methods['wechat'] ? ($data['wechat_id'] ?? null) : null,
             'billing_address' => $data['billing_address'],
             'shipping_address' => $address,
-            'payment_method' => 'cod', // public orders are COD only
+            'payment_method' => $data['payment_method'],
             'status' => Order::$status['pending'],
         ]);
 
@@ -383,8 +386,11 @@ class PublicOrderController extends Controller
         $rules = [
             'attn_name' => ['required', 'string', 'max:30'],
             'attn_contact' => ['required', 'string', 'max:30'],
+            'contact_method' => Order::$attribute_rules['contact_method'],
+            'wechat_id' => Order::$attribute_rules['wechat_id'],
             'billing_address' => ['required', 'string', 'max:100'],
             'shipping_address' => ['nullable', 'string', 'max:100'],
+            'payment_method' => ['required', 'in:' . implode(',', OrderPayment::codDeliveryPreferenceKeys())],
         ];
 
         try {

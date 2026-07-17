@@ -24,6 +24,10 @@ Route::namespace('Driver')->middleware(['web'])->prefix('driver')->group(
                 Route::post('/orders/{id}/adjust', 'DeliveryOrderController@adjustOrder')->name('orders.adjust');
                 Route::post('/orders/{id}/payment', 'DeliveryOrderController@recordPayment')->name('orders.record-payment');
                 Route::get('/orders/{id}/payment-proof', 'DeliveryOrderController@downloadProof')->name('orders.payment-proof');
+                Route::get('/orders/{id}/delivery-proof', 'DeliveryOrderController@downloadDeliveryProof')->name('orders.delivery-proof');
+
+                Route::get('/profile', 'ProfileController@index')->name('profile');
+                Route::post('/profile/password', 'ProfileController@updatePassword')->name('profile.update-password');
             }
         );
     }

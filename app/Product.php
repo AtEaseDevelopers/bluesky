@@ -20,7 +20,8 @@ class Product extends Model
     {
         return match ($sellIn) {
             self::SELL_IN_QTY => ['show_qty' => true, 'show_weight' => false],
-            self::SELL_IN_WEIGHT, self::SELL_IN_QTY_BILL_WEIGHT => ['show_qty' => false, 'show_weight' => true],
+            self::SELL_IN_WEIGHT => ['show_qty' => false, 'show_weight' => true],
+            self::SELL_IN_QTY_BILL_WEIGHT => ['show_qty' => true, 'show_weight' => true],
             default => ['show_qty' => false, 'show_weight' => false],
         };
     }
@@ -181,7 +182,7 @@ class Product extends Model
 
     public function requiresQuantityInput(): bool
     {
-        return in_array($this->sell_in, [self::SELL_IN_QTY, self::SELL_IN_QTY_BILL_WEIGHT, self::SELL_IN_WEIGHT], true);
+        return in_array($this->sell_in, [self::SELL_IN_QTY, self::SELL_IN_QTY_BILL_WEIGHT], true);
     }
 
     public function requiresWeightInput(): bool
@@ -250,7 +251,7 @@ class Product extends Model
 
     public function inventoryTracksQuantity(): bool
     {
-        return in_array($this->sell_in, [self::SELL_IN_QTY, self::SELL_IN_QTY_BILL_WEIGHT, self::SELL_IN_WEIGHT], true);
+        return in_array($this->sell_in, [self::SELL_IN_QTY, self::SELL_IN_QTY_BILL_WEIGHT], true);
     }
 
     public function inventoryTracksWeight(): bool
@@ -292,19 +293,31 @@ class Product extends Model
     /**
      * @return array{quantity: ?float, weight: ?float, product_weight: ?float, bill_amount: float, order_weight: float}
      */
-    public function resolveLineInputs(?float $quantity, ?float $weight): array
+    public function resolveLineInputs(?float $quantity, ?float $weight, bool $billByWeight = false): array
     {
-        if ($this->sell_in === self::SELL_IN_QTY_BILL_WEIGHT || $this->sell_in === self::SELL_IN_WEIGHT) {
+        if ($this->sell_in === self::SELL_IN_QTY_BILL_WEIGHT) {
             $qty = (float) $quantity;
             $wt = ($weight !== null && $weight !== '') ? (float) $weight : null;
-            $billAmount = ($wt !== null && $qty > 0) ? $qty * $wt : 0;
+            $billAmount = ($billByWeight && $wt !== null && $wt > 0) ? $wt : $qty;
 
             return [
                 'quantity' => $qty,
+                'weight' => ($wt !== null && $wt > 0) ? $wt : null,
+                'product_weight' => null,
+                'bill_amount' => $billAmount,
+                'order_weight' => ($wt !== null && $wt > 0) ? $wt : 0,
+            ];
+        }
+
+        if ($this->sell_in === self::SELL_IN_WEIGHT) {
+            $wt = (float) $weight;
+
+            return [
+                'quantity' => null,
                 'weight' => $wt,
                 'product_weight' => $wt,
-                'bill_amount' => $billAmount,
-                'order_weight' => $billAmount,
+                'bill_amount' => $wt,
+                'order_weight' => $wt,
             ];
         }
 
@@ -319,9 +332,9 @@ class Product extends Model
         ];
     }
 
-    public function calculateLinePrice(float $unitPrice, ?float $quantity, ?float $weight): float
+    public function calculateLinePrice(float $unitPrice, ?float $quantity, ?float $weight, bool $billByWeight = false): float
     {
-        $line = $this->resolveLineInputs($quantity, $weight);
+        $line = $this->resolveLineInputs($quantity, $weight, $billByWeight);
 
         return $unitPrice * $line['bill_amount'];
     }

@@ -26,8 +26,8 @@ return [
                     'description' => 'Daily sales and delivery order reports.',
                 ],
                 'drivers' => [
-                    'label' => 'Drivers / Lorry',
-                    'description' => 'Manage drivers and lorry assignments.',
+                    'label' => 'Drivers',
+                    'description' => 'Manage drivers and driver assignments.',
                 ],
                 'settings' => [
                     'label' => 'System Settings',

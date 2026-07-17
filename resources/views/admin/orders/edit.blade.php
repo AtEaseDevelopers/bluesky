@@ -52,9 +52,9 @@
                                         <label class="mb-2" for="area">{{ __('orders.select_area') }}</label>
                                         <select class="form-select @error('area') is-invalid @enderror"  id="area" name="area">
                                             <option value="">{{ __('orders.choose') }}</option>
-                                            @foreach ($areaList as $area)
-                                                <option value="{{ $area }}" {{ $order->area == $area ? 'selected' : '' }}>
-                                                    {{ $area }}
+                                            @foreach ($areas as $area)
+                                                <option value="{{ $area->id }}" {{ old('area', \App\Area::selectedIdForStored($order->area)) == $area->id ? 'selected' : '' }}>
+                                                    {{ $area->area_name }}
                                                 </option>
                                             @endforeach
                                         </select>

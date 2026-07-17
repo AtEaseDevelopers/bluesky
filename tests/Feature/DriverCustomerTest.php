@@ -343,10 +343,11 @@ class DriverCustomerTest extends TestCase
             'payment_method' => 'term',
         ]);
 
-        // Credit customers may collect less than the full balance (unlike COD).
+        // Credit customers may collect less than the full balance when paying now.
         $this->actingAs($driver, 'web_driver')
             ->post(route('driver.customers.record-payment', [$customer->id, $order->id]), [
-                'payment_method' => 'credit',
+                'payment_timing' => 'pay_now',
+                'payment_method' => 'cash',
                 'paid_amount' => 50.00,
             ])
             ->assertRedirect()
@@ -358,11 +359,41 @@ class DriverCustomerTest extends TestCase
         $this->assertFalse($fresh->isFullyPaid());
         $this->assertDatabaseHas('order_payments', [
             'order_id' => $order->id,
-            'payment_method' => 'credit-term',
+            'payment_method' => 'cash',
             'amount' => 50.00,
             'status' => 'confirmed',
             'recorded_by_driver' => $driver->id,
         ]);
+    }
+
+    /** @test */
+    public function driver_can_mark_credit_customer_as_pay_later_from_the_customer_page()
+    {
+        $driver = $this->makeDriver();
+        $customer = $this->makeCustomer([
+            'default_driver_id' => $driver->id,
+            'customer_type' => 'credit',
+            'payment_term_days' => 30,
+        ]);
+
+        $order = $this->makeOrder($customer, [
+            'invoice_number' => 'INV-CREDIT-2',
+            'total_price' => 150.00,
+            'paid_amount' => 0,
+            'status' => 'delivered',
+            'payment_status' => 'unpaid',
+            'payment_method' => 'term',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.customers.record-payment', [$customer->id, $order->id]), [
+                'payment_timing' => 'pay_later',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertEquals(0.0, (float) $order->fresh()->paid_amount);
+        $this->assertDatabaseMissing('order_payments', ['order_id' => $order->id]);
     }
 
     /** @test */

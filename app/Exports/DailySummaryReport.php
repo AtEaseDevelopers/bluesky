@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Area;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -115,8 +116,8 @@ class DailySummaryReport implements FromCollection, WithHeadings, WithEvents, Wi
                 }
             )
             ->when(
-                $request->area, function ($q) {
-                    return $q->where('orders.area', request()->area);
+                $areaFilter = Area::orderFilterValue($request->input('area')), function ($q) use ($areaFilter) {
+                    return $q->where('orders.area', $areaFilter);
                 }
             )
             ->get();

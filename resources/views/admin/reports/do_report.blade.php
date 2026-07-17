@@ -38,6 +38,7 @@
                                     <th>{{ __('reports.lorry') }}</th>
                                     <th>{{ __('reports.status') }}</th>
                                     <th>{{ __('reports.last_updated_at') }}</th>
+                                    <th>{{ __('reports.actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -75,6 +76,20 @@
                                         </td>
                                         <td class="text-center">{{ __('order.status.' . $order->status) }}</td>
                                         <td>{{ $order->updated_at }}</td>
+                                        <td class="text-nowrap">
+                                            @php
+                                                $orderModel = $orderModels[$order->id] ?? null;
+                                            @endphp
+                                            @if ($orderModel && $orderModel->canShowDeliveryOrder())
+                                                <a class="btn btn-sm btn-outline-primary view-pdf"
+                                                   href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0"
+                                                   data-url="{{ route('admin.order.delivery-order', $order->id) }}">
+                                                    {{ __('orders.view_do') }}
+                                                </a>
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -85,4 +100,28 @@
         </div>
     </div>
 
+    @include('admin.orders.partials.pdf-modal')
+
+@endsection
+
+@section('script')
+    <script>
+        $(document).ready(function () {
+            $('.view-pdf').on('click', function (e) {
+                e.preventDefault();
+
+                var pdfUrl = $(this).attr('href').replace('#toolbar=0', '');
+                var downloadUrl = $(this).data('url').replace('#toolbar=0', '');
+
+                $('#pdfFrame').attr('src', pdfUrl);
+                $('#downloadLink').attr('href', downloadUrl + '/download');
+
+                $('#pdfModal').modal('show');
+            });
+
+            $('#pdfModal').on('hidden.bs.modal', function () {
+                $('#pdfFrame').attr('src', '');
+            });
+        });
+    </script>
 @endsection

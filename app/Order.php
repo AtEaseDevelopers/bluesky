@@ -20,6 +20,8 @@ class Order extends Model
         'adjustment_remark',
         'attn_name',
         'attn_contact',
+        'contact_method',
+        'wechat_id',
         'area',
         'billing_address',
         'billing_city',
@@ -41,6 +43,11 @@ class Order extends Model
         'is_estimated',
         'completed_at',
         'transfer_slip',
+        'pickup_proof',
+        'pickup_confirmed_at',
+        'pickup_confirmed_by',
+        'delivery_proof',
+        'delivery_confirmed_at',
         'status',
         'driver_id',
         'fulfillment_type',
@@ -59,6 +66,7 @@ class Order extends Model
         'payment_due_date' => 'date',
         'delivery_date' => 'date',
         'completed_at' => 'datetime',
+        'pickup_confirmed_at' => 'datetime',
         'is_estimated' => 'boolean',
     ];
 
@@ -67,6 +75,8 @@ class Order extends Model
     public static $attribute_rules = [
         'attn_name' => ['nullable', 'string', 'max:30'],
         'attn_contact' => ['nullable', 'string', 'max:30'],
+        'contact_method' => ['required', 'in:whatsapp,wechat'],
+        'wechat_id' => ['nullable', 'required_if:contact_method,wechat', 'string', 'max:100'],
         'billing_address' => ['required', 'string', 'max:100'],
         'billing_postcode' => ['required', 'string', 'max:5'],
         'billing_state' => ['required', 'string', 'max:30'],
@@ -81,6 +91,7 @@ class Order extends Model
         'pending' => 'pending',
         'packing' => 'packing',
         'customer_reviewing' => 'customer_reviewing',
+        'handed_to_customer' => 'handed_to_customer',
         'in_route' => 'in_route',
         'delivered' => 'delivered',
         'completed' => 'completed',
@@ -107,14 +118,40 @@ class Order extends Model
         return $this->order_type === self::$order_types['pos'];
     }
 
+    public function isWalkInOrder(): bool
+    {
+        return $this->order_type === self::$order_types['walk_in'];
+    }
+
+    public function isInStoreOrder(): bool
+    {
+        if ($this->isPosOrder() || $this->isWalkInOrder()) {
+            return true;
+        }
+
+        return $this->order_type === self::$order_types['registered']
+            && $this->isPickup()
+            && !$this->delivery_slot_id;
+    }
+
+    public function isPickupFulfillmentOrder(): bool
+    {
+        return $this->isPickup() && !$this->isInStoreOrder();
+    }
+
     public function isFulfilled(): bool
     {
-        if ($this->isPosOrder()) {
+        if ($this->isInStoreOrder()) {
             return $this->status === self::$status['completed'];
         }
 
         return $this->status === self::$status['delivered'];
     }
+
+    public static $contact_methods = [
+        'whatsapp' => 'whatsapp',
+        'wechat' => 'wechat',
+    ];
 
     public static $fulfillment_types = [
         'delivery' => 'delivery',
@@ -137,6 +174,15 @@ class Order extends Model
         $label = __($key);
 
         return $label !== $key ? $label : ucfirst($this->fulfillment_type ?? 'delivery');
+    }
+
+    public function contactMethodLabel(): string
+    {
+        $method = $this->contact_method ?? self::$contact_methods['whatsapp'];
+        $key = 'orders.contact_method.' . $method;
+        $label = __($key);
+
+        return $label !== $key ? $label : ucfirst($method);
     }
 
     public function customer()
@@ -185,11 +231,22 @@ class Order extends Model
 
         $parts = [];
         foreach ($breakdown as $method => $amount) {
-            $label = OrderPayment::$payment_methods[$method] ?? ucfirst(str_replace('-', ' ', $method));
+            $label = OrderPayment::paymentMethodLabel($method) ?? $method;
             $parts[] = $label . ' RM ' . number_format($amount, 2);
         }
 
         return implode(' + ', $parts);
+    }
+
+    public function preferredPaymentMethodLabel(): ?string
+    {
+        return OrderPayment::paymentMethodLabel($this->payment_method);
+    }
+
+    public function hasCodDeliveryPreference(): bool
+    {
+        return $this->isCodCustomer()
+            && in_array($this->payment_method, OrderPayment::codDeliveryPreferenceKeys(), true);
     }
 
     public function orderProducts()
@@ -201,6 +258,20 @@ class Order extends Model
     {
         return $this->customer !== null
             && ($this->customer->customer_type ?? 'cod') === 'credit';
+    }
+
+    public function paysInStore(): bool
+    {
+        return ($this->payment_method ?? null) === User::$payment_method['in-store'];
+    }
+
+    public function shouldAutoApplyCredit(): bool
+    {
+        if (!$this->user_id || !$this->isCreditCustomer()) {
+            return false;
+        }
+
+        return !$this->paysInStore();
     }
 
     public function isCodCustomer(): bool
@@ -215,7 +286,7 @@ class Order extends Model
 
     public function requiresExactPayment(): bool
     {
-        return $this->isCodCustomer();
+        return $this->isCodCustomer() || $this->paysInStore();
     }
 
     public function customerType(): string
@@ -233,17 +304,49 @@ class Order extends Model
         return OrderPayment::customerSubmitMethodsFor($this->customerType());
     }
 
+    public function canConfirmPickup(): bool
+    {
+        return $this->isPickupFulfillmentOrder()
+            && $this->status === self::$status['packing'];
+    }
+
+    public function pickupProofUrl(): ?string
+    {
+        if (!$this->pickup_proof) {
+            return null;
+        }
+
+        return route('admin.orders.pickup-proof', [$this->id, $this->pickup_proof]);
+    }
+
+    public function deliveryProofUrl(): ?string
+    {
+        if (!$this->delivery_proof) {
+            return null;
+        }
+
+        return route('admin.orders.delivery-proof', [$this->id, $this->delivery_proof]);
+    }
+
     public function canRecordAdminPayment(): bool
     {
         if ($this->status === self::$status['cancelled'] || $this->balanceDue() <= 0) {
             return false;
         }
 
-        if ($this->isPosOrder()) {
+        if ($this->isInStoreOrder()) {
+            return $this->status === self::$status['handed_to_customer'];
+        }
+
+        if ($this->isPickupFulfillmentOrder()) {
+            if ($this->isCodCustomer()) {
+                return $this->status === self::$status['delivered'];
+            }
+
             return in_array($this->status, [
-                self::$status['pending'],
                 self::$status['packing'],
-                self::$status['completed'],
+                self::$status['customer_reviewing'],
+                self::$status['delivered'],
             ], true);
         }
 
@@ -297,6 +400,13 @@ class Order extends Model
 
     public function canShowDeliveryOrder(): bool
     {
+        if ($this->isPickupFulfillmentOrder()) {
+            return in_array($this->status, [
+                self::$status['packing'],
+                self::$status['delivered'],
+            ], true);
+        }
+
         return in_array($this->status, [
             self::$status['in_route'],
             self::$status['delivered'],
@@ -328,6 +438,7 @@ class Order extends Model
     {
         return in_array($status, [
             self::$status['pending'],
+            self::$status['packing'],
             self::$status['customer_reviewing'],
         ], true);
     }

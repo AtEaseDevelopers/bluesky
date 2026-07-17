@@ -62,6 +62,15 @@
                                 {{ $order->attn_name ?: '-' }}<br/>
                                 {{ $order->attn_contact }}
                             </p>
+                            @if ($order->contact_method)
+                                <p>
+                                    <strong>{{ __('orders.contact_using') }}:</strong>
+                                    {{ $order->contactMethodLabel() }}
+                                    @if ($order->contact_method === \App\Order::$contact_methods['wechat'] && $order->wechat_id)
+                                        ({{ $order->wechat_id }})
+                                    @endif
+                                </p>
+                            @endif
                         </div>
                         <div class="col-md-6">
                             <p>

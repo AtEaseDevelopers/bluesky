@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Area;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -159,8 +160,8 @@ class OrdersExport implements FromCollection, WithHeadings, WithEvents, WithColu
                 }
             )
             ->when(
-                $request->area, function ($q) {
-                    return $q->where('orders.area', request()->area);
+                $areaFilter = Area::orderFilterValue($request->input('area')), function ($q) use ($areaFilter) {
+                    return $q->where('orders.area', $areaFilter);
                 }
             )
             ->when(

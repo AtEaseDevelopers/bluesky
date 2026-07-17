@@ -16,11 +16,11 @@ trait ValidatesProductCartInput
         ];
         $customMessages = [];
 
-        if ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT || $product->sell_in === Product::SELL_IN_WEIGHT) {
+        if ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT) {
             $rules['quantity'] = ['required', 'numeric', 'min:0.001'];
-            $rules['weight'] = ['nullable', 'numeric', 'min:0.001'];
+            $rules['weight'] = ['nullable', 'numeric', 'min:0'];
             $customMessages['quantity.required'] = 'The quantity is required';
-        } elseif ($product->requiresQuantityInput()) {
+        } elseif ($product->sell_in === Product::SELL_IN_QTY) {
             $rules['quantity'] = ['required', 'numeric', 'min:0.001'];
             $customMessages['quantity.required'] = 'The quantity is required';
         } else {
@@ -54,9 +54,10 @@ trait ValidatesProductCartInput
         $stock = app(StockService::class)->getOrCreateStock($product->id);
 
         if ($requested <= 0) {
-            $field = $product->requiresQuantityInput() && ! $product->requiresWeightInput()
-                ? 'quantity'
-                : ($product->requiresWeightInput() && ! $product->requiresQuantityInput() ? 'weight' : 'quantity');
+            $field = match ($product->sell_in) {
+                Product::SELL_IN_QTY, Product::SELL_IN_QTY_BILL_WEIGHT => 'quantity',
+                default => 'weight',
+            };
 
             throw ValidationException::withMessages([
                 $field => 'Please enter a valid amount.',

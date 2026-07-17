@@ -16,7 +16,7 @@
         $adjustment = (float) ($order->amount_adjustment ?? 0);
         $grandTotal = $lineSubtotal + $deliveryFee + $adjustment;
     @endphp
-    <table style="width: 100%; font-family: sans-serif; border-collapse: collapse; margin: 10px 0 0 0;">
+    <table style="width: 100%; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif; border-collapse: collapse; margin: 10px 0 0 0;">
         <tr>
             <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; padding: 5px 0 5px 0; width: 8%;">NO.</td>
             <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; width: {{ $canShowLinePrices ? '24%' : '30%' }}; text-align: left;">DESCRIPTION</td>
@@ -51,7 +51,7 @@
         @endforeach
     </table>
     <!-- Footer -->
-    <table style="width: 100%; font-family: sans-serif; border-collapse: collapse; margin: 50px 0 0 0;">
+    <table style="width: 100%; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif; border-collapse: collapse; margin: 50px 0 0 0;">
         @if ($canShowLinePrices)
             <tr>
                 <td style="border-top: solid 1px black;" colspan="2"></td>

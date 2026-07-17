@@ -23,7 +23,7 @@ class BulkPaymentController extends Controller
         }
 
         if (!$user->isCreditCustomer()) {
-            return redirect()->route('member.orders')->with('error', 'Bulk payment is available for credit customers only.');
+            return redirect()->route('member.orders')->with('error', __('orders.member.bulk_payment.credit_only'));
         }
 
         $orders = app(BulkPaymentService::class)->openOrdersFor($user);
@@ -66,7 +66,7 @@ class BulkPaymentController extends Controller
 
         return redirect()->route('member.orders')->with(
             'success',
-            'Bulk payment submitted. Our team will review and knock off your selected invoices.'
+            __('orders.member.bulk_payment.submitted_success')
         );
     }
 }

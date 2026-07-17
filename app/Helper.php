@@ -27,10 +27,4 @@ class Helper extends Model
     
         return $randomString;
     }
-
-    public static function areaList() {
-        return [
-            "ALAM", "AYER ITAM", "BAGAN SERAI", "BATU KAWAN", "BAYAN LEPAS", "BEDONG", "BERTAM", "BUKIT MERTAJAM", "BUKIT MINYAK ", "BUKIT TENGAH", "BUTTERWORTH", "GELUGOR ", "GEORGETOWN", "GURUN", "JAWI", "JELUTONG", "JURU", "KOTA PERMAI", "KUALA KURAU", "KUALA MUDA", "KULIM", "NIBONG TEBAL", "PADANG SERAI", "PANTAI REMIS", "PARIT BUNTAR", "PERAI", "SELAMA", "SERDANG", "SG ARA", "SIMPANG AMPAT", "SUNGAI PETANI", "TAMBUN", "TANJUNG TOKONG", "TASEK GELUGOR"
-        ];
-    }
 }

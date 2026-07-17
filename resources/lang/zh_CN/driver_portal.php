@@ -47,6 +47,19 @@ return [
         'make_payment' => '收款',
         'payment_gateway_coming_soon' => '在线支付网关即将上线，届时客户可在此付款。',
         'status_updated' => '配送状态已更新为「:status」。',
+        'delivered_requires_in_route' => '须由办公室先将订单标记为配送中，您才能确认已送达。',
+        'wait_for_in_route' => '等待办公室将订单标记为配送中后，方可确认送达。',
+        'expected_payment' => '客户计划付款方式：:method',
+        'payment_timing_label' => '客户何时付款？',
+        'pay_now' => '立即付款',
+        'pay_later' => '稍后付款',
+        'pay_later_help' => '客户将按账期稍后付款，现在不收款。',
+        'delivery_proof' => '送达凭证照片',
+        'delivery_proof_required' => '必须上传送达凭证照片。',
+        'delivery_proof_format' => '送达凭证须为 JPG 或 PNG 图片。',
+        'delivery_proof_size' => '送达凭证不得超过 4 MB。',
+        'delivery_proof_not_found' => '找不到送达凭证。',
+        'view_delivery_proof' => '查看送达凭证',
     ],
 
     'customers' => [
@@ -90,6 +103,7 @@ return [
         'proof_required' => '二维码和银行转账付款必须上传付款凭证。',
         'cannot_record' => '当前订单状态无法记录付款。',
         'cod_status_required' => '货到付款仅可在配送中或已送达时记录。',
+        'pay_later_noted' => '已记录：客户将稍后按账期付款。',
         'recorded' => '付款已成功记录。',
     ],
 
@@ -106,6 +120,17 @@ return [
         'password_placeholder' => '请输入密码',
         'invalid_credentials' => '用户名或密码不正确。',
         'inactive' => '您的司机账号已停用，请联系管理员。',
+    ],
+
+    'profile' => [
+        'title' => '修改密码',
+        'subtitle' => '请输入当前密码并设置新密码。',
+        'old_password' => '当前密码',
+        'new_password' => '新密码',
+        'confirm_password' => '确认新密码',
+        'save' => '更新密码',
+        'old_password_incorrect' => '当前密码不正确。',
+        'password_changed' => '密码已成功更新。',
     ],
 
     'errors' => [

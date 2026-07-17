@@ -93,7 +93,8 @@ class PosOrderController extends Controller
         $linePrice = $product->calculateLinePrice(
             $price,
             isset($data['quantity']) ? (float) $data['quantity'] : null,
-            isset($data['weight']) ? (float) $data['weight'] : null
+            isset($data['weight']) ? (float) $data['weight'] : null,
+            true
         );
 
         $cartProduct = CartProduct::create([
@@ -178,7 +179,8 @@ class PosOrderController extends Controller
                 ? $product->calculateLinePrice(
                     $price,
                     $request->quantity !== null ? (float) $request->quantity : null,
-                    $request->weight !== null ? (float) $request->weight : null
+                    $request->weight !== null ? (float) $request->weight : null,
+                    true
                 )
                 : $price * ($request->quantity ?? $request->weight);
 
@@ -355,7 +357,8 @@ class PosOrderController extends Controller
             $line = $product
                 ? $product->resolveLineInputs(
                     $value->quantity !== null ? (float) $value->quantity : null,
-                    $value->weight !== null ? (float) $value->weight : null
+                    $value->weight !== null ? (float) $value->weight : null,
+                    true
                 )
                 : [
                     'quantity' => $value->quantity,

@@ -40,6 +40,7 @@ class OrderPayment extends Model
         'cash' => 'Cash',
         'qr' => 'QR',
         'bank-transfer' => 'Bank Transfer',
+        'payment-gateway' => 'Payment Gateway',
         'cod' => 'COD',
         'in-store' => 'In-Store Payment',
     ];
@@ -53,6 +54,13 @@ class OrderPayment extends Model
         'credit-term' => 'Credit Term',
         'cash' => 'Cash',
         'in-store' => 'In-Store Payment',
+    ];
+
+    /** Customer COD preference at checkout (record only — driver prepares cash/QR/e-wallet). */
+    public static $cod_delivery_preference_methods = [
+        'cash' => 'Cash',
+        'qr' => 'QR',
+        'e-wallet' => 'E-Wallet',
     ];
 
     /** Customer-uploaded proof at delivery (COD). */
@@ -84,6 +92,40 @@ class OrderPayment extends Model
         return ($customerType === 'credit')
             ? self::$credit_customer_methods
             : self::$cod_customer_methods;
+    }
+
+    public static function codDeliveryPreferenceKeys(): array
+    {
+        return array_keys(self::$cod_delivery_preference_methods);
+    }
+
+    /** @return array<string, string> */
+    public static function codDeliveryPreferenceOptions(): array
+    {
+        $options = [];
+        foreach (self::codDeliveryPreferenceKeys() as $key) {
+            $labelKey = 'order.payment_methods.' . $key;
+            $label = __($labelKey);
+            $options[$key] = $label !== $labelKey
+                ? $label
+                : (self::$cod_delivery_preference_methods[$key] ?? $key);
+        }
+
+        return $options;
+    }
+
+    public static function paymentMethodLabel(?string $method): ?string
+    {
+        if (!$method) {
+            return null;
+        }
+
+        $labelKey = 'order.payment_methods.' . $method;
+        $label = __($labelKey);
+
+        return $label !== $labelKey
+            ? $label
+            : (self::$payment_methods[$method] ?? ucfirst(str_replace('-', ' ', $method)));
     }
 
     public static function customerTypeFromOrder(?Order $order): string
@@ -122,7 +164,7 @@ class OrderPayment extends Model
 
     public static function proofHelpText(): string
     {
-        return 'JPG, PNG or PDF only. Maximum ' . (self::PROOF_MAX_KB / 1024) . ' MB.';
+        return __('orders.member.payment_proof_help', ['size' => self::PROOF_MAX_KB / 1024]);
     }
 
     public static function proofValidationMessages(string $attribute = 'payment_proof'): array
@@ -130,10 +172,10 @@ class OrderPayment extends Model
         $maxMb = self::PROOF_MAX_KB / 1024;
 
         return [
-            "{$attribute}.required" => 'Payment proof is required.',
-            "{$attribute}.file" => 'Payment proof must be a valid file upload.',
-            "{$attribute}.mimes" => 'Payment proof must be a JPG, PNG image or PDF file.',
-            "{$attribute}.max" => "Payment proof must not exceed {$maxMb} MB.",
+            "{$attribute}.required" => __('orders.js.payment_proof_required'),
+            "{$attribute}.file" => __('orders.js.invalid_payment_proof'),
+            "{$attribute}.mimes" => __('orders.js.payment_proof_format'),
+            "{$attribute}.max" => __('orders.js.payment_proof_size', ['size' => $maxMb]),
         ];
     }
 

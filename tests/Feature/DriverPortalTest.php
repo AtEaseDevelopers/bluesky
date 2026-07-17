@@ -146,14 +146,49 @@ class DriverPortalTest extends TestCase
     }
 
     /** @test */
-    public function driver_can_update_delivery_status_to_in_route()
+    public function driver_cannot_set_in_route_status()
     {
         $driver = $this->makeDriver();
         $order = $this->makeOrder($driver, ['status' => 'customer_reviewing']);
 
         $this->actingAs($driver, 'web_driver')
             ->post(route('driver.orders.update-status', $order->id), ['status' => 'in_route'])
-            ->assertRedirect();
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame('customer_reviewing', $order->fresh()->status);
+    }
+
+    /** @test */
+    public function driver_can_mark_delivered_with_delivery_proof()
+    {
+        Storage::fake('local');
+
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, ['status' => 'in_route']);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.update-status', $order->id), [
+                'status' => 'delivered',
+                'delivery_proof' => UploadedFile::fake()->image('delivered.jpg'),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $fresh = $order->fresh();
+        $this->assertSame('delivered', $fresh->status);
+        $this->assertNotNull($fresh->delivery_proof);
+        $this->assertNotNull($fresh->delivery_confirmed_at);
+    }
+
+    /** @test */
+    public function driver_cannot_mark_delivered_without_delivery_proof()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, ['status' => 'in_route']);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.update-status', $order->id), ['status' => 'delivered'])
+            ->assertSessionHasErrors('delivery_proof');
 
         $this->assertSame('in_route', $order->fresh()->status);
     }
@@ -234,6 +269,93 @@ class DriverPortalTest extends TestCase
         $this->assertEquals('bank-transfer', $payment->payment_method);
         $this->assertNotNull($payment->payment_proof);
         Storage::disk('local')->assertExists(Order::$path . '/' . $order->id . '/payments/' . $payment->payment_proof);
+    }
+
+    /** @test */
+    public function driver_can_record_immediate_payment_for_credit_customer_delivery()
+    {
+        $driver = $this->makeDriver();
+        $customer = User::forceCreate([
+            'name' => 'Credit Buyer',
+            'email' => 'credit' . rand(1000, 9999) . '@example.com',
+            'password' => Hash::make('password'),
+            'category' => 'credit',
+            'customer_type' => 'credit',
+            'status' => 'active',
+            'payment_method' => json_encode(['term']),
+            'login_code' => 'code' . rand(1000, 9999),
+            'billing_address' => '1 Market St',
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+            'shipping_address' => '1 Market St',
+            'shipping_postcode' => '50000',
+            'shipping_state' => 'WP',
+        ]);
+
+        $order = Order::forceCreate([
+            'user_id' => $customer->id,
+            'total_price' => 150.00,
+            'paid_amount' => 0,
+            'status' => 'in_route',
+            'payment_method' => 'term',
+            'driver_id' => $driver->id,
+            'billing_address' => '1 Market St',
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.record-payment', $order->id), [
+                'payment_timing' => 'pay_now',
+                'payment_method' => 'cash',
+                'paid_amount' => 150.00,
+            ])->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertEquals(150.00, (float) $order->fresh()->paid_amount);
+    }
+
+    /** @test */
+    public function driver_can_mark_credit_customer_delivery_as_pay_later()
+    {
+        $driver = $this->makeDriver();
+        $customer = User::forceCreate([
+            'name' => 'Credit Buyer',
+            'email' => 'credit' . rand(1000, 9999) . '@example.com',
+            'password' => Hash::make('password'),
+            'category' => 'credit',
+            'customer_type' => 'credit',
+            'status' => 'active',
+            'payment_method' => json_encode(['term']),
+            'login_code' => 'code' . rand(1000, 9999),
+            'billing_address' => '1 Market St',
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+            'shipping_address' => '1 Market St',
+            'shipping_postcode' => '50000',
+            'shipping_state' => 'WP',
+        ]);
+
+        $order = Order::forceCreate([
+            'user_id' => $customer->id,
+            'total_price' => 150.00,
+            'paid_amount' => 0,
+            'status' => 'delivered',
+            'payment_method' => 'term',
+            'driver_id' => $driver->id,
+            'billing_address' => '1 Market St',
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.record-payment', $order->id), [
+                'payment_timing' => 'pay_later',
+            ])->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertEquals(0.0, (float) $order->fresh()->paid_amount);
+        $this->assertDatabaseMissing('order_payments', ['order_id' => $order->id]);
     }
 
     /** @test */
@@ -321,5 +443,68 @@ class DriverPortalTest extends TestCase
         $fresh = $order->fresh();
         $this->assertEquals(50.00, (float) $fresh->total_price);
         $this->assertEquals(5, (float) $orderProduct->fresh()->quantity);
+    }
+
+    /** @test */
+    public function driver_can_view_change_password_page()
+    {
+        $driver = $this->makeDriver();
+
+        $this->actingAs($driver, 'web_driver')
+            ->get(route('driver.profile'))
+            ->assertOk()
+            ->assertSee(__('driver_portal.profile.title'));
+    }
+
+    /** @test */
+    public function driver_can_change_password_with_correct_old_password()
+    {
+        $driver = $this->makeDriver([
+            'username' => 'pwdriver',
+            'password' => Hash::make('oldpass'),
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.profile.update-password'), [
+                'old_password' => 'oldpass',
+                'password' => 'newpass',
+                'password_confirmation' => 'newpass',
+            ])
+            ->assertRedirect(route('driver.profile'))
+            ->assertSessionHas('success');
+
+        $driver->refresh();
+        $this->assertTrue(Hash::check('newpass', $driver->password));
+
+        $this->post(route('driver.logout'));
+        $this->post(route('driver.login.submit'), [
+            'username' => 'pwdriver',
+            'password' => 'newpass',
+        ])->assertRedirect(route('driver.orders.index'));
+    }
+
+    /** @test */
+    public function driver_cannot_change_password_with_wrong_old_password()
+    {
+        $driver = $this->makeDriver(['password' => Hash::make('oldpass')]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.profile.update-password'), [
+                'old_password' => 'wrongpass',
+                'password' => 'newpass',
+                'password_confirmation' => 'newpass',
+            ])
+            ->assertRedirect(route('driver.profile'))
+            ->assertSessionHas('error');
+
+        $driver->refresh();
+        $this->assertTrue(Hash::check('oldpass', $driver->password));
+    }
+
+    /** @test */
+    public function guests_cannot_access_driver_change_password_page()
+    {
+        $this->get(route('driver.profile'))
+            ->assertRedirect(route('driver.login'));
     }
 }

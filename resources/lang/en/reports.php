@@ -16,7 +16,10 @@ return [
     'payment_method' => 'Payment Method',
     'billing_address' => 'Billing Address',
     'shipping_address' => 'Shipping Address',
-    'lorry' => 'Lorry',
+    'lorry' => 'Driver',
     'last_updated_at' => 'Last Updated At',
+    'actions' => 'Actions',
     'driver_deleted' => 'Driver Deleted',
+    'no_do_to_download' => 'No delivery orders are available to download for the selected filters.',
+    'do_zip_failed' => 'Could not create the delivery order download file. Please try again.',
 ];

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Area;
 use App\DeliverySlot;
 use App\Driver;
 use App\Http\Controllers\Controller;
@@ -41,7 +42,7 @@ class AddOrderController extends Controller
                 'payment_method_options' => $payment_method_options? : [],
                 'shipping_state_options' => System::$country_state['MY'],
                 'customers_list' => User::all(),
-                'areaList' => Helper::areaList(),
+                'areas' => Area::optionsForSelect(),
                 'drivers' => Driver::optionsForSelect(),
                 'deliveryDates' => DeliverySlot::availableDates(),
                 'deliverySlotsUrl' => route('admin.delivery-slots.for-date'),
@@ -61,8 +62,8 @@ class AddOrderController extends Controller
         if ($isWalkIn) {
             $request->validate([
                 'walk_in_name' => 'required|string|max:100',
-                'walk_in_phone' => 'required|string|max:30',
-                'billing_address' => 'required|string|max:200',
+                'walk_in_phone' => 'nullable|string|max:30',
+                'billing_address' => 'nullable|string|max:200',
                 'shipping_address' => 'nullable|string|max:200',
             ]);
             $user = null;
@@ -94,7 +95,7 @@ class AddOrderController extends Controller
             "attn_name" => $data['attn_name'],
             "attn_contact" => $data['attn_contact'],
             "payment_method" => $data['payment_method'] ?? null,
-            "area" => $request['area'],
+            "area" => Area::orderStorageValue($request->input('area')),
             "billing_address" => $data['billing_address'],
             "billing_city" => $request['billing_city'] ?? null,
             "shipping_city" => $request['shipping_city'],
@@ -105,20 +106,28 @@ class AddOrderController extends Controller
             "shipping_state" => $data['shipping_state'] ?? null,
             "status" => Order::$status['pending'],
             "payment_status" => Order::$payment_status['unpaid'],
-            "driver_id" => $request->input('fulfillment_type') === Order::$fulfillment_types['pickup']
+            "driver_id" => $isWalkIn
                 ? null
-                : ($request->input('driver_id') ?: null),
-            "fulfillment_type" => $request->input('fulfillment_type', Order::$fulfillment_types['delivery']),
+                : ($request->input('fulfillment_type') === Order::$fulfillment_types['pickup']
+                    ? null
+                    : ($request->input('driver_id') ?: null)),
+            "fulfillment_type" => $isWalkIn
+                ? Order::$fulfillment_types['pickup']
+                : $request->input('fulfillment_type', Order::$fulfillment_types['delivery']),
             "is_estimated" => true,
         ];
 
-        if ($request->filled('delivery_slot_id') && $request->filled('delivery_date')) {
+        if ($request->filled('delivery_slot_id') && $request->filled('delivery_date')
+            && ($data['payment_method'] ?? null) !== User::$payment_method['in-store']) {
             $slot = DeliverySlot::find($request->input('delivery_slot_id'));
             if ($slot && $slot->isAvailableForDate($request->input('delivery_date'))) {
                 $orderData['delivery_slot_id'] = $slot->id;
                 $orderData['delivery_date'] = $request->input('delivery_date');
                 $orderData['delivery_time_slot'] = $slot->time_label;
             }
+        } else {
+            $orderData['fulfillment_type'] = Order::$fulfillment_types['pickup'];
+            $orderData['driver_id'] = null;
         }
 
         $order = Order::create($orderData);
@@ -152,7 +161,8 @@ class AddOrderController extends Controller
                 $rawWeight = $data['weight'][$key] ?? null;
                 $line = $product->resolveLineInputs(
                     (float) ($data['quantity'][$key] ?? 0),
-                    ($rawWeight !== null && $rawWeight !== '') ? (float) $rawWeight : null
+                    ($rawWeight !== null && $rawWeight !== '') ? (float) $rawWeight : null,
+                    true
                 );
             } else {
                 $line = $product->resolveLineInputs((float) ($data['quantity'][$key] ?? 0), null);
@@ -204,9 +214,11 @@ class AddOrderController extends Controller
 
         app(OrderService::class)->assignDoNumber($order);
 
-        if (!$isWalkIn && $user) {
+        if (!$isWalkIn && $user && $order->shouldAutoApplyCredit()) {
             app(CreditService::class)->applyAvailableCredit($order->fresh());
         }
+
+        app(OrderService::class)->applyDefaultPaymentDueDate($order->fresh());
 
         return redirect(route('admin.orders.summary', $order->id))->with('success', __('orders.created_success'));
     }
@@ -221,7 +233,9 @@ class AddOrderController extends Controller
             "attn_contact" => array_merge(Order::$attribute_rules['attn_contact'], []),
             // "payment_method" => array_merge(Order::$attribute_rules['payment_method'], []),
             'payment_method' => ['nullable'],
-            "billing_address" => array_merge(Order::$attribute_rules['billing_address'], []),
+            "billing_address" => $request->boolean('is_walk_in')
+                ? ['nullable', 'string', 'max:200']
+                : array_merge(Order::$attribute_rules['billing_address'], []),
             // "billing_postcode" => array_merge(Order::$attribute_rules['billing_postcode'], []),
             'billing_postcode' => ['nullable'],
             // "billing_state" => array_merge(Order::$attribute_rules['billing_state'], []),

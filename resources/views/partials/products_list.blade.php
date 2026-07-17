@@ -76,7 +76,7 @@
                             </button>
                         </div>
                     </div>
-                @elseif (in_array($product->sell_in, ['qty_bill_weight', 'weight'], true))
+                @elseif ($product->sell_in == 'qty_bill_weight')
                     <div class="form-group mb-3">
                         <label class="mb-2" for="productQuantity_{{ $product->id }}">{{ __('orders.quantity_label') }}</label>
                         <span class="text-danger"> *</span>
@@ -97,13 +97,13 @@
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productWeight_{{ $product->id }}" data-action="minus">
                                 <i class="fa fa-minus"></i>
                             </button>
-                            <input type="number" class="form-control text-center" id="productWeight_{{ $product->id }}" name="weight" value="" min="0.001" step="0.001">
+                            <input type="number" class="form-control text-center" id="productWeight_{{ $product->id }}" name="weight" value="" min="0" step="0.001">
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productWeight_{{ $product->id }}" data-action="plus">
                                 <i class="fa fa-plus"></i>
                             </button>
                         </div>
                     </div>
-                @else
+                @elseif ($product->sell_in == 'weight')
                     <div class="form-group mb-3">
                         <label class="mb-2" for="productWeight_{{ $product->id }}">{{ __('orders.order_qty_uom', ['uom' => $uomLabel]) }}</label>
                         <span class="text-danger"> *</span>

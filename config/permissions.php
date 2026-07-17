@@ -88,7 +88,7 @@ return [
                 ],
                 'drivers' => [
                     'label' => 'Drivers / Vehicles',
-                    'description' => 'Drivers, vehicles, and lorry registry.',
+                    'description' => 'Drivers, vehicles, and driver registry.',
                     'capabilities' => [
                         'view' => [
                             'label' => 'View',
@@ -191,7 +191,7 @@ return [
                 ],
                 'vehicle' => [
                     'label' => 'Vehicle Selection',
-                    'description' => 'Choose which registered lorry the driver is operating.',
+                    'description' => 'Choose which registered vehicle the driver is operating.',
                     'default' => false,
                 ],
                 'assigned_customers' => [

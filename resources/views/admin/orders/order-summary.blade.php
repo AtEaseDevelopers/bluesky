@@ -45,16 +45,30 @@
                                     @if ($order->walk_in_phone || $order->attn_contact || ($customer->attn_contact ?? null))
                                         <p><strong>{{ __('orders.phone') }}:</strong> {{ $order->walk_in_phone ?: ($order->attn_contact ?: ($customer->attn_contact ?? '-')) }}</p>
                                     @endif
+                                    @if ($order->contact_method)
+                                        <p>
+                                            <strong>{{ __('orders.contact_using') }}:</strong>
+                                            {{ $order->contactMethodLabel() }}
+                                            @if ($order->contact_method === \App\Order::$contact_methods['wechat'] && $order->wechat_id)
+                                                ({{ $order->wechat_id }})
+                                            @endif
+                                        </p>
+                                    @endif
                                     <p><strong>{{ __('orders.order_date') }}:</strong> {{ $order->created_at->format('Y-m-d h:i a') }}</p>
-                                    <p><strong>{{ __('orders.delivery') }}:</strong> {{ $order->delivery_date ? $order->delivery_date->format('d-m-Y') : '-' }} {{ $order->delivery_time_slot }}</p>
-                                    <p><strong>{{ __('orders.fulfillment_type') }}:</strong> {{ $order->fulfillmentTypeLabel() }}</p>
-                                    <p><strong>{{ __('orders.assign_driver') }}:</strong> {{ $order->driver_id && isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '-' }}</p>
+                                    @if (!$order->isInStoreOrder())
+                                        <p><strong>{{ __('orders.delivery') }}:</strong> {{ $order->delivery_date ? $order->delivery_date->format('d-m-Y') : '-' }} {{ $order->delivery_time_slot }}</p>
+                                        <p><strong>{{ __('orders.fulfillment_type') }}:</strong> {{ $order->fulfillmentTypeLabel() }}</p>
+                                        @if ($order->isDelivery())
+                                            <p><strong>{{ __('orders.assign_driver') }}:</strong> {{ $order->driver_id && isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '-' }}</p>
+                                        @endif
+                                    @endif
                                 </div>
                                 <div class="col-md-6">
                                     <p><strong>{{ __('orders.status_label') }}</strong> {{ __('order.status.' . $order->status) }}</p>
                                     <p><strong>{{ __('orders.payment_label') }}</strong>
                                         @php
                                             $paymentBadgeClass = match ($order->payment_status) {
+                                                'unpaid' => 'bg-danger',
                                                 'payment_due' => 'bg-danger',
                                                 'paid' => 'bg-success',
                                                 'pending' => 'bg-warning text-dark',
@@ -68,6 +82,8 @@
                                     </p>
                                     @if ($payments->count())
                                         <p><strong>{{ __('orders.payment_methods') }}:</strong> {{ $order->paymentMethodsLabel() }}</p>
+                                    @elseif ($order->hasCodDeliveryPreference())
+                                        <p><strong>{{ __('orders.expected_cod_payment') }}:</strong> {{ $order->preferredPaymentMethodLabel() }}</p>
                                     @endif
                                     @if ($isCreditCustomer)
                                         @if ($order->payment_due_date)
@@ -86,6 +102,9 @@
                                         <p><strong>{{ __('orders.autocount') }}:</strong> {{ str_replace('_', ' ', ucfirst($order->autocount_sync_status)) }}</p>
                                     @endif
                                     <p><strong>{{ __('orders.estimated') }}:</strong> {{ $order->is_estimated ? __('orders.yes') : __('orders.no') }}</p>
+                                    @if ($order->pickup_confirmed_at && $order->isPickupFulfillmentOrder())
+                                        <p><strong>{{ __('orders.pickup_confirmed_at') }}:</strong> {{ $order->pickup_confirmed_at->format('Y-m-d h:i a') }}</p>
+                                    @endif
                                 </div>
                             </div>
 
@@ -104,24 +123,33 @@
                                     </thead>
                                     <tbody>
                                         @foreach ($products as $product)
+                                            @php
+                                                $sellIn = $product->sell_in ?? \App\Product::resolveSellInForOrderLine($product);
+                                                $sellInLabels = [
+                                                    \App\Product::SELL_IN_QTY => __('product.sell_in_qty'),
+                                                    \App\Product::SELL_IN_WEIGHT => __('product.sell_in_weight'),
+                                                    \App\Product::SELL_IN_QTY_BILL_WEIGHT => __('product.sell_in_qty_bill_weight'),
+                                                ];
+                                            @endphp
                                             <tr>
                                                 <td>
                                                     <strong>{{ $product->name }}</strong>
+                                                    <br><small class="text-muted">{{ __('orders.sell_in_label') }}: {{ $sellInLabels[$sellIn] ?? $sellIn }}</small>
                                                     @if ($product->remark)
                                                         <br><small>{{ __('orders.remark_label') }} {{ $product->remark }}</small>
                                                     @endif
                                                 </td>
                                                 <td>{{ number_format($product->unit_price, 2) }}</td>
-                                                <td>{{ $product->quantity ?? '-' }}</td>
                                                 <td>
-                                                    @if ($product->weight)
-                                                        {{ $product->weight }}
-                                                    @elseif ($product->quantity && $product->product_weight)
-                                                        {{ $product->quantity * $product->product_weight }}
+                                                    @if ($sellIn === \App\Product::SELL_IN_WEIGHT)
+                                                        -
+                                                    @elseif ($product->quantity !== null && $product->quantity !== '')
+                                                        {{ rtrim(rtrim(number_format((float) $product->quantity, 3, '.', ''), '0'), '.') }}
                                                     @else
                                                         -
                                                     @endif
                                                 </td>
+                                                <td>{{ \App\OrderProduct::displayWeight($product) ?? '-' }}</td>
                                                 <td class="text-end">{{ number_format($product->price, 2) }}</td>
                                             </tr>
                                         @endforeach
@@ -184,6 +212,7 @@
                         </div>
                     @endif
 
+                    @if ($order->isDelivery())
                     <div class="card shadow no-border mb-4">
                         <div class="card-body">
                             <h5 class="card-title">{{ __('orders.fulfillment_type') }}</h5>
@@ -208,6 +237,34 @@
                                             @endforeach
                                         </select>
                                     </div>
+                                    <div id="summary-delivery-wrap">
+                                        <div class="mb-3">
+                                            <label class="mb-1">{{ __('orders.delivery_date') }}</label>
+                                            <select name="delivery_date" id="summary_delivery_date" class="form-select">
+                                                <option value="">{{ __('orders.none') }}</option>
+                                                @php
+                                                    $summaryDeliveryDates = $deliveryDates;
+                                                    if ($order->delivery_date) {
+                                                        $currentDeliveryDate = $order->delivery_date->format('Y-m-d');
+                                                        if (!in_array($currentDeliveryDate, $summaryDeliveryDates, true)) {
+                                                            array_unshift($summaryDeliveryDates, $currentDeliveryDate);
+                                                        }
+                                                    }
+                                                @endphp
+                                                @foreach ($summaryDeliveryDates as $date)
+                                                    <option value="{{ $date }}" {{ $order->delivery_date && $order->delivery_date->format('Y-m-d') === $date ? 'selected' : '' }}>
+                                                        {{ \Carbon\Carbon::parse($date)->format('d-m-Y') }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="mb-1">{{ __('orders.delivery_time') }}</label>
+                                            <select name="delivery_slot_id" id="summary_delivery_slot_id" class="form-select" {{ $order->delivery_date ? '' : 'disabled' }}>
+                                                <option value="">{{ __('orders.none') }}</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                     <button type="submit" class="btn btn-primary w-100">{{ __('orders.update_driver') }}</button>
                                 </form>
                             @else
@@ -216,6 +273,41 @@
                             @endif
                         </div>
                     </div>
+                    @endif
+
+                    @if ($order->canConfirmPickup() && $admin->canModule('orders', 'edit'))
+                    <div class="card shadow no-border mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ __('orders.confirm_pickup') }}</h5>
+                            <p class="text-muted small">{{ __('orders.confirm_pickup_help') }}</p>
+                            <hr>
+                            <form action="{{ route('admin.orders.confirm-pickup', $order->id) }}" method="POST" enctype="multipart/form-data">
+                                @csrf
+                                <div class="mb-3">
+                                    <label class="mb-1" for="pickup_proof">{{ __('orders.pickup_proof') }} <span class="text-danger">*</span></label>
+                                    <input type="file" class="form-control" name="pickup_proof" id="pickup_proof" accept="image/jpeg,image/png,.jpg,.jpeg,.png" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">{{ __('orders.confirm_pickup') }}</button>
+                            </form>
+                        </div>
+                    </div>
+                    @elseif ($order->isPickupFulfillmentOrder() && $order->pickup_proof)
+                    <div class="card shadow no-border mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ __('orders.confirm_pickup') }}</h5>
+                            <hr>
+                            <a href="{{ $order->pickupProofUrl() }}" target="_blank" class="btn btn-outline-primary w-100">{{ __('orders.view') }} {{ __('orders.pickup_proof') }}</a>
+                        </div>
+                    </div>
+                    @elseif ($order->isDelivery() && $order->delivery_proof)
+                    <div class="card shadow no-border mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ __('orders.delivery_proof') }}</h5>
+                            <hr>
+                            <a href="{{ $order->deliveryProofUrl() }}" target="_blank" class="btn btn-outline-primary w-100">{{ __('orders.view') }} {{ __('orders.delivery_proof') }}</a>
+                        </div>
+                    </div>
+                    @endif
 
                     <div class="card shadow no-border mb-4">
                         <div class="card-body">
@@ -236,7 +328,7 @@
                                     {{ __('orders.cancel_order') }}
                                 </button>
                             @endif
-                            @if ($order->status === Order::$status['delivered'] && $order->isFullyPaid() && !$order->isPosOrder())
+                            @if (($order->status === Order::$status['delivered'] || ($order->isInStoreOrder() && $order->status === Order::$status['completed'])) && $order->isFullyPaid() && !$order->isPosOrder())
                                 <form action="{{ route('admin.orders.sync-autocount', $order->id) }}" method="POST" class="mt-3">
                                     @csrf
                                     <button type="submit" class="btn btn-outline-secondary w-100">{{ __('orders.sync_autocount') }}</button>
@@ -249,7 +341,9 @@
                     <div class="card shadow no-border mb-4">
                         <div class="card-body">
                             <h5 class="card-title">{{ __('orders.record_payment') }}</h5>
-                            @if ($isCreditCustomer)
+                            @if ($order->isInStoreOrder())
+                                <p class="text-muted small mb-3">{{ __('orders.in_store_payment_help') }}</p>
+                            @elseif ($isCreditCustomer)
                                 <p class="text-muted small mb-3">{{ __('orders.credit_payment_help') }}</p>
                             @else
                                 <p class="text-muted small mb-3">{{ __('orders.cod_payment_help') }}</p>
@@ -272,7 +366,7 @@
                                                 <label class="mb-1">{{ __('orders.amount_rm') }}</label>
                                                 <input type="number" step="0.01" min="0.01" name="payments[0][amount]" class="form-control payment-amount"
                                                     value="{{ number_format($order->balanceDue(), 2, '.', '') }}" required
-                                                    @if (!$isCreditCustomer) data-cod-exact="1" @endif>
+                                                    @if ($order->requiresExactPayment()) data-cod-exact="1" @endif>
                                             </div>
                                             <div class="col-md-4">
                                                 <label class="mb-1">{{ __('orders.proof') }}</label>
@@ -300,14 +394,26 @@
                                     @endif
                                     <span class="text-muted small">{{ __('orders.total_entering') }}: RM <strong id="payment-lines-total">{{ number_format($order->balanceDue(), 2) }}</strong> · {{ __('orders.balance_due_rm') }} {{ number_format($order->balanceDue(), 2) }}</span>
                                 </div>
-                                @if ($isCreditCustomer)
+                                @if ($isCreditCustomer && !$order->paysInStore())
                                     <p class="text-muted small">{{ __('orders.credit_overpayment_help') }}</p>
                                 @endif
                                 <button type="submit" class="btn btn-primary w-100">{{ __('orders.record_payments') }}</button>
                             </form>
                         </div>
                     </div>
-                    @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && !$isCreditCustomer)
+                    @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && $order->isInStoreOrder() && $order->status === Order::$status['handed_to_customer'])
+                    <div class="alert alert-warning mb-4">
+                        {{ __('orders.in_store_payment_required_for_complete') }}
+                    </div>
+                    @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && $order->isInStoreOrder() && in_array($order->status, [Order::$status['pending'], Order::$status['packing']], true))
+                    <div class="alert alert-info mb-4">
+                        {!! __('orders.in_store_payment_after_handover') !!}
+                    </div>
+                    @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && $order->isPickupFulfillmentOrder() && $order->status === Order::$status['pending'])
+                    <div class="alert alert-info mb-4">
+                        {!! __('orders.pickup_pending_help') !!}
+                    </div>
+                    @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && !$isCreditCustomer && !$order->isInStoreOrder() && !$order->isPickupFulfillmentOrder())
                     <div class="alert alert-info mb-4">
                         {!! __('orders.cod_record_when_html') !!}
                     </div>
@@ -457,7 +563,7 @@
         $('.btn-change-status').on('click', function () {
             var status = $(this).data('status');
 
-            if (status === '{{ Order::$status['in_route'] }}') {
+            if (status === '{{ Order::$status['in_route'] }}' && !{{ $order->isInStoreOrder() ? 'true' : 'false' }}) {
                 Swal.fire({
                     title: ordersJs.move_to_in_route,
                     html: buildDriverSelectHtml(),
@@ -502,7 +608,7 @@
         var paymentMethodOptions = @json($paymentMethods);
         var paymentLineIndex = 1;
         var balanceDue = {{ number_format($order->balanceDue(), 2, '.', '') }};
-        var requiresExactTotal = {{ $isCreditCustomer ? 'false' : 'true' }};
+        var requiresExactTotal = {{ $order->requiresExactPayment() ? 'true' : 'false' }};
         var proofAccept = @json(\App\OrderPayment::proofAcceptAttribute());
         var proofHelpText = @json(\App\OrderPayment::proofHelpText());
         var proofMaxBytes = {{ \App\OrderPayment::PROOF_MAX_KB * 1024 }};
@@ -633,16 +739,66 @@
 
         (function () {
             var fulfillment = document.getElementById('summary_fulfillment_type');
-            var wrap = document.getElementById('summary-driver-wrap');
+            var driverWrap = document.getElementById('summary-driver-wrap');
+            var deliveryWrap = document.getElementById('summary-delivery-wrap');
             var driver = document.getElementById('summary_driver_id');
-            if (!fulfillment || !wrap || !driver) return;
+            var dateSelect = document.getElementById('summary_delivery_date');
+            var slotSelect = document.getElementById('summary_delivery_slot_id');
+            var deliverySlotsUrl = @json($deliverySlotsUrl ?? '');
+            var summaryOrderId = @json($order->id);
+            var summarySlotId = @json($order->delivery_slot_id);
+
+            if (!fulfillment || !driverWrap || !driver) return;
+
+            function loadSummaryDeliverySlots(date, slotId) {
+                if (!slotSelect) return;
+                slotSelect.disabled = true;
+                slotSelect.innerHTML = '<option value="">{{ __('orders.none') }}</option>';
+
+                if (!date || !deliverySlotsUrl) {
+                    return;
+                }
+
+                $.get(deliverySlotsUrl, { date: date, order_id: summaryOrderId }, function (response) {
+                    if (!response.slots || !response.slots.length) {
+                        slotSelect.innerHTML = '<option value="">{{ __('orders.no_delivery_slots_for_date') }}</option>';
+                        return;
+                    }
+
+                    var html = '<option value="">{{ __('orders.none') }}</option>';
+                    response.slots.forEach(function (slot) {
+                        var selected = slotId && String(slotId) === String(slot.id) ? ' selected' : '';
+                        html += '<option value="' + slot.id + '"' + selected + '>' + slot.label + '</option>';
+                    });
+                    slotSelect.innerHTML = html;
+                    slotSelect.disabled = false;
+                });
+            }
+
             function sync() {
                 var isPickup = fulfillment.value === 'pickup';
-                wrap.style.display = isPickup ? 'none' : '';
+                driverWrap.style.display = isPickup ? 'none' : '';
                 driver.disabled = isPickup;
+                if (deliveryWrap) {
+                    deliveryWrap.style.display = isPickup ? 'none' : '';
+                    if (dateSelect) dateSelect.disabled = isPickup;
+                    if (slotSelect) slotSelect.disabled = isPickup || !dateSelect || !dateSelect.value;
+                }
             }
+
             fulfillment.addEventListener('change', sync);
+            if (dateSelect) {
+                dateSelect.addEventListener('change', function () {
+                    summarySlotId = null;
+                    loadSummaryDeliverySlots(dateSelect.value, null);
+                    sync();
+                });
+            }
+
             sync();
+            if (dateSelect && dateSelect.value) {
+                loadSummaryDeliverySlots(dateSelect.value, summarySlotId);
+            }
         })();
     </script>
 @endsection

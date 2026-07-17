@@ -1,13 +1,13 @@
 @extends('layouts.member')
-@section('title', 'Bulk Payment')
+@section('title', __('orders.member.bulk_payment.title'))
 @section('content')
 
     <div class="row mb-5">
         <div class="col-lg-8">
             <div class="card no-border shadow mb-4">
                 <div class="card-body">
-                    <h5 class="mb-3">Bulk Payment</h5>
-                    <p class="text-muted">Select multiple invoices and submit one payment. We will knock off your selected orders based on the payment amount received.</p>
+                    <h5 class="mb-3">{{ __('orders.member.bulk_payment.title') }}</h5>
+                    <p class="text-muted">{{ __('orders.member.bulk_payment.intro') }}</p>
 
                     <form action="{{ route('member.bulk-payments.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
@@ -16,10 +16,10 @@
                                 <thead>
                                     <tr>
                                         <th width="40"><input type="checkbox" id="selectAllOrders"></th>
-                                        <th>Order</th>
-                                        <th>Date</th>
-                                        <th>Invoice</th>
-                                        <th class="text-end">Balance Due (RM)</th>
+                                        <th>{{ __('orders.member.bulk_payment.order') }}</th>
+                                        <th>{{ __('orders.member.bulk_payment.date') }}</th>
+                                        <th>{{ __('orders.member.bulk_payment.invoice') }}</th>
+                                        <th class="text-end">{{ __('orders.member.bulk_payment.balance_due_rm') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -35,7 +35,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="text-center text-muted">No outstanding invoices.</td>
+                                            <td colspan="5" class="text-center text-muted">{{ __('orders.member.bulk_payment.no_outstanding') }}</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -46,36 +46,42 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="mb-2">Payment Method</label>
+                                        <label class="mb-2">{{ __('orders.payment_method') }}</label>
                                         <select name="payment_method" class="form-select" required>
                                             @foreach ($paymentMethods as $key => $label)
-                                                <option value="{{ $key }}">{{ $label }}</option>
+                                                @php
+                                                    $methodLabel = __('user.payment_method.' . $key);
+                                                    if ($methodLabel === 'user.payment_method.' . $key) {
+                                                        $methodLabel = $label;
+                                                    }
+                                                @endphp
+                                                <option value="{{ $key }}">{{ $methodLabel }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="mb-2">Payment Amount (RM)</label>
+                                        <label class="mb-2">{{ __('orders.member.bulk_payment.payment_amount_rm') }}</label>
                                         <input type="number" step="0.01" min="0.01" name="amount" id="bulkPaymentAmount" class="form-control" value="{{ old('amount') }}" required>
-                                        <small class="text-muted">Selected balance: RM <span id="selectedBalance">0.00</span>. Partial or overpayments are supported.</small>
+                                        <small class="text-muted">{{ __('orders.member.bulk_payment.selected_balance_label') }} RM <span id="selectedBalance">0.00</span>. {{ __('orders.member.bulk_payment.partial_overpayment_help') }}</small>
                                     </div>
                                 </div>
                                 <div class="col-md-12">
                                     <div class="mb-3">
-                                        <label class="mb-2">Payment Proof</label>
+                                        <label class="mb-2">{{ __('orders.member.upload_payment_proof') }}</label>
                                         <input type="file" name="payment_proof" class="form-control" accept="{{ \App\OrderPayment::proofAcceptAttribute() }}" required>
                                         <small class="text-muted">{{ \App\OrderPayment::proofHelpText() }}</small>
                                     </div>
                                 </div>
                                 <div class="col-md-12">
                                     <div class="mb-3">
-                                        <label class="mb-2">Notes</label>
-                                        <textarea name="notes" class="form-control" rows="2">{{ old('notes') }}</textarea>
+                                        <label class="mb-2">{{ __('orders.member.bulk_payment.notes') }}</label>
+                                        <textarea name="notes" class="form-control" rows="2" placeholder="{{ __('orders.member.notes_placeholder') }}">{{ old('notes') }}</textarea>
                                     </div>
                                 </div>
                             </div>
-                            <button type="submit" class="btn btn-primary">Submit Bulk Payment</button>
+                            <button type="submit" class="btn btn-primary">{{ __('orders.member.bulk_payment.submit') }}</button>
                         @endif
                     </form>
                 </div>

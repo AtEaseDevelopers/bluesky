@@ -47,6 +47,19 @@ return [
         'make_payment' => 'Make Payment',
         'payment_gateway_coming_soon' => 'Online payment gateway coming soon. Customer can pay here when available.',
         'status_updated' => 'Delivery status updated to ":status".',
+        'delivered_requires_in_route' => 'This order must be marked In Route by the office before you can mark it delivered.',
+        'wait_for_in_route' => 'Waiting for the office to mark this order In Route before you can confirm delivery.',
+        'expected_payment' => 'Customer plans to pay: :method',
+        'payment_timing_label' => 'When is the customer paying?',
+        'pay_now' => 'Pay Now',
+        'pay_later' => 'Pay Later',
+        'pay_later_help' => 'Customer will pay on credit terms. No payment will be collected now.',
+        'delivery_proof' => 'Delivery Proof Photo',
+        'delivery_proof_required' => 'Delivery proof photo is required.',
+        'delivery_proof_format' => 'Delivery proof must be a JPG or PNG image.',
+        'delivery_proof_size' => 'Delivery proof must not exceed 4 MB.',
+        'delivery_proof_not_found' => 'Delivery proof not found.',
+        'view_delivery_proof' => 'View Delivery Proof',
     ],
 
     'customers' => [
@@ -70,9 +83,9 @@ return [
 
     'vehicle' => [
         'title' => 'My Vehicle',
-        'subtitle' => 'Choose the lorry you are driving. The office sees this on your deliveries.',
+        'subtitle' => 'Choose the vehicle you are driving. The office sees this on your deliveries.',
         'current' => 'Current Vehicle',
-        'current_help' => 'Your active lorry',
+        'current_help' => 'Your active vehicle',
         'empty' => 'No vehicles are registered yet. Please contact the office.',
         'select' => 'Select vehicle',
         'choose' => '— Choose a vehicle —',
@@ -90,7 +103,7 @@ return [
         'proof_required' => 'Payment proof is required for QR and bank transfer payments.',
         'cannot_record' => 'Payment cannot be recorded for this order in its current status.',
         'cod_status_required' => 'COD payment can only be recorded when the order is in route or delivered.',
-        'credit_not_allowed' => 'Payment recording is not available for credit customer deliveries.',
+        'pay_later_noted' => 'Recorded: customer will pay later on credit terms.',
         'recorded' => 'Payment recorded successfully.',
     ],
 
@@ -107,6 +120,17 @@ return [
         'password_placeholder' => 'Enter your password',
         'invalid_credentials' => 'Invalid username or password.',
         'inactive' => 'Your driver account is inactive. Please contact your administrator.',
+    ],
+
+    'profile' => [
+        'title' => 'Change Password',
+        'subtitle' => 'Enter your current password and choose a new one.',
+        'old_password' => 'Current Password',
+        'new_password' => 'New Password',
+        'confirm_password' => 'Confirm New Password',
+        'save' => 'Update Password',
+        'old_password_incorrect' => 'Current password is incorrect.',
+        'password_changed' => 'Your password has been updated.',
     ],
 
     'errors' => [

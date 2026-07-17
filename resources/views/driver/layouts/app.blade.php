@@ -132,6 +132,11 @@
                         <span class="nav-link">{{ Auth::guard('web_driver')->user()->name ?? Auth::guard('web_driver')->user()->username }}</span>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('driver.profile') ? 'active-tab' : '' }}" href="{{ route('driver.profile') }}" title="{{ __('ui.change_password') }}">
+                            <i class="fa fa-key"></i> <span class="d-none d-sm-inline">{{ __('ui.change_password') }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ route('driver.logout') }}">
                             <i class="fa fa-sign-out"></i> {{ __('ui.logout') }}
                         </a>

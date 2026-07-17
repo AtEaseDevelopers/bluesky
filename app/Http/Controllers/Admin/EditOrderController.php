@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Area;
 use App\Exports\AdminOrderExport;
 use App\Helper;
 use Illuminate\Http\Request;
@@ -71,7 +72,7 @@ class EditOrderController extends Controller
                 'customer' => $order->customer,
                 'order' => $order,
                 'products' => $order_products->toArray(),
-                'areaList' => Helper::areaList(),
+                'areas' => Area::optionsForSelect(),
             ]
         );
     }
@@ -103,7 +104,7 @@ class EditOrderController extends Controller
             "attn_name" => $data['attn_name'],
             "attn_contact" => $data['attn_contact'],
             "payment_method" => $data['payment_method'] ?? null,
-            "area" => $request['area'],
+            "area" => Area::orderStorageValue($request->input('area')),
             "billing_address" => $data['billing_address'],
             "billing_city" => $request['billing_city'],
             "shipping_city" => $request['shipping_city'],
@@ -150,7 +151,8 @@ class EditOrderController extends Controller
                 $rawWeight = $data['weight'][$key] ?? null;
                 $line = $product->resolveLineInputs(
                     (float) ($data['quantity'][$key] ?? 0),
-                    ($rawWeight !== null && $rawWeight !== '') ? (float) $rawWeight : null
+                    ($rawWeight !== null && $rawWeight !== '') ? (float) $rawWeight : null,
+                    true
                 );
             } else {
                 $line = $product->resolveLineInputs((float) ($data['quantity'][$key] ?? 0), null);

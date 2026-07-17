@@ -34,7 +34,8 @@
                                         @php
                                             $sellIn = $product->sell_in ?? \App\Product::SELL_IN_WEIGHT;
                                             $needsQty = in_array($sellIn, [\App\Product::SELL_IN_QTY, \App\Product::SELL_IN_QTY_BILL_WEIGHT], true);
-                                            $needsWeight = in_array($sellIn, [\App\Product::SELL_IN_WEIGHT, \App\Product::SELL_IN_QTY_BILL_WEIGHT], true);
+                                            $needsWeight = $sellIn === \App\Product::SELL_IN_WEIGHT;
+                                            $optionalWeight = $sellIn === \App\Product::SELL_IN_QTY_BILL_WEIGHT;
                                             $estLabel = match ($sellIn) {
                                                 \App\Product::SELL_IN_QTY => $product->quantity ?? '-',
                                                 \App\Product::SELL_IN_QTY_BILL_WEIGHT => trim(($product->quantity ?? '-') . ' / ' . ($product->weight ?? $product->product_weight ?? '-')),
@@ -42,9 +43,11 @@
                                             };
                                             $catalogProduct = \App\Product::find($product->product_id);
                                             $reviewQty = $needsQty ? $product->quantity : null;
-                                            $reviewWeight = $needsWeight ? ($product->weight ?? $product->product_weight) : null;
+                                            $reviewWeight = ($needsWeight || $optionalWeight)
+                                                ? ($product->weight ?? ($optionalWeight ? null : $product->product_weight))
+                                                : null;
                                             $initialLineTotal = $catalogProduct
-                                                ? $catalogProduct->calculateLinePrice((float) $product->unit_price, $reviewQty !== null ? (float) $reviewQty : null, $reviewWeight !== null ? (float) $reviewWeight : null)
+                                                ? $catalogProduct->calculateLinePrice((float) $product->unit_price, $reviewQty !== null ? (float) $reviewQty : null, $reviewWeight !== null ? (float) $reviewWeight : null, true)
                                                 : (float) $product->price;
                                         @endphp
                                         <tr class="review-line" data-unit-price="{{ $product->unit_price }}" data-sell-in="{{ $sellIn }}">
@@ -63,6 +66,9 @@
                                                 @if ($needsWeight)
                                                     <input type="number" step="0.001" min="0.001" class="form-control line-weight"
                                                         name="line_items[{{ $product->id }}][weight]" value="{{ $product->weight ?? $product->product_weight }}" required>
+                                                @elseif ($optionalWeight)
+                                                    <input type="number" step="0.001" min="0" class="form-control line-weight"
+                                                        name="line_items[{{ $product->id }}][weight]" value="{{ $product->weight ?? '' }}" placeholder="{{ __('product.optional') }}">
                                                 @else
                                                     <span class="text-muted">—</span>
                                                 @endif
@@ -113,12 +119,12 @@
                                     <div class="mb-4">
                                         <label class="mb-2">{{ __('orders.payment_due_date') }}</label>
                                         <input type="date" name="payment_due_date" class="form-control"
-                                            value="{{ old('payment_due_date', optional($order->payment_due_date)->format('Y-m-d')) }}">
+                                            value="{{ old('payment_due_date', optional($order->payment_due_date)->format('Y-m-d') ?? ($defaultPaymentDueDate ?? null)) }}">
                                         <small class="text-muted">{{ __('orders.payment_due_date_credit_default') }}</small>
                                     </div>
                                 </div>
                             @endif
-                            @if (!$isPosOrder)
+                            @if (!$isPosOrder && !$order->isInStoreOrder())
                             <div class="col-md-4">
                                 <div class="mb-4">
                                     <label class="mb-2">{{ __('orders.fulfillment_type') }}</label>
@@ -178,8 +184,12 @@
                 return qty;
             }
 
-            if (sellIn === 'qty_bill_weight' || sellIn === 'weight') {
-                return qty * weight;
+            if (sellIn === 'qty_bill_weight') {
+                return weight > 0 ? weight : qty;
+            }
+
+            if (sellIn === 'weight') {
+                return weight;
             }
 
             return weight;

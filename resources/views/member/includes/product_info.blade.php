@@ -59,7 +59,7 @@
             </button>
         </div>
     </div>
-@elseif (in_array($product->sell_in, ['qty_bill_weight', 'weight'], true))
+@elseif ($product->sell_in == 'qty_bill_weight')
     <div class="mb-4">
         <label class="mb-2" for="quantity">{{ __('orders.quantity_label') }} <span class="text-danger">*</span></label>
         <div class="btn-group w-100" role="group">
@@ -79,7 +79,21 @@
             <button type="button" class="btn btn-outline-primary btn-minus-weight" disabled>
                 <i class="fa fa-minus" aria-hidden="true"></i>
             </button>
-            <input type="number" class="form-control px-4" id="weight" name="weight" value="{{ old('weight') }}" min="0.001" step="0.001">
+            <input type="number" class="form-control px-4" id="weight" name="weight" value="{{ old('weight') }}" min="0" step="0.001">
+            <button type="button" class="btn btn-outline-primary btn-plus-weight">
+                <i class="fa fa-plus" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
+@elseif ($product->sell_in == 'weight')
+    <div class="mb-4">
+        <label class="mb-2" for="weight">{{ __('orders.order_qty_uom', ['uom' => $product->uom_name ?? 'KG']) }} <span class="text-danger">*</span></label>
+        @include('partials.weight_presets', ['targetId' => 'weight', 'uomLabel' => $product->uom_name ?? 'KG', 'presets' => $product->weightPresetsList()])
+        <div class="btn-group w-100" role="group">
+            <button type="button" class="btn btn-outline-primary btn-minus-weight" disabled>
+                <i class="fa fa-minus" aria-hidden="true"></i>
+            </button>
+            <input type="number" class="form-control px-4" id="weight" name="weight" value="{{ old('weight', 1) }}" min="0.001" step="0.001" required>
             <button type="button" class="btn btn-outline-primary btn-plus-weight">
                 <i class="fa fa-plus" aria-hidden="true"></i>
             </button>

@@ -5,6 +5,7 @@ return [
         'pending' => '待处理',
         'packing' => '打包中',
         'customer_reviewing' => '客户审核中',
+        'handed_to_customer' => '已交给客户',
         'in_route' => '配送中',
         'delivered' => '已送达',
         'completed' => '已完成',

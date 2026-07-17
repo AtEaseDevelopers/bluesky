@@ -57,9 +57,9 @@
                                     <label class="mb-2" for="area">{{ __('orders.select_area') }}</label>
                                     <select class="form-select @error('area') is-invalid @enderror"  id="area" name="area">
                                         <option value="">{{ __('orders.choose') }}</option>
-                                        @foreach ($areaList as $area)
-                                            <option value="{{ $area }}" {{ ($input['area'] ?? '') == $area ? 'selected' : '' }}>
-                                                {{ $area }}
+                                        @foreach ($areas as $area)
+                                            <option value="{{ $area->id }}" {{ ($input['area'] ?? '') == $area->id ? 'selected' : '' }}>
+                                                {{ $area->area_name }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -213,9 +213,9 @@
                                     <th>{{ __('orders.customer') }}</th>
                                     <th class="order-products-col">{{ __('orders.products') }}</th>
                                     <th>{{ __('orders.area') }}</th>
-                                    <th>{{ __('orders.billing_address') }}</th>
                                     <th>{{ __('orders.shipping_address') }}</th>
                                     <th>{{ __('orders.assign_driver') }}</th>
+                                    <th>{{ __('orders.delivery_schedule') }}</th>
                                     <th>{{ __('orders.status') }}</th>
                                     <th>{{ __('orders.payment') }}</th>
                                     <th>{{ __('orders.payment_due') }}</th>
@@ -262,7 +262,7 @@
                                                     @endif
                                                     @if ($admin->canModule('orders', 'edit'))
                                                         <li>
-                                                            <a class="dropdown-item btn-change-lorry" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-lorry="{{ $order->driver_id }}" data-bs-toggle="modal" data-bs-target="#change-lorry">{{ __('orders.change_lorry') }}</a>
+                                                            <a class="dropdown-item btn-change-lorry" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-order-id="{{ $order->id }}" data-lorry="{{ $order->driver_id }}" data-fulfillment="{{ $order->fulfillment_type ?? 'delivery' }}" data-delivery-date="{{ $order->delivery_date ? $order->delivery_date->format('Y-m-d') : '' }}" data-delivery-slot="{{ $order->delivery_slot_id }}" data-bs-toggle="modal" data-bs-target="#change-lorry">{{ __('orders.change_lorry') }}</a>
                                                         </li>
                                                         <li>
                                                             <a class="dropdown-item btn-add-order-weight" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-bs-toggle="modal" data-bs-target="#add-weight">{{ __('orders.order_weight') }}</a>
@@ -287,7 +287,6 @@
                                         </td>
                                         <td class="order-products-col">{!! $order->order_products !!}</td>
                                         <td>{{ $order->area }}</td>
-                                        <td>{!! $order->billing_address !!}</td>
                                         <td>{!! $order->shipping_address !!}</td>
                                         <td>
                                             @if ($order->driver_id)
@@ -296,10 +295,21 @@
                                                 -
                                             @endif
                                         </td>
+                                        <td>
+                                            @if ($order->delivery_date)
+                                                {{ $order->delivery_date->format('d-m-Y') }}
+                                                @if ($order->delivery_time_slot)
+                                                    <br><small class="text-muted">{{ $order->delivery_time_slot }}</small>
+                                                @endif
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
                                         <td class="text-center">{{ __('order.status.' . $order->status) }}</td>
                                         <td class="text-center">
                                             @php
                                                 $paymentBadgeClass = match ($order->payment_status ?? 'unpaid') {
+                                                    'unpaid' => 'bg-danger',
                                                     'payment_due' => 'bg-danger',
                                                     'paid' => 'bg-success',
                                                     'pending' => 'bg-warning text-dark',
@@ -353,7 +363,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="16">
+                                    <td colspan="17">
                                         {{ $orders->appends(request()->query())->links('pagination::bootstrap-4') }}
                                     </td>
                                 </tr>
@@ -426,7 +436,7 @@
         </div>
     </div>
 
-    <div class="modal" id="change-lorry" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal" id="change-lorry" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" data-delivery-slots-url="{{ $deliverySlotsUrl }}">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -443,6 +453,23 @@
                                 <option value="delivery">{{ __('orders.fulfillment_delivery') }}</option>
                                 <option value="pickup">{{ __('orders.fulfillment_pickup') }}</option>
                             </select>
+                        </div>
+                        <div id="modal-delivery-wrap">
+                            <div class="mb-4">
+                                <label class="mb-2">{{ __('orders.delivery_date') }}</label>
+                                <select class="form-select" id="modal_delivery_date" name="delivery_date">
+                                    <option value="">{{ __('orders.none') }}</option>
+                                    @foreach ($deliveryDates as $date)
+                                        <option value="{{ $date }}">{{ \Carbon\Carbon::parse($date)->format('d-m-Y') }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="mb-4">
+                                <label class="mb-2">{{ __('orders.delivery_time') }}</label>
+                                <select class="form-select" id="modal_delivery_slot_id" name="delivery_slot_id" disabled>
+                                    <option value="">{{ __('orders.none') }}</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="mb-4" id="modal-driver-wrap">
                             <label class="mb-2">{{ __('orders.assign_driver') }}</label>
@@ -676,21 +703,97 @@
             });
         });
 
-        function toggleFulfillmentDriver(selectId, wrapId, driverId) {
+        function toggleFulfillmentDriver(selectId, wrapId, driverId, deliveryWrapId) {
             var select = document.getElementById(selectId);
             var wrap = document.getElementById(wrapId);
             var driver = document.getElementById(driverId);
+            var deliveryWrap = deliveryWrapId ? document.getElementById(deliveryWrapId) : null;
             if (!select || !wrap || !driver) return;
             function sync() {
                 var isPickup = select.value === 'pickup';
                 wrap.style.display = isPickup ? 'none' : '';
                 driver.disabled = isPickup;
+                if (deliveryWrap) {
+                    deliveryWrap.style.display = isPickup ? 'none' : '';
+                    var dateSelect = deliveryWrap.querySelector('select[name="delivery_date"]');
+                    var slotSelect = deliveryWrap.querySelector('select[name="delivery_slot_id"]');
+                    if (dateSelect) dateSelect.disabled = isPickup;
+                    if (slotSelect) slotSelect.disabled = isPickup || !dateSelect || !dateSelect.value;
+                }
             }
             select.addEventListener('change', sync);
             sync();
         }
 
-        toggleFulfillmentDriver('modal_fulfillment_type', 'modal-driver-wrap', 'order_driver_id');
+        var changeLorryModal = document.getElementById('change-lorry');
+        var deliverySlotsUrl = changeLorryModal ? changeLorryModal.dataset.deliverySlotsUrl : '';
+        var pendingModalSlotId = null;
+        var pendingModalOrderId = null;
+
+        function formatDeliveryDateLabel(date) {
+            if (!date) return '';
+            var parts = date.split('-');
+            if (parts.length !== 3) return date;
+            return parts[2] + '-' + parts[1] + '-' + parts[0];
+        }
+
+        function ensureModalDeliveryDateOption(date) {
+            var dateSelect = document.getElementById('modal_delivery_date');
+            if (!dateSelect || !date) return;
+            if (!dateSelect.querySelector('option[value="' + date + '"]')) {
+                var option = document.createElement('option');
+                option.value = date;
+                option.textContent = formatDeliveryDateLabel(date);
+                dateSelect.appendChild(option);
+            }
+        }
+        window.ensureModalDeliveryDateOption = ensureModalDeliveryDateOption;
+
+        function loadModalDeliverySlots(date, slotId, orderId) {
+            var $slotSelect = $('#modal_delivery_slot_id');
+            $slotSelect.prop('disabled', true).html('<option value="">{{ __('orders.none') }}</option>');
+
+            if (!date || !deliverySlotsUrl) {
+                return;
+            }
+
+            $.get(deliverySlotsUrl, { date: date, order_id: orderId || '' }, function (response) {
+                if (!response.slots || !response.slots.length) {
+                    $slotSelect.html('<option value="">{{ __('orders.no_delivery_slots_for_date') }}</option>');
+                    return;
+                }
+
+                var html = '<option value="">{{ __('orders.none') }}</option>';
+                response.slots.forEach(function (slot) {
+                    var selected = slotId && String(slotId) === String(slot.id) ? ' selected' : '';
+                    html += '<option value="' + slot.id + '"' + selected + '>' + slot.label + '</option>';
+                });
+                $slotSelect.html(html).prop('disabled', false);
+            });
+        }
+
+        window.prefillChangeLorryDeliverySlots = function (slotId, orderId) {
+            pendingModalSlotId = slotId || null;
+            pendingModalOrderId = orderId || null;
+            var dateSelect = document.getElementById('modal_delivery_date');
+            if (dateSelect && dateSelect.value) {
+                loadModalDeliverySlots(dateSelect.value, pendingModalSlotId, pendingModalOrderId);
+            } else {
+                $('#modal_delivery_slot_id').prop('disabled', true).html('<option value="">{{ __('orders.none') }}</option>');
+            }
+        };
+
+        $('#modal_delivery_date').on('change', function () {
+            var date = $(this).val();
+            if (!date) {
+                $('#modal_delivery_slot_id').prop('disabled', true).html('<option value="">{{ __('orders.none') }}</option>');
+                return;
+            }
+            loadModalDeliverySlots(date, pendingModalSlotId, pendingModalOrderId);
+            pendingModalSlotId = null;
+        });
+
+        toggleFulfillmentDriver('modal_fulfillment_type', 'modal-driver-wrap', 'order_driver_id', 'modal-delivery-wrap');
         toggleFulfillmentDriver('bulk_fulfillment_type', 'bulk-driver-wrap', 'bulk_driver_id');
     </script>
 

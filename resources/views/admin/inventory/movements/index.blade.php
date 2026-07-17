@@ -4,6 +4,10 @@
     <link href="{{ asset('assets/datatables/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" type="text/css">
 @endsection
 @section('content')
+@php
+    $admin = Auth::guard('web_admin')->user();
+    $canEditInventory = $admin->canModule('products', 'edit');
+@endphp
 
     <div class="row mb-4">
         <div class="col-md-12">
@@ -13,8 +17,10 @@
                         <h5 class="card-title">{{ __('inventory.movement_log') }}</h5>
                         <div class="d-flex gap-2">
                             <a href="{{ route('admin.inventory.index') }}" class="btn btn-secondary">{{ __('inventory.stock_balance') }}</a>
-                            <a href="{{ route('admin.inventory.stock-in.create') }}" class="btn btn-success">{{ __('inventory.stock_in') }}</a>
-                            <a href="{{ route('admin.inventory.stock-out.create') }}" class="btn btn-warning">{{ __('inventory.stock_out') }}</a>
+                            @if ($canEditInventory)
+                                <a href="{{ route('admin.inventory.stock-in.create') }}" class="btn btn-success">{{ __('inventory.stock_in') }}</a>
+                                <a href="{{ route('admin.inventory.stock-out.create') }}" class="btn btn-warning">{{ __('inventory.stock_out') }}</a>
+                            @endif
                         </div>
                     </div>
                     <div class="row mb-3">

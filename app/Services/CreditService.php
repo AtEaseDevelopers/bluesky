@@ -31,7 +31,7 @@ class CreditService
         }
 
         $customer = User::find($order->user_id);
-        if (!$customer || !$customer->isCreditCustomer()) {
+        if (!$customer || !$customer->isCreditCustomer() || !$order->shouldAutoApplyCredit()) {
             return 0;
         }
 
