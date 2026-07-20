@@ -142,7 +142,10 @@ class Order extends Model
     public function isFulfilled(): bool
     {
         if ($this->isInStoreOrder()) {
-            return $this->status === self::$status['completed'];
+            return in_array($this->status, [
+                self::$status['handed_to_customer'],
+                self::$status['completed'],
+            ], true);
         }
 
         return $this->status === self::$status['delivered'];

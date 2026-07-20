@@ -670,7 +670,10 @@ class AutoCountApiService
             ->where('payment_status', Order::$payment_status['paid'])
             ->where(function ($query) {
                 $query->where('status', Order::$status['delivered'])
-                    ->orWhere('status', Order::$status['completed']);
+                    ->orWhereIn('status', [
+                        Order::$status['handed_to_customer'],
+                        Order::$status['completed'],
+                    ]);
             });
     }
 
