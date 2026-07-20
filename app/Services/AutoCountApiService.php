@@ -291,6 +291,149 @@ class AutoCountApiService
         return $result;
     }
 
+    public function importInvoices(array $payload): array
+    {
+        $rows = $payload['invoices'] ?? $payload;
+        if (!is_array($rows)) {
+            throw new \InvalidArgumentException('Invoices payload must be an array.');
+        }
+
+        $result = [
+            'created' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'errors' => [],
+        ];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                $result['skipped']++;
+                continue;
+            }
+
+            $docNo = trim((string) ($row['doc_no'] ?? $row['DocNo'] ?? $row['number'] ?? ''));
+            if ($docNo === '') {
+                $result['skipped']++;
+                continue;
+            }
+
+            try {
+                $order = $this->findOrderForImportedInvoice($row, $docNo);
+                if (!$order) {
+                    $result['skipped']++;
+                    continue;
+                }
+
+                $order->loadMissing('customer');
+                $docType = strtoupper(trim((string) ($row['doc_type'] ?? $row['type'] ?? 'INV')));
+                $doDocNo = trim((string) ($row['do_doc_no'] ?? $row['DoDocNo'] ?? ''));
+                $outstanding = (float) ($row['outstanding'] ?? $row['Outstanding'] ?? 0);
+                $isPaidInAutoCount = $docType === 'CS' || $outstanding <= 0.00001;
+
+                $updates = [
+                    'api_invoice_id' => $docNo,
+                    'autocount_synced_at' => now(),
+                ];
+
+                if ($doDocNo !== '' && empty($order->api_do_id)) {
+                    $updates['api_do_id'] = $doDocNo;
+                }
+
+                if ($isPaidInAutoCount && $order->customer && $order->customer->isCreditCustomer()) {
+                    $updates['autocount_sync_status'] = 'paid_synced';
+                } else {
+                    $updates['autocount_sync_status'] = 'synced';
+                }
+
+                $order->update($updates);
+
+                if (!$order->invoice_number) {
+                    app(OrderService::class)->generateInvoiceNumber($order->fresh());
+                    $order = $order->fresh();
+                }
+
+                $message = 'AutoCount invoice imported: ' . $docType . ' ' . $docNo;
+                if ($doDocNo !== '') {
+                    $message .= ' (DO ' . $doDocNo . ')';
+                }
+
+                \App\AutoCountSyncLog::create([
+                    'order_id' => $order->id,
+                    'invoice_number' => $order->invoice_number,
+                    'sync_status' => $updates['autocount_sync_status'],
+                    'response_message' => $message,
+                    'error_message' => null,
+                    'admin_id' => null,
+                ]);
+
+                $result['updated']++;
+            } catch (\Throwable $e) {
+                $result['errors'][] = $docNo . ': ' . $e->getMessage();
+                Log::error('AutoCount invoice import failed', [
+                    'doc_no' => $docNo,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $result;
+    }
+
+    protected function findOrderForImportedInvoice(array $row, string $docNo): ?Order
+    {
+        $orderId = (int) ($row['order_id'] ?? $row['oms_order_id'] ?? 0);
+        if ($orderId > 0) {
+            $order = Order::find($orderId);
+            if ($order) {
+                return $order;
+            }
+        }
+
+        $order = Order::query()->where('api_invoice_id', $docNo)->first();
+        if ($order) {
+            return $order;
+        }
+
+        $doDocNo = trim((string) ($row['do_doc_no'] ?? $row['DoDocNo'] ?? ''));
+        if ($doDocNo !== '') {
+            $order = Order::query()->where('api_do_id', $doDocNo)->first();
+            if ($order) {
+                return $order;
+            }
+        }
+
+        $debtorCode = trim((string) ($row['debtor_code'] ?? $row['DebtorCode'] ?? $row['AccNo'] ?? ''));
+        if ($debtorCode === '') {
+            return null;
+        }
+
+        $query = Order::query()
+            ->whereNull('api_invoice_id')
+            ->whereHas('customer', function ($query) use ($debtorCode) {
+                $query->where('sql_customer_code', $debtorCode);
+            });
+
+        $docDate = $this->parseImportDate($row['doc_date'] ?? $row['DocDate'] ?? null);
+        if ($docDate) {
+            $query->whereDate('created_at', $docDate);
+        }
+
+        return $query->orderBy('id')->first();
+    }
+
+    protected function parseImportDate($value): ?\Carbon\Carbon
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($value)->startOfDay();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     protected function mapImportedCustomer(array $row, string $accNo): array
     {
         $billing = $this->joinAddressLines(

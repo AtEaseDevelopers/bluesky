@@ -25,6 +25,10 @@ Route::prefix('products')->group(function () {
     Route::post('/import', [AutoCountController::class, 'productsImport']);
 });
 
+Route::prefix('invoices')->group(function () {
+    Route::post('/import', [AutoCountController::class, 'invoicesImport']);
+});
+
 Route::prefix('driver')->group(function () {
     Route::post('/login', [DriverAuthController::class, 'login']);
 

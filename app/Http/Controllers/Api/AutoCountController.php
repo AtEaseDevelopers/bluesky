@@ -140,6 +140,17 @@ class AutoCountController extends Controller
         return response()->json($result);
     }
 
+    public function invoicesImport(Request $request)
+    {
+        if (!$this->authorized($request)) {
+            return response('Unauthorized', 401);
+        }
+
+        $result = $this->service->importInvoices($request->all());
+
+        return response()->json($result);
+    }
+
     protected function authorized(Request $request): bool
     {
         $token = (string) config('autocount.api_token', '');
