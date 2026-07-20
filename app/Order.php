@@ -210,6 +210,21 @@ class Order extends Model
         return $this->hasMany(OrderPayment::class);
     }
 
+    public function autocountSyncLogs()
+    {
+        return $this->hasMany(AutoCountSyncLog::class);
+    }
+
+    public function latestAutoCountSyncError(): ?string
+    {
+        $log = $this->autocountSyncLogs()
+            ->where('sync_status', 'sync_error')
+            ->latest('id')
+            ->first();
+
+        return $log?->error_message ?: $log?->response_message;
+    }
+
     public function paymentBreakdown(): array
     {
         return $this->payments()

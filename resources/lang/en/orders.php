@@ -159,13 +159,18 @@ return [
     'no_status_changes' => 'No further status changes available.',
     'cancel_order' => 'Cancel Order',
     'sync_autocount' => 'Sync to AutoCount',
+    'autocount_sync_error' => 'AutoCount error',
 
     'autocount_sync_status' => [
         'pending' => 'Pending',
         'pending_sync' => 'Pending Sync',
+        'do_created' => 'DO Created',
         'synced' => 'Synced',
         'synced_successfully' => 'Synced Successfully',
+        'paid_synced' => 'Paid Synced',
+        'sync_error' => 'Sync Error',
         'skipped' => 'Skipped',
+        'not_applicable' => 'N/A',
     ],
 
     'payment_due_status_labels' => [

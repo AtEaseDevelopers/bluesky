@@ -99,7 +99,18 @@
                                         <p><strong>{{ __('orders.do_no') }}:</strong> {{ $order->do_no }}</p>
                                     @endif
                                     @if ($order->autocount_sync_status ?? false)
-                                        <p><strong>{{ __('orders.autocount') }}:</strong> {{ str_replace('_', ' ', ucfirst($order->autocount_sync_status)) }}</p>
+                                        @php
+                                            $syncStatusKey = $order->autocountSyncStatusKey();
+                                        @endphp
+                                        <p><strong>{{ __('orders.autocount') }}:</strong>
+                                            {{ __('orders.autocount_sync_status.' . $syncStatusKey) }}
+                                        </p>
+                                        @if ($syncStatusKey === 'sync_error')
+                                            @php $autoCountError = $order->latestAutoCountSyncError(); @endphp
+                                            @if ($autoCountError)
+                                                <p class="text-danger small mb-0"><strong>{{ __('orders.autocount_sync_error') }}:</strong> {{ $autoCountError }}</p>
+                                            @endif
+                                        @endif
                                     @endif
                                     <p><strong>{{ __('orders.estimated') }}:</strong> {{ $order->is_estimated ? __('orders.yes') : __('orders.no') }}</p>
                                     @if ($order->pickup_confirmed_at && $order->isPickupFulfillmentOrder())

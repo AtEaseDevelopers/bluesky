@@ -27,9 +27,9 @@ class AutoCountSyncService
             $order = $order->fresh();
         }
 
-        // Placeholder until AutoCount API is connected.
         $order->update([
             'autocount_sync_status' => 'pending_sync',
+            'autocount_synced_at' => null,
         ]);
 
         return $this->log(

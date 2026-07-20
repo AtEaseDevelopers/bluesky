@@ -347,8 +347,9 @@
                                             @php
                                                 $syncStatusKey = $order->autocountSyncStatusKey();
                                                 $syncStatusClass = match ($syncStatusKey) {
-                                                    'synced', 'synced_successfully' => 'bg-success',
-                                                    'pending_sync' => 'bg-warning text-dark',
+                                                    'synced', 'synced_successfully', 'paid_synced' => 'bg-success',
+                                                    'pending_sync', 'do_created' => 'bg-warning text-dark',
+                                                    'sync_error' => 'bg-danger',
                                                     'skipped' => 'bg-secondary',
                                                     default => 'bg-light text-dark',
                                                 };
