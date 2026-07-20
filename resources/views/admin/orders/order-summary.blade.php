@@ -328,7 +328,7 @@
                                     {{ __('orders.cancel_order') }}
                                 </button>
                             @endif
-                            @if (($order->status === Order::$status['delivered'] || ($order->isInStoreOrder() && $order->status === Order::$status['completed'])) && $order->isFullyPaid() && !$order->isPosOrder())
+                            @if ($order->isFulfilled() && $order->isFullyPaid())
                                 <form action="{{ route('admin.orders.sync-autocount', $order->id) }}" method="POST" class="mt-3">
                                     @csrf
                                     <button type="submit" class="btn btn-outline-secondary w-100">{{ __('orders.sync_autocount') }}</button>
