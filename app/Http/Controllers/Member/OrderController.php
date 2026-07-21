@@ -94,6 +94,10 @@ class OrderController extends Controller
             abort(404);
         }
 
+        $order->load('customer');
+        $order = app(\App\Services\OrderService::class)->ensurePaymentDueDate($order)->fresh();
+        $order->load('customer');
+
         $order_products = DB::table('order_products')
             ->select(
                 'order_products.id as order_product_id',

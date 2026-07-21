@@ -77,8 +77,11 @@
                                 </span>
                             </p>
                             @if (($customer->customer_type ?? 'cod') === 'credit')
-                                @if ($order->payment_due_date)
-                                    <p><strong>{{ __('orders.member.payment_due_colon') }}</strong> {{ $order->payment_due_date->format('d M Y') }}</p>
+                                @php
+                                    $displayPaymentDueDate = app(\App\Services\OrderService::class)->paymentDueDateForDisplay($order);
+                                @endphp
+                                @if ($displayPaymentDueDate)
+                                    <p><strong>{{ __('orders.member.payment_due_colon') }}</strong> {{ $displayPaymentDueDate->format('d M Y') }}</p>
                                 @endif
                             @endif
                             @if ($payments->count())

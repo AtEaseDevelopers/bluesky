@@ -89,8 +89,11 @@
                                         @if ($customer)
                                             <p><strong>{{ __('customers.payment_term') }}:</strong> {{ $customer->paymentTermLabel() }}</p>
                                         @endif
-                                        @if ($order->payment_due_date)
-                                            <p><strong>{{ __('orders.payment_due_label') }}:</strong> {{ $order->payment_due_date->format('d-m-Y') }}</p>
+                                        @php
+                                            $displayPaymentDueDate = app(\App\Services\OrderService::class)->paymentDueDateForDisplay($order);
+                                        @endphp
+                                        @if ($displayPaymentDueDate)
+                                            <p><strong>{{ __('orders.payment_due_label') }}:</strong> {{ $displayPaymentDueDate->format('d-m-Y') }}</p>
                                         @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'])
                                             <p><strong>{{ __('orders.payment_due_label') }}:</strong> <span class="text-muted">{{ __('orders.not_set') }}</span></p>
                                         @endif
@@ -215,12 +218,18 @@
                                 <form action="{{ route('admin.orders.payment-due-date', $order->id) }}" method="POST">
                                     @csrf
                                     @php
-                                        $defaultPaymentDueDate = app(\App\Services\OrderService::class)->resolvePaymentDueDate($order, null);
+                                        $displayPaymentDueDate = app(\App\Services\OrderService::class)->paymentDueDateForDisplay($order);
+                                        $dueDateInputValue = old('payment_due_date');
+                                        if ($dueDateInputValue === null || $dueDateInputValue === '') {
+                                            $dueDateInputValue = $displayPaymentDueDate
+                                                ? $displayPaymentDueDate->format('Y-m-d')
+                                                : null;
+                                        }
                                     @endphp
                                     <div class="mb-3">
                                         <label class="mb-1">{{ __('orders.due_date') }}</label>
                                         <input type="date" name="payment_due_date" class="form-control"
-                                            value="{{ old('payment_due_date', optional($order->payment_due_date)->format('Y-m-d') ?? $defaultPaymentDueDate) }}">
+                                            value="{{ $dueDateInputValue }}">
                                         <small class="text-muted">{{ __('orders.due_date_help', ['term' => $customer ? $customer->paymentTermLabel() : '-']) }}</small>
                                     </div>
                                     <button type="submit" class="btn btn-primary w-100">{{ __('orders.update_due_date') }}</button>

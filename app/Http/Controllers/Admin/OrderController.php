@@ -403,10 +403,8 @@ class OrderController extends Controller
         $order = $order->fresh();
         $order->load('customer');
 
-        if ($order->isCreditCustomer() && !$order->payment_due_date && !$order->paysInStore()) {
-            app(OrderService::class)->applyDefaultPaymentDueDate($order);
-            $order = $order->fresh();
-        }
+        $order = app(OrderService::class)->ensurePaymentDueDate($order)->fresh();
+        $order->load('customer');
 
         $order_products = DB::table('order_products')
             ->select(
@@ -487,9 +485,14 @@ class OrderController extends Controller
         ]);
 
         try {
+            $dueDateInput = $request->input('payment_due_date');
+            $dueDateInput = ($dueDateInput !== null && trim((string) $dueDateInput) !== '')
+                ? trim((string) $dueDateInput)
+                : null;
+
             app(OrderService::class)->updatePaymentDueDate(
                 $order,
-                $request->input('payment_due_date')
+                $dueDateInput
             );
         } catch (\InvalidArgumentException $e) {
             return back()->with('error', $e->getMessage());

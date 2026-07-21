@@ -108,7 +108,7 @@ class OrderService
 
     public function applyDefaultPaymentDueDate(Order $order, ?string $requestedDate = null, bool $force = false): Order
     {
-        if (!$order->isCreditCustomer() || $order->paysInStore()) {
+        if ($order->paysInStore() || !$this->isCreditOrder($order)) {
             return $order;
         }
 
@@ -124,6 +124,26 @@ class OrderService
         $order->update(['payment_due_date' => $dueDate]);
 
         return $this->refreshPaymentStatus($order->fresh());
+    }
+
+    public function ensurePaymentDueDate(Order $order): Order
+    {
+        if ($order->paysInStore() || !$this->isCreditOrder($order) || $order->payment_due_date) {
+            return $order;
+        }
+
+        return $this->applyDefaultPaymentDueDate($order);
+    }
+
+    public function paymentDueDateForDisplay(Order $order): ?\Carbon\Carbon
+    {
+        if ($order->payment_due_date) {
+            return $order->payment_due_date->copy();
+        }
+
+        $resolved = $this->resolvePaymentDueDate($order, null);
+
+        return $resolved ? \Carbon\Carbon::parse($resolved)->startOfDay() : null;
     }
 
     public function recalculatePaymentDueDatesForCustomer(User $customer): void
@@ -153,19 +173,54 @@ class OrderService
             return $requestedDate;
         }
 
-        if (!$order->isCreditCustomer() || $order->paysInStore()) {
+        if ($order->paysInStore() || !$this->isCreditOrder($order)) {
             return null;
         }
 
-        $order->loadMissing('customer');
-        $customer = $order->customer;
+        $customer = $this->resolveOrderCustomer($order);
         if (!$customer) {
             return null;
         }
 
-        $baseDate = ($order->created_at ?? now())->copy()->startOfDay();
+        return $this->orderBaseDate($order)
+            ->addDays($customer->paymentTermDays())
+            ->toDateString();
+    }
 
-        return $baseDate->addDays($customer->paymentTermDays())->toDateString();
+    protected function isCreditOrder(Order $order): bool
+    {
+        $customer = $this->resolveOrderCustomer($order);
+
+        return $customer !== null && $customer->isCreditCustomer();
+    }
+
+    protected function resolveOrderCustomer(Order $order): ?User
+    {
+        $order->loadMissing('customer');
+        if ($order->customer) {
+            return $order->customer;
+        }
+
+        if (!$order->user_id) {
+            return null;
+        }
+
+        $customer = User::find($order->user_id);
+        if ($customer) {
+            $order->setRelation('customer', $customer);
+        }
+
+        return $customer;
+    }
+
+    protected function orderBaseDate(Order $order): \Carbon\Carbon
+    {
+        $createdAt = $order->created_at ?? now();
+        if (!$createdAt instanceof \Carbon\CarbonInterface) {
+            $createdAt = \Carbon\Carbon::parse($createdAt);
+        }
+
+        return $createdAt->copy()->startOfDay();
     }
 
     private function isPaymentOverdue(Order $order, float $paid, float $total): bool

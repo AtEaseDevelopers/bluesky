@@ -270,6 +270,10 @@ class Order extends Model
 
     public function isCreditCustomer(): bool
     {
+        if ($this->user_id) {
+            $this->loadMissing('customer');
+        }
+
         return $this->customer !== null
             && ($this->customer->customer_type ?? 'cod') === 'credit';
     }

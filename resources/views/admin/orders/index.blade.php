@@ -322,7 +322,10 @@
                                         </td>
                                         <td class="text-center">
                                             @if ($customer && ($customer->customer_type ?? 'cod') === 'credit')
-                                                {{ $order->payment_due_date ? $order->payment_due_date->format('d-m-Y') : '-' }}
+                                                @php
+                                                    $displayPaymentDueDate = app(\App\Services\OrderService::class)->paymentDueDateForDisplay($order);
+                                                @endphp
+                                                {{ $displayPaymentDueDate ? $displayPaymentDueDate->format('d-m-Y') : '-' }}
                                             @else
                                                 -
                                             @endif
