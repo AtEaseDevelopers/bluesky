@@ -200,7 +200,11 @@ class AutoCountApiService
                 $attributes = $this->mapImportedCustomer($row, $accNo);
 
                 if ($user) {
-                    unset($attributes['payment_term_days']);
+                    if (($attributes['customer_type'] ?? 'cod') === 'cod') {
+                        $attributes['payment_term_days'] = null;
+                    } else {
+                        unset($attributes['payment_term_days']);
+                    }
                     $user->update($attributes);
                     $result['updated']++;
                     continue;
@@ -533,14 +537,6 @@ class AutoCountApiService
     {
         $explicit = strtolower(trim((string) ($row['customer_type'] ?? $row['payment_method'] ?? '')));
         if (in_array($explicit, ['credit', 'term'], true)) {
-            return 'credit';
-        }
-        if (in_array($explicit, ['cod', 'cash'], true)) {
-            return 'cod';
-        }
-
-        $term = trim((string) ($row['DisplayTerm'] ?? $row['credit_term'] ?? ''));
-        if ($term !== '' && !preg_match('/^(cod|cash)$/i', $term)) {
             return 'credit';
         }
 
