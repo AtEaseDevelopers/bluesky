@@ -194,6 +194,10 @@
         var selected_products = [];
         var order_text = @json(__('orders.js.create_order'));
         var order_subtext = @json(__('orders.js.create_order_confirm'));
+        // Offer "Create & Collect Payment" vs "Create (Pay Later)" on the create flow.
+        window.orderAllowGenerateQr = true;
+        window.orderQrConfirmText = @json(__('orders.js.create_generate_qr'));
+        window.orderNoQrText = @json(__('orders.js.create_without_qr'));
         var selectPaymentMethodPlaceholder = @json(__('orders.select_payment_method'));
         window.selectPaymentMethodPlaceholder = selectPaymentMethodPlaceholder;
         var walkInPaymentMethodKeys = @json(\App\User::walkInOrderPaymentMethodKeys());

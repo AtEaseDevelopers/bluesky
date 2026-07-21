@@ -4,6 +4,38 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/locale/{locale}', 'LocaleController@switch')->name('locale.switch');
 
+// Public landing page Revenue Monster redirects the customer to after paying.
+Route::get('/payment/return', function () {
+    $reference = (string) request('orderId');
+    $status = strtolower((string) request('status'));
+
+    // Prefer the reconciled DB state (the webhook may already have confirmed it)
+    // over the gateway's redirect param.
+    $transaction = $reference !== ''
+        ? \App\RevenueMonsterTransaction::where('reference', $reference)->first()
+        : null;
+
+    if ($transaction) {
+        $order = $transaction->order;
+        // Reconcile against RM in case the webhook hasn't reached us yet.
+        if ($order && ! $transaction->isPaid() && $order->balanceDue() > 0) {
+            app(\App\Services\RevenueMonster\OrderQrPaymentService::class)->reconcileFromGateway($order);
+            $transaction->refresh();
+            $order->refresh();
+        }
+        if ($transaction->isPaid() || ($order && $order->balanceDue() <= 0)) {
+            $status = 'success';
+        } elseif ($transaction->status === \App\RevenueMonsterTransaction::STATUS_FAILED && $status === '') {
+            $status = 'failed';
+        }
+    }
+
+    return view('payment.return', [
+        'status' => $status,
+        'orderId' => $reference,
+    ]);
+})->name('rm.return');
+
 $adminUrl = config('app.admin_url');
 
 // if ((request()->isSecure()? "https://" : "http://") . request()->getHost() == $adminUrl) {

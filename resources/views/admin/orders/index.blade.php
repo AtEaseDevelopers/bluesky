@@ -245,6 +245,14 @@
                                                     <li>
                                                         <a class="dropdown-item" href="{{ route('admin.orders.summary', $order->id) }}">{{ __('orders.order_summary') }}</a>
                                                     </li>
+                                                    @if ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && $admin->canModule('orders', 'edit'))
+                                                        <li>
+                                                            <form method="POST" action="{{ route('admin.orders.qr-generate', $order->id) }}">
+                                                                @csrf
+                                                                <button type="submit" class="dropdown-item"><i class="fa fa-qrcode me-1"></i>{{ __('orders.qr.generate') }}</button>
+                                                            </form>
+                                                        </li>
+                                                    @endif
                                                     @if (Order::canAdjustQuantities($order->status) && $admin->canModule('orders', 'edit'))
                                                         <li>
                                                             <a class="dropdown-item" href="{{ route('admin.orders.review', $order->id) }}">{{ __('orders.adjust_order') }}</a>

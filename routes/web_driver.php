@@ -23,6 +23,9 @@ Route::namespace('Driver')->middleware(['web'])->prefix('driver')->group(
                 Route::post('/orders/{id}/status', 'DeliveryOrderController@updateStatus')->name('orders.update-status');
                 Route::post('/orders/{id}/adjust', 'DeliveryOrderController@adjustOrder')->name('orders.adjust');
                 Route::post('/orders/{id}/payment', 'DeliveryOrderController@recordPayment')->name('orders.record-payment');
+                Route::post('/orders/{id}/pay', 'RevenueMonsterPaymentController@generate')->name('orders.rm-pay');
+                Route::get('/orders/{id}/pay/qr', 'RevenueMonsterPaymentController@show')->name('orders.rm-qr');
+                Route::get('/orders/{id}/pay/status', 'RevenueMonsterPaymentController@status')->name('orders.rm-status');
                 Route::get('/orders/{id}/payment-proof', 'DeliveryOrderController@downloadProof')->name('orders.payment-proof');
                 Route::get('/orders/{id}/delivery-proof', 'DeliveryOrderController@downloadDeliveryProof')->name('orders.delivery-proof');
 

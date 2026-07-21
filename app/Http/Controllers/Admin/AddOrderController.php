@@ -220,6 +220,18 @@ class AddOrderController extends Controller
 
         app(OrderService::class)->applyDefaultPaymentDueDate($order->fresh());
 
+        if ($request->input('generate_qr') === '1' && $order->fresh()->balanceDue() > 0) {
+            try {
+                app(\App\Services\RevenueMonster\OrderQrPaymentService::class)->createOrReuse($order->fresh());
+
+                return redirect(route('admin.orders.qr', $order->id))->with('success', __('orders.created_success'));
+            } catch (\App\Services\RevenueMonster\Exceptions\RevenueMonsterException $e) {
+                return redirect(route('admin.orders.summary', $order->id))
+                    ->with('success', __('orders.created_success'))
+                    ->with('error', __('orders.qr.failed'));
+            }
+        }
+
         return redirect(route('admin.orders.summary', $order->id))->with('success', __('orders.created_success'));
     }
 

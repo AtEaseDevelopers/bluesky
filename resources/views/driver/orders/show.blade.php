@@ -189,10 +189,13 @@
             </div>
             @if ($driverCan('make_payment') && $balance > 0.001)
                 <div class="mt-3 pt-3" style="border-top:1px solid var(--line);">
-                    <button type="button" class="btn btn-accent btn-block-tall w-100" disabled>
-                        <i class="fa fa-credit-card me-1"></i> {{ __('driver_portal.deliveries.make_payment') }}
-                    </button>
-                    <p class="text-muted-ink mb-0 mt-2" style="font-size:.88rem;">{{ __('driver_portal.deliveries.payment_gateway_coming_soon') }}</p>
+                    <form method="POST" action="{{ route('driver.orders.rm-pay', $order->id) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-accent btn-block-tall w-100">
+                            <i class="fa fa-qrcode me-1"></i> {{ __('driver_portal.deliveries.make_payment') }}
+                        </button>
+                    </form>
+                    <p class="text-muted-ink mb-0 mt-2" style="font-size:.88rem;">{{ __('driver_portal.deliveries.rm_scan_hint') }}</p>
                 </div>
             @endif
             @php
@@ -326,8 +329,8 @@
     </div>
     @endif
 
+
 @endsection
-@if (($canAdjustOrder && $driverCan('adjust_order')) || ($driverCan('record_payment') && $order->canRecordAdminPayment()))
 @section('script')
     @if ($canAdjustOrder && $driverCan('adjust_order'))
     <script>
@@ -428,4 +431,3 @@
     </script>
     @endif
 @endsection
-@endif

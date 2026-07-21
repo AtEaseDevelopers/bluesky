@@ -3,7 +3,11 @@
 use App\Http\Controllers\Api\AutoCountController;
 use App\Http\Controllers\Api\DriverAuthController;
 use App\Http\Controllers\Api\DriverOrderController;
+use App\Http\Controllers\RevenueMonsterWebhookController;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/webhooks/revenue-monster', [RevenueMonsterWebhookController::class, 'notify'])
+    ->name('webhooks.revenue-monster');
 
 Route::prefix('order')->group(function () {
     Route::get('/pending', [AutoCountController::class, 'orderPending']);

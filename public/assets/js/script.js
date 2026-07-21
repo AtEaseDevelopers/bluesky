@@ -278,17 +278,31 @@ document.addEventListener('DOMContentLoaded', function () {
                             return false;
                         }
         
+                        var allowQr = window.orderAllowGenerateQr === true;
                         Swal.fire({
                             title: order_text,
                             text: order_subtext,
                             icon: 'info',
                             showCancelButton: true,
-                            confirmButtonColor: '#28a745',
+                            showDenyButton: allowQr,
+                            confirmButtonColor: allowQr ? '#ff5d3b' : '#28a745',
+                            denyButtonColor: '#023e7d',
                             cancelButtonColor: '#d33',
-                            confirmButtonText: orderJs('yes', 'Yes')
+                            confirmButtonText: allowQr ? (window.orderQrConfirmText || 'Create & Generate QR') : orderJs('yes', 'Yes'),
+                            denyButtonText: window.orderNoQrText || 'Create without QR'
                         }).then((result) => {
-                            if (result.isConfirmed) {
+                            if (result.isConfirmed || result.isDenied) {
                                 var form = document.getElementById('admin-order-create-form') || document.querySelector('form');
+                                if (allowQr && form) {
+                                    var flag = form.querySelector('input[name="generate_qr"]');
+                                    if (!flag) {
+                                        flag = document.createElement('input');
+                                        flag.type = 'hidden';
+                                        flag.name = 'generate_qr';
+                                        form.appendChild(flag);
+                                    }
+                                    flag.value = result.isConfirmed ? '1' : '0';
+                                }
                                 if (window.FormDraft && form) {
                                     FormDraft.clear(form);
                                 }
