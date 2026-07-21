@@ -11,7 +11,6 @@ class OrderStatusService
     private static array $deliveryTransitions = [
         'pending' => ['packing', 'cancelled'],
         'packing' => ['in_route', 'cancelled'],
-        'customer_reviewing' => ['packing', 'in_route', 'cancelled'],
         'in_route' => ['delivered', 'cancelled'],
         'delivered' => [],
         'cancelled' => [],
@@ -20,7 +19,6 @@ class OrderStatusService
     private static array $pickupTransitions = [
         'pending' => ['packing', 'cancelled'],
         'packing' => ['cancelled'],
-        'customer_reviewing' => ['packing', 'cancelled'],
         'delivered' => [],
         'cancelled' => [],
     ];

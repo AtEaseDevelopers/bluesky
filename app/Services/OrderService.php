@@ -106,13 +106,13 @@ class OrderService
         return $this->refreshPaymentStatus($order->fresh());
     }
 
-    public function applyDefaultPaymentDueDate(Order $order, ?string $requestedDate = null): Order
+    public function applyDefaultPaymentDueDate(Order $order, ?string $requestedDate = null, bool $force = false): Order
     {
         if (!$order->isCreditCustomer() || $order->paysInStore()) {
             return $order;
         }
 
-        if (!$requestedDate && $order->payment_due_date) {
+        if (!$requestedDate && $order->payment_due_date && !$force) {
             return $order;
         }
 
@@ -126,9 +126,30 @@ class OrderService
         return $this->refreshPaymentStatus($order->fresh());
     }
 
+    public function recalculatePaymentDueDatesForCustomer(User $customer): void
+    {
+        if (!$customer->isCreditCustomer()) {
+            return;
+        }
+
+        Order::query()
+            ->where('user_id', $customer->id)
+            ->where('payment_status', '!=', Order::$payment_status['paid'])
+            ->where('status', '!=', Order::$status['cancelled'])
+            ->orderBy('id')
+            ->each(function (Order $order) {
+                if ($order->paysInStore()) {
+                    return;
+                }
+
+                $this->applyDefaultPaymentDueDate($order->fresh(), null, true);
+            });
+    }
+
     public function resolvePaymentDueDate(Order $order, ?string $requestedDate = null): ?string
     {
-        if ($requestedDate) {
+        $requestedDate = $requestedDate !== null ? trim($requestedDate) : null;
+        if ($requestedDate !== null && $requestedDate !== '') {
             return $requestedDate;
         }
 
@@ -136,6 +157,7 @@ class OrderService
             return null;
         }
 
+        $order->loadMissing('customer');
         $customer = $order->customer;
         if (!$customer) {
             return null;
@@ -561,10 +583,23 @@ class OrderService
             return $order;
         }
 
-        $number = 'INV-' . date('Ymd') . '-' . str_pad((string) $order->id, 5, '0', STR_PAD_LEFT);
-        $order->update(['invoice_number' => $number]);
+        return DB::transaction(function () use ($order) {
+            $order = Order::lockForUpdate()->find($order->id);
+            if (!$order || $order->invoice_number) {
+                return $order;
+            }
 
-        return $order->fresh();
+            $prefix = 'INV-' . now()->format('Ym') . '-';
+            $prefixLength = strlen($prefix);
+            $lastSeq = (int) Order::where('invoice_number', 'like', $prefix . '%')
+                ->lockForUpdate()
+                ->max(DB::raw("CAST(SUBSTRING(invoice_number, {$prefixLength} + 1) AS UNSIGNED)"));
+
+            $number = $prefix . str_pad((string) ($lastSeq + 1), 5, '0', STR_PAD_LEFT);
+            $order->update(['invoice_number' => $number]);
+
+            return $order->fresh();
+        });
     }
 
     public function applyReviewAdjustments(Order $order, array $lineItems, array $data, ?int $adminId): Order
@@ -640,7 +675,6 @@ class OrderService
                 $order = $order->fresh();
                 if (in_array($order->status, [
                     Order::$status['pending'],
-                    Order::$status['customer_reviewing'],
                 ], true)) {
                     app(OrderStatusService::class)->transition(
                         $order,
@@ -720,7 +754,6 @@ class OrderService
 
             if (in_array($order->status, [
                 Order::$status['packing'],
-                Order::$status['customer_reviewing'],
                 Order::$status['in_route'],
                 Order::$status['delivered'],
             ], true)) {
@@ -743,7 +776,6 @@ class OrderService
 
         if (in_array($order->status, [
             Order::$status['packing'],
-            Order::$status['customer_reviewing'],
             Order::$status['in_route'],
         ], true)) {
             PdfHelper::GenerateOrderInvoice($order);

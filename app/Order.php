@@ -90,7 +90,6 @@ class Order extends Model
     public static $status = [
         'pending' => 'pending',
         'packing' => 'packing',
-        'customer_reviewing' => 'customer_reviewing',
         'handed_to_customer' => 'handed_to_customer',
         'in_route' => 'in_route',
         'delivered' => 'delivered',
@@ -360,7 +359,6 @@ class Order extends Model
 
             return in_array($this->status, [
                 self::$status['packing'],
-                self::$status['customer_reviewing'],
                 self::$status['delivered'],
             ], true);
         }
@@ -374,7 +372,6 @@ class Order extends Model
 
         return in_array($this->status, [
             self::$status['packing'],
-            self::$status['customer_reviewing'],
             self::$status['in_route'],
             self::$status['delivered'],
         ], true);
@@ -443,7 +440,6 @@ class Order extends Model
 
         return in_array($this->status, [
             self::$status['packing'],
-            self::$status['customer_reviewing'],
             self::$status['in_route'],
             self::$status['delivered'],
         ], true);
@@ -454,7 +450,6 @@ class Order extends Model
         return in_array($status, [
             self::$status['pending'],
             self::$status['packing'],
-            self::$status['customer_reviewing'],
         ], true);
     }
 
@@ -473,7 +468,6 @@ class Order extends Model
         return in_array($status, [
             self::$status['pending'],
             self::$status['packing'],
-            self::$status['customer_reviewing'],
             self::$status['in_route'],
         ], true);
     }

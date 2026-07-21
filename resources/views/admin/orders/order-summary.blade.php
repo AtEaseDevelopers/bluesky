@@ -86,6 +86,9 @@
                                         <p><strong>{{ __('orders.expected_cod_payment') }}:</strong> {{ $order->preferredPaymentMethodLabel() }}</p>
                                     @endif
                                     @if ($isCreditCustomer)
+                                        @if ($customer)
+                                            <p><strong>{{ __('customers.payment_term') }}:</strong> {{ $customer->paymentTermLabel() }}</p>
+                                        @endif
                                         @if ($order->payment_due_date)
                                             <p><strong>{{ __('orders.payment_due_label') }}:</strong> {{ $order->payment_due_date->format('d-m-Y') }}</p>
                                         @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'])
@@ -211,11 +214,14 @@
                                 <hr>
                                 <form action="{{ route('admin.orders.payment-due-date', $order->id) }}" method="POST">
                                     @csrf
+                                    @php
+                                        $defaultPaymentDueDate = app(\App\Services\OrderService::class)->resolvePaymentDueDate($order, null);
+                                    @endphp
                                     <div class="mb-3">
                                         <label class="mb-1">{{ __('orders.due_date') }}</label>
                                         <input type="date" name="payment_due_date" class="form-control"
-                                            value="{{ old('payment_due_date', optional($order->payment_due_date)->format('Y-m-d')) }}">
-                                        <small class="text-muted">{{ __('orders.due_date_help') }}</small>
+                                            value="{{ old('payment_due_date', optional($order->payment_due_date)->format('Y-m-d') ?? $defaultPaymentDueDate) }}">
+                                        <small class="text-muted">{{ __('orders.due_date_help', ['term' => $customer ? $customer->paymentTermLabel() : '-']) }}</small>
                                     </div>
                                     <button type="submit" class="btn btn-primary w-100">{{ __('orders.update_due_date') }}</button>
                                 </form>

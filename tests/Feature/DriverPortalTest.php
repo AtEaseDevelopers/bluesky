@@ -149,13 +149,13 @@ class DriverPortalTest extends TestCase
     public function driver_cannot_set_in_route_status()
     {
         $driver = $this->makeDriver();
-        $order = $this->makeOrder($driver, ['status' => 'customer_reviewing']);
+        $order = $this->makeOrder($driver, ['status' => 'pending']);
 
         $this->actingAs($driver, 'web_driver')
             ->post(route('driver.orders.update-status', $order->id), ['status' => 'in_route'])
             ->assertSessionHasErrors('status');
 
-        $this->assertSame('customer_reviewing', $order->fresh()->status);
+        $this->assertSame('pending', $order->fresh()->status);
     }
 
     /** @test */

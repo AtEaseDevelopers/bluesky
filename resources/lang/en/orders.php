@@ -149,7 +149,7 @@ return [
 
     'payment_due_date' => 'Payment Due Date',
     'due_date' => 'Due Date',
-    'due_date_help' => 'Credit customer only. Defaults to order date plus the customer payment term. Status becomes Payment Due after this date if the balance remains unpaid.',
+    'due_date_help' => 'Credit customer only. Default: order date + customer payment term (:term). Clear the date and save to recalculate from the customer profile. Status becomes Payment Due after this date if the balance remains unpaid.',
     'update_due_date' => 'Update Due Date',
     'update_driver' => 'Update Driver',
     'no_drivers' => 'No drivers configured yet.',

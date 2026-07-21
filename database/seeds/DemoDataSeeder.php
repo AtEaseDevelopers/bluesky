@@ -40,10 +40,10 @@ class DemoDataSeeder extends Seeder
             ['username' => 'manager', 'name' => 'Operations Manager', 'email' => 'manager@bluesky.test', 'role' => 'admin', 'status' => 'active'],
         ] as $row) {
             $admin = Admin::updateOrCreate(
-                ['username' => $row['username']],
+                ['email' => $row['email']],
                 [
+                    'username' => $row['username'],
                     'name' => $row['name'],
-                    'email' => $row['email'],
                     'password' => Hash::make('password'),
                 ]
             );
@@ -90,9 +90,9 @@ class DemoDataSeeder extends Seeder
     private function seedDrivers(): array
     {
         $rows = [
-            ['lorry_number' => 'LRY-001', 'name' => 'Ahmad Rizal', 'phone' => '0123001001', 'username' => 'driver1'],
-            ['lorry_number' => 'LRY-002', 'name' => 'Tan Wei Ming', 'phone' => '0123001002', 'username' => 'driver2'],
-            ['lorry_number' => 'LRY-003', 'name' => 'Kumar Raj', 'phone' => '0123001003', 'username' => 'driver3'],
+            ['name' => 'Ahmad Rizal', 'phone' => '0123001001', 'username' => 'driver1'],
+            ['name' => 'Tan Wei Ming', 'phone' => '0123001002', 'username' => 'driver2'],
+            ['name' => 'Kumar Raj', 'phone' => '0123001003', 'username' => 'driver3'],
         ];
 
         $drivers = [];
@@ -181,7 +181,7 @@ class DemoDataSeeder extends Seeder
         $customers = [];
         foreach ($rows as $row) {
             $customers[] = User::updateOrCreate(
-                ['login_code' => $row['login_code']],
+                ['email' => $row['email']],
                 array_merge($defaults, $row)
             );
         }

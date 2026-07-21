@@ -26,7 +26,6 @@ class DriverCustomerVerifySeeder extends Seeder
                 [
                     'name' => 'Demo Driver',
                     'phone' => '0123456789',
-                    'lorry_number' => 'LRY-DEMO',
                     'password' => Hash::make('password'),
                     'is_active' => true,
                 ]

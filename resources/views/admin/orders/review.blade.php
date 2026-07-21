@@ -158,7 +158,7 @@
 
                         <div class="d-flex justify-content-end gap-2">
                             <button type="submit" name="send_to_customer" value="0" class="btn btn-secondary">{{ __('orders.save_adjustments') }}</button>
-                            @if ($order->status === Order::$status['pending'] || $order->status === Order::$status['customer_reviewing'])
+                            @if ($order->status === Order::$status['pending'])
                                 <button type="submit" name="send_to_customer" value="1" class="btn btn-primary">{{ __('orders.save_and_move_to_packing') }}</button>
                             @else
                                 <button type="submit" name="send_to_customer" value="1" class="btn btn-primary">{{ __('orders.save_update_customer_invoice') }}</button>

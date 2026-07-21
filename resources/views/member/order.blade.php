@@ -2,17 +2,6 @@
 @section('title', __('orders.member.page_title'))
 @section('content')
 
-    @if ($pendingReviewCount > 0)
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="alert alert-warning mb-0">
-                    <strong>{{ __('orders.member.pending_review_alert', ['count' => $pendingReviewCount]) }}</strong>
-                    {{ __('orders.member.pending_review_help') }}
-                </div>
-            </div>
-        </div>
-    @endif
-
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="card shadow no-border mb-0">
@@ -81,12 +70,9 @@
                     <div class="row">
                         @forelse($orders as $order)
                             <div class="col-12 col-sm-6 col-md-3 mb-4">
-                                <div class="card shadow-sm {{ $order->status === 'customer_reviewing' ? 'border-warning' : '' }}">
+                                <div class="card shadow-sm">
                                     <div class="card-header d-flex justify-content-between align-items-center">
                                         <h5 class="m-0">{{ __('orders.member.order_number', ['id' => $order->id]) }}</h5>
-                                        @if ($order->status === 'customer_reviewing')
-                                            <span class="badge bg-warning text-dark">{{ __('orders.member.review_badge') }}</span>
-                                        @endif
                                     </div>
                                     <div class="card-body">
                                         <h6 class="fw-bold mb-0">{{ __('orders.member.order_at') }}</h6>
@@ -121,11 +107,6 @@
                                         <a href="{{ route('member.orders.summary', encrypt($order->id)) }}" class="btn btn-sm btn-primary m-1" title="{{ __('orders.member.view_detail') }}">
                                             <i class="fa fa-eye"></i>
                                         </a>
-                                        @if ($order->status === 'customer_reviewing')
-                                            <a href="{{ route('member.orders.review', encrypt($order->id)) }}" class="btn btn-sm btn-warning m-1" title="{{ __('orders.member.review_approve') }}">
-                                                <i class="fa fa-check"></i>
-                                            </a>
-                                        @endif
                                         @if (!in_array($order->status, ['pending', 'cancelled']))
                                             <a href="{{ url('order/buy-again/' . encrypt($order->id)) }}" class="btn btn-sm btn-primary m-1" title="{{ __('orders.member.buy_again') }}">
                                                 <i class="fa fa-repeat"></i>

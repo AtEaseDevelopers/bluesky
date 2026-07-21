@@ -181,10 +181,7 @@
                             <i class="fa fa-file-excel-o" aria-hidden="true"></i> {{ __('ui.export_excel') }}
                         </button>
                     </form>
-                    <button class="btn btn-success status-action-button me-1" data-to_status="completed" data-status="{{ __('order.status.completed') }}" style="display: none;">
-                        {{ __('orders.change_status_to', ['status' => __('order.status.completed')]) }}
-                    </button>
-                    <button class="btn btn-success status-action-button download-zip me-1" data-to_status="completed" data-status="{{ __('order.status.completed') }}" title="{{ __('orders.download_selected_zip') }}" style="display: none;">
+                    <button type="button" class="btn btn-success download-zip me-1" title="{{ __('orders.download_selected_zip') }}" style="display: none;">
                         <i class="fa fa-download"></i>
                     </button>
                 </div>
@@ -209,6 +206,7 @@
                                     </th>
                                     <th>{{ __('orders.option') }}</th>
                                     <th>{{ __('orders.order_id') }}</th>
+                                    <th>{{ __('orders.invoice_no') }}</th>
                                     <th>{{ __('orders.order_at') }}</th>
                                     <th>{{ __('orders.customer') }}</th>
                                     <th class="order-products-col">{{ __('orders.products') }}</th>
@@ -272,6 +270,7 @@
                                             </div>
                                         </td>
                                         <td>{{ $order->id }}</td>
+                                        <td>{{ $order->invoice_number ?: '-' }}</td>
                                         <td>{{ $order->created_at }}</td>
                                         <td>
                                             @if ($customer)
@@ -364,7 +363,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="17">
+                                    <td colspan="18">
                                         {{ $orders->appends(request()->query())->links('pagination::bootstrap-4') }}
                                     </td>
                                 </tr>
@@ -653,9 +652,9 @@
             });
 
             $(".order-cbx-col input[type=checkbox]").on('click', function(e){
-                $(".status-action-button").hide();
+                $(".download-zip").hide();
                 if ($(".order-cbx-col input[type=checkbox]:checked").length) {
-                    $(".status-action-button[data-status='" + "{{ __('order.status.completed') }}"+"']").show()
+                    $(".download-zip").show();
                     $('#change-order-statuses').removeClass('d-none');
                     $('#change-order-lorry').removeClass('d-none');
                 } else {
@@ -664,43 +663,15 @@
                 }
             });
 
-            $(".status-action-button").click(function(){
+            $(".download-zip").click(function(){
                 var selectedOrders = [];
                 $("input[name='selected_orders[]']:checked").each(function() {
                     selectedOrders.push($(this).val());
                 });
 
-                if($(this).hasClass('download-zip')){
-                    var field_name = 'order_ids[]';
-                    var queryParameters = selectedOrders.join('&'+ field_name +'=');
-                    window.location.href = "{{ url('/admin/order/batch-download-files') }}" + "?"+ field_name +"=" + queryParameters;
-                    return;
-                }
-
-                var status = $(this).data('to_status');
-
-                $.ajax({
-                    type: "POST",
-                    url: "{{ url('/admin/order/batch-update-status') }}",
-                    data: {
-                        _token: "{{ csrf_token() }}",
-                        order_ids: selectedOrders,
-                        status: status,
-                    },
-                    success: function (response) {
-                        data = $.parseJSON(response);
-                        if(data.success){
-                            Swal.fire(ordersJs.order_updated, ordersJs.order_status_updated, 'success').then(function(){
-                                window.location.reload();
-                            });
-                        }else{
-                            Swal.fire(ordersJs.error, ordersJs.order_status_error, 'error');
-                        }
-                    },
-                    error: function (error) {
-                        Swal.fire(ordersJs.error, ordersJs.order_status_error, 'error');
-                    }
-                });
+                var field_name = 'order_ids[]';
+                var queryParameters = selectedOrders.join('&'+ field_name +'=');
+                window.location.href = "{{ url('/admin/order/batch-download-files') }}" + "?"+ field_name +"=" + queryParameters;
             });
         });
 

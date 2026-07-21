@@ -4,7 +4,6 @@ return [
     'status' => [
         'pending' => 'Pending',
         'packing' => 'Packing',
-        'customer_reviewing' => 'Customer Reviewing',
         'handed_to_customer' => 'Handed to Customer',
         'in_route' => 'In Route',
         'delivered' => 'Delivered',

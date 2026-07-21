@@ -70,6 +70,8 @@ class EditCustomerController extends Controller
             return redirect()->back()->withInput()->withErrors($data['field_err']);
         }
 
+        $previousPaymentTermDays = $customer->payment_term_days;
+
         $customer->fill(
             [
                 "name" => $data['name'],
@@ -103,6 +105,13 @@ class EditCustomerController extends Controller
 
             ]
         )->save();
+
+        $customer = $customer->fresh();
+
+        if ($customer->isCreditCustomer()
+            && (int) $previousPaymentTermDays !== (int) $customer->payment_term_days) {
+            app(\App\Services\OrderService::class)->recalculatePaymentDueDatesForCustomer($customer);
+        }
 
         if (($request->input('customer_type', 'cod') === 'cod')) {
             app(CreditService::class)->clearBalanceForCodCustomer(

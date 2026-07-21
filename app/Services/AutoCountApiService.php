@@ -200,6 +200,7 @@ class AutoCountApiService
                 $attributes = $this->mapImportedCustomer($row, $accNo);
 
                 if ($user) {
+                    unset($attributes['payment_term_days']);
                     $user->update($attributes);
                     $result['updated']++;
                     continue;
@@ -679,6 +680,11 @@ class AutoCountApiService
 
     protected function toSyncPayload(Order $order, string $type): array
     {
+        if (!$order->invoice_number) {
+            app(OrderService::class)->generateInvoiceNumber($order->fresh());
+            $order = $order->fresh();
+        }
+
         $customer = $order->customer;
         $lines = $order->orderProducts()
             ->where('status', OrderProduct::$status['active'])
@@ -710,6 +716,7 @@ class AutoCountApiService
         return [
             'order' => [
                 'id' => $order->id,
+                'invoice_number' => $order->invoice_number,
                 'api_invoice_id' => $order->api_invoice_id,
                 'api_do_id' => $order->api_do_id,
                 'user_id' => $order->user_id,
