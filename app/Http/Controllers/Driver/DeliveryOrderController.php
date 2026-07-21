@@ -49,7 +49,7 @@ class DeliveryOrderController extends Controller
 
         $orders = $query->orderByRaw("CASE status
                 WHEN 'in_route' THEN 0 WHEN 'delivering' THEN 0
-                WHEN 'packing' THEN 1 WHEN 'pending' THEN 1 WHEN 'customer_reviewing' THEN 1 WHEN 'processing' THEN 1
+                WHEN 'packing' THEN 1 WHEN 'pending' THEN 1 WHEN 'processing' THEN 1
                 WHEN 'delivered' THEN 2 WHEN 'completed' THEN 2
                 ELSE 4 END")
             ->orderByDesc('id')
@@ -276,7 +276,7 @@ class DeliveryOrderController extends Controller
     public static function statusesForFilter(string $filter): array
     {
         return match ($filter) {
-            'processing' => ['pending', 'packing', 'customer_reviewing', 'processing'],
+            'processing' => ['pending', 'packing', 'processing'],
             'in_route', 'delivering' => ['in_route', 'delivering'],
             'delivered', 'completed' => ['delivered', 'completed'],
             default => [],

@@ -10,11 +10,6 @@
                     <a href="{{ route('member.orders') }}" class="btn btn-outline-primary me-3 mb-1">
                         <i class="fa fa-chevron-circle-left"></i> {{ __('ui.nav.my_orders') }}
                     </a>
-                    @if ($order->status === \App\Order::$status['customer_reviewing'])
-                        <a href="{{ route('member.orders.review', $encryptedId) }}" class="btn btn-warning mb-1">
-                            <i class="fa fa-check"></i> {{ __('orders.member.review_approve') }}
-                        </a>
-                    @endif
                     @if ($order->canShowInvoiceToCustomer($customer))
                         <a href="{{ $invoice_url }}" class="btn btn-primary view-pdf mb-1">
                             <i class="fa fa-eye"></i> {{ __('order.file.invoice') }}
@@ -31,13 +26,6 @@
                     @endif
                 </div>
             </div>
-
-            @if ($order->status === \App\Order::$status['customer_reviewing'])
-                <div class="alert alert-warning">
-                    {{ __('orders.member.awaiting_review') }}
-                    <a href="{{ route('member.orders.review', $encryptedId) }}" class="alert-link">{{ __('orders.member.review_now') }}</a>
-                </div>
-            @endif
 
             <div class="alert alert-light border mb-4">
                 @include('partials.subject_to_availability')
@@ -89,8 +77,11 @@
                                 </span>
                             </p>
                             @if (($customer->customer_type ?? 'cod') === 'credit')
-                                @if ($order->payment_due_date)
-                                    <p><strong>{{ __('orders.member.payment_due_colon') }}</strong> {{ $order->payment_due_date->format('d M Y') }}</p>
+                                @php
+                                    $displayPaymentDueDate = app(\App\Services\OrderService::class)->paymentDueDateForDisplay($order);
+                                @endphp
+                                @if ($displayPaymentDueDate)
+                                    <p><strong>{{ __('orders.member.payment_due_colon') }}</strong> {{ $displayPaymentDueDate->format('d M Y') }}</p>
                                 @endif
                             @endif
                             @if ($payments->count())

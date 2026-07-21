@@ -65,10 +65,6 @@ class OrderController extends Controller
             $orders[$key]->invoice_url = url('/') . '/' . Order::$path . '/' . $value->id . '/invoice-' . $value->id . '.pdf';
         }
 
-        $pendingReviewCount = Order::where('user_id', $user->id)
-            ->where('status', Order::$status['customer_reviewing'])
-            ->count();
-
         return view(
             'member.order',
             [
@@ -77,7 +73,6 @@ class OrderController extends Controller
                 'input' => $request->all(),
                 'query_params' => Helper::query_params($request->input()),
                 'status_options' => Order::$status,
-                'pendingReviewCount' => $pendingReviewCount,
             ]
         );
     }
@@ -98,6 +93,10 @@ class OrderController extends Controller
         if ($user->id != $order->user_id) {
             abort(404);
         }
+
+        $order->load('customer');
+        $order = app(\App\Services\OrderService::class)->ensurePaymentDueDate($order)->fresh();
+        $order->load('customer');
 
         $order_products = DB::table('order_products')
             ->select(

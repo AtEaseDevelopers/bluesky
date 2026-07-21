@@ -115,7 +115,7 @@ class User extends Authenticatable
 
     public function isCreditCustomer(): bool
     {
-        return ($this->customer_type ?? 'cod') === 'credit';
+        return strtolower((string) ($this->customer_type ?? 'cod')) === 'credit';
     }
 
     public function isCodCustomer(): bool

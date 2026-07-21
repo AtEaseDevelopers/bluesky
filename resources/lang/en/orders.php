@@ -149,7 +149,7 @@ return [
 
     'payment_due_date' => 'Payment Due Date',
     'due_date' => 'Due Date',
-    'due_date_help' => 'Credit customer only. Defaults to order date plus the customer payment term. Status becomes Payment Due after this date if the balance remains unpaid.',
+    'due_date_help' => 'Credit customer only. Default: order date + customer payment term (:term). Clear the date and save to recalculate from the customer profile. Status becomes Payment Due after this date if the balance remains unpaid.',
     'update_due_date' => 'Update Due Date',
     'update_driver' => 'Update Driver',
     'no_drivers' => 'No drivers configured yet.',
@@ -159,13 +159,18 @@ return [
     'no_status_changes' => 'No further status changes available.',
     'cancel_order' => 'Cancel Order',
     'sync_autocount' => 'Sync to AutoCount',
+    'autocount_sync_error' => 'AutoCount error',
 
     'autocount_sync_status' => [
         'pending' => 'Pending',
         'pending_sync' => 'Pending Sync',
+        'do_created' => 'DO Created',
         'synced' => 'Synced',
         'synced_successfully' => 'Synced Successfully',
+        'paid_synced' => 'Paid Synced',
+        'sync_error' => 'Sync Error',
         'skipped' => 'Skipped',
+        'not_applicable' => 'N/A',
     ],
 
     'payment_due_status_labels' => [

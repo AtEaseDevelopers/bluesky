@@ -18,8 +18,8 @@ class AutoCountSyncService
             return $this->log($order, 'skipped', 'Invoice not paid — sync not allowed.', null, $adminId);
         }
 
-        if ($order->status !== Order::$status['delivered']) {
-            return $this->log($order, 'skipped', 'Order must be delivered before sync.', null, $adminId);
+        if (!$order->isFulfilled()) {
+            return $this->log($order, 'skipped', 'Order must be delivered, handed to customer, or completed before sync.', null, $adminId);
         }
 
         if (!$order->invoice_number) {
@@ -27,9 +27,9 @@ class AutoCountSyncService
             $order = $order->fresh();
         }
 
-        // Placeholder until AutoCount API is connected.
         $order->update([
             'autocount_sync_status' => 'pending_sync',
+            'autocount_synced_at' => null,
         ]);
 
         return $this->log(

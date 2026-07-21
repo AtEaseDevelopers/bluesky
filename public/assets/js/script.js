@@ -334,7 +334,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             if (document.querySelectorAll(".order-cbx-col input[type=checkbox]:checked").length) {
-                document.querySelector(".status-action-button[data-status='Completed']").style.display = "block";
                 document.querySelector(".download-zip").style.display = "block";
                 document.getElementById('change-order-statuses').classList.remove('d-none');
                 document.getElementById('change-order-lorry').classList.remove('d-none');
@@ -342,7 +341,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('change-order-statuses').classList.add('d-none');
                 document.getElementById('change-order-lorry').classList.add('d-none');
                 document.querySelector(".download-zip").style.display = "none";
-                document.querySelector(".status-action-button[data-status='Completed']").style.display = "none";
             }
         });
     }

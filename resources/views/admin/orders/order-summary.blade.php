@@ -86,8 +86,14 @@
                                         <p><strong>{{ __('orders.expected_cod_payment') }}:</strong> {{ $order->preferredPaymentMethodLabel() }}</p>
                                     @endif
                                     @if ($isCreditCustomer)
-                                        @if ($order->payment_due_date)
-                                            <p><strong>{{ __('orders.payment_due_label') }}:</strong> {{ $order->payment_due_date->format('d-m-Y') }}</p>
+                                        @if ($customer)
+                                            <p><strong>{{ __('customers.payment_term') }}:</strong> {{ $customer->paymentTermLabel() }}</p>
+                                        @endif
+                                        @php
+                                            $displayPaymentDueDate = app(\App\Services\OrderService::class)->paymentDueDateForDisplay($order);
+                                        @endphp
+                                        @if ($displayPaymentDueDate)
+                                            <p><strong>{{ __('orders.payment_due_label') }}:</strong> {{ $displayPaymentDueDate->format('d-m-Y') }}</p>
                                         @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'])
                                             <p><strong>{{ __('orders.payment_due_label') }}:</strong> <span class="text-muted">{{ __('orders.not_set') }}</span></p>
                                         @endif
@@ -99,7 +105,18 @@
                                         <p><strong>{{ __('orders.do_no') }}:</strong> {{ $order->do_no }}</p>
                                     @endif
                                     @if ($order->autocount_sync_status ?? false)
-                                        <p><strong>{{ __('orders.autocount') }}:</strong> {{ str_replace('_', ' ', ucfirst($order->autocount_sync_status)) }}</p>
+                                        @php
+                                            $syncStatusKey = $order->autocountSyncStatusKey();
+                                        @endphp
+                                        <p><strong>{{ __('orders.autocount') }}:</strong>
+                                            {{ __('orders.autocount_sync_status.' . $syncStatusKey) }}
+                                        </p>
+                                        @if ($syncStatusKey === 'sync_error')
+                                            @php $autoCountError = $order->latestAutoCountSyncError(); @endphp
+                                            @if ($autoCountError)
+                                                <p class="text-danger small mb-0"><strong>{{ __('orders.autocount_sync_error') }}:</strong> {{ $autoCountError }}</p>
+                                            @endif
+                                        @endif
                                     @endif
                                     <p><strong>{{ __('orders.estimated') }}:</strong> {{ $order->is_estimated ? __('orders.yes') : __('orders.no') }}</p>
                                     @if ($order->pickup_confirmed_at && $order->isPickupFulfillmentOrder())
@@ -200,11 +217,20 @@
                                 <hr>
                                 <form action="{{ route('admin.orders.payment-due-date', $order->id) }}" method="POST">
                                     @csrf
+                                    @php
+                                        $displayPaymentDueDate = app(\App\Services\OrderService::class)->paymentDueDateForDisplay($order);
+                                        $dueDateInputValue = old('payment_due_date');
+                                        if ($dueDateInputValue === null || $dueDateInputValue === '') {
+                                            $dueDateInputValue = $displayPaymentDueDate
+                                                ? $displayPaymentDueDate->format('Y-m-d')
+                                                : null;
+                                        }
+                                    @endphp
                                     <div class="mb-3">
                                         <label class="mb-1">{{ __('orders.due_date') }}</label>
                                         <input type="date" name="payment_due_date" class="form-control"
-                                            value="{{ old('payment_due_date', optional($order->payment_due_date)->format('Y-m-d')) }}">
-                                        <small class="text-muted">{{ __('orders.due_date_help') }}</small>
+                                            value="{{ $dueDateInputValue }}">
+                                        <small class="text-muted">{{ __('orders.due_date_help', ['term' => $customer ? $customer->paymentTermLabel() : '-']) }}</small>
                                     </div>
                                     <button type="submit" class="btn btn-primary w-100">{{ __('orders.update_due_date') }}</button>
                                 </form>
@@ -328,7 +354,7 @@
                                     {{ __('orders.cancel_order') }}
                                 </button>
                             @endif
-                            @if (($order->status === Order::$status['delivered'] || ($order->isInStoreOrder() && $order->status === Order::$status['completed'])) && $order->isFullyPaid() && !$order->isPosOrder())
+                            @if ($order->isFulfilled() && $order->isFullyPaid())
                                 <form action="{{ route('admin.orders.sync-autocount', $order->id) }}" method="POST" class="mt-3">
                                     @csrf
                                     <button type="submit" class="btn btn-outline-secondary w-100">{{ __('orders.sync_autocount') }}</button>

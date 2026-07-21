@@ -90,7 +90,6 @@ class Order extends Model
     public static $status = [
         'pending' => 'pending',
         'packing' => 'packing',
-        'customer_reviewing' => 'customer_reviewing',
         'handed_to_customer' => 'handed_to_customer',
         'in_route' => 'in_route',
         'delivered' => 'delivered',
@@ -141,11 +140,11 @@ class Order extends Model
 
     public function isFulfilled(): bool
     {
-        if ($this->isInStoreOrder()) {
-            return $this->status === self::$status['completed'];
-        }
-
-        return $this->status === self::$status['delivered'];
+        return in_array($this->status, [
+            self::$status['delivered'],
+            self::$status['handed_to_customer'],
+            self::$status['completed'],
+        ], true);
     }
 
     public static $contact_methods = [
@@ -210,6 +209,21 @@ class Order extends Model
         return $this->hasMany(OrderPayment::class);
     }
 
+    public function autocountSyncLogs()
+    {
+        return $this->hasMany(AutoCountSyncLog::class);
+    }
+
+    public function latestAutoCountSyncError(): ?string
+    {
+        $log = $this->autocountSyncLogs()
+            ->where('sync_status', 'sync_error')
+            ->latest('id')
+            ->first();
+
+        return $log?->error_message ?: $log?->response_message;
+    }
+
     public function paymentBreakdown(): array
     {
         return $this->payments()
@@ -256,8 +270,12 @@ class Order extends Model
 
     public function isCreditCustomer(): bool
     {
+        if ($this->user_id) {
+            $this->loadMissing('customer');
+        }
+
         return $this->customer !== null
-            && ($this->customer->customer_type ?? 'cod') === 'credit';
+            && strtolower((string) ($this->customer->customer_type ?? 'cod')) === 'credit';
     }
 
     public function paysInStore(): bool
@@ -345,7 +363,6 @@ class Order extends Model
 
             return in_array($this->status, [
                 self::$status['packing'],
-                self::$status['customer_reviewing'],
                 self::$status['delivered'],
             ], true);
         }
@@ -359,7 +376,6 @@ class Order extends Model
 
         return in_array($this->status, [
             self::$status['packing'],
-            self::$status['customer_reviewing'],
             self::$status['in_route'],
             self::$status['delivered'],
         ], true);
@@ -428,7 +444,6 @@ class Order extends Model
 
         return in_array($this->status, [
             self::$status['packing'],
-            self::$status['customer_reviewing'],
             self::$status['in_route'],
             self::$status['delivered'],
         ], true);
@@ -439,7 +454,6 @@ class Order extends Model
         return in_array($status, [
             self::$status['pending'],
             self::$status['packing'],
-            self::$status['customer_reviewing'],
         ], true);
     }
 
@@ -458,7 +472,6 @@ class Order extends Model
         return in_array($status, [
             self::$status['pending'],
             self::$status['packing'],
-            self::$status['customer_reviewing'],
             self::$status['in_route'],
         ], true);
     }

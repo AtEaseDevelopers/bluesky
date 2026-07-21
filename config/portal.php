@@ -7,7 +7,7 @@ return [
         'registration_no' => env('PORTAL_COMPANY_REG', '1130071.K'),
         'phone' => env('PORTAL_COMPANY_PHONE', ''),
         'email' => env('PORTAL_COMPANY_EMAIL', ''),
-        'address' => env('PORTAL_COMPANY_ADDRESS', "Level 11, Menara KEN TTDI, 37,\nJalan Burhanuddin Helmi, Taman Tun Dr Ismail,\n60000 Kuala Lumpur, Wilayah Persekutuan Kuala Lumpur"),
+        'address' => env('PORTAL_COMPANY_ADDRESS', 'Jln 11, Kampung Baru Ampang, 68000 Ampang, Selangor.'),
     ],
 
     'kyc_note' => 'Additional documents might be required by our risk team upon KYC risk assessment.',

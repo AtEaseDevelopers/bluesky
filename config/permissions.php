@@ -147,11 +147,6 @@ return [
                     'description' => 'View order history and order summary.',
                     'default' => true,
                 ],
-                'order_review' => [
-                    'label' => 'Order Review',
-                    'description' => 'Approve or reject orders pending customer review.',
-                    'default' => true,
-                ],
                 'order_payments' => [
                     'label' => 'Order Payments',
                     'description' => 'Submit payment proof on orders.',
@@ -247,9 +242,6 @@ return [
         'member.checkout' => 'checkout',
         'member.orders' => 'orders',
         'member.orders.summary' => 'orders',
-        'member.orders.review' => 'order_review',
-        'member.orders.review.approve' => 'order_review',
-        'member.orders.review.reject' => 'order_review',
         'member.orders.payments.store' => 'order_payments',
         'member.orders.payment-proof' => 'order_payments',
         'member.bulk-payments' => 'bulk_payments',

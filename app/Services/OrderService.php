@@ -91,7 +91,7 @@ class OrderService
 
     public function updatePaymentDueDate(Order $order, ?string $paymentDueDate): Order
     {
-        if (!$order->isCreditCustomer()) {
+        if (!$this->shouldHavePaymentDueDate($order)) {
             throw new \InvalidArgumentException('Payment due date applies to credit customers only.');
         }
 
@@ -106,13 +106,13 @@ class OrderService
         return $this->refreshPaymentStatus($order->fresh());
     }
 
-    public function applyDefaultPaymentDueDate(Order $order, ?string $requestedDate = null): Order
+    public function applyDefaultPaymentDueDate(Order $order, ?string $requestedDate = null, bool $force = false): Order
     {
-        if (!$order->isCreditCustomer() || $order->paysInStore()) {
+        if (!$this->shouldHavePaymentDueDate($order)) {
             return $order;
         }
 
-        if (!$requestedDate && $order->payment_due_date) {
+        if (!$requestedDate && $order->payment_due_date && !$force) {
             return $order;
         }
 
@@ -126,24 +126,115 @@ class OrderService
         return $this->refreshPaymentStatus($order->fresh());
     }
 
+    public function ensurePaymentDueDate(Order $order): Order
+    {
+        if (!$this->shouldHavePaymentDueDate($order) || $order->payment_due_date) {
+            return $order;
+        }
+
+        return $this->applyDefaultPaymentDueDate($order);
+    }
+
+    public function paymentDueDateForDisplay(Order $order): ?\Carbon\Carbon
+    {
+        if ($order->payment_due_date) {
+            return $order->payment_due_date->copy();
+        }
+
+        $resolved = $this->resolvePaymentDueDate($order, null);
+
+        return $resolved ? \Carbon\Carbon::parse($resolved)->startOfDay() : null;
+    }
+
+    public function recalculatePaymentDueDatesForCustomer(User $customer): void
+    {
+        if (!$customer->isCreditCustomer()) {
+            return;
+        }
+
+        Order::query()
+            ->where('user_id', $customer->id)
+            ->where('payment_status', '!=', Order::$payment_status['paid'])
+            ->where('status', '!=', Order::$status['cancelled'])
+            ->orderBy('id')
+            ->each(function (Order $order) {
+                if (!$this->shouldHavePaymentDueDate($order)) {
+                    return;
+                }
+
+                $this->applyDefaultPaymentDueDate($order->fresh(), null, true);
+            });
+    }
+
     public function resolvePaymentDueDate(Order $order, ?string $requestedDate = null): ?string
     {
-        if ($requestedDate) {
+        $requestedDate = $requestedDate !== null ? trim($requestedDate) : null;
+        if ($requestedDate !== null && $requestedDate !== '') {
             return $requestedDate;
         }
 
-        if (!$order->isCreditCustomer() || $order->paysInStore()) {
+        if (!$this->shouldHavePaymentDueDate($order)) {
             return null;
         }
 
-        $customer = $order->customer;
+        $customer = $this->resolveOrderCustomer($order);
         if (!$customer) {
             return null;
         }
 
-        $baseDate = ($order->created_at ?? now())->copy()->startOfDay();
+        return $this->orderBaseDate($order)
+            ->addDays($customer->paymentTermDays())
+            ->toDateString();
+    }
 
-        return $baseDate->addDays($customer->paymentTermDays())->toDateString();
+    protected function shouldHavePaymentDueDate(Order $order): bool
+    {
+        if (!$this->isCreditOrder($order)) {
+            return false;
+        }
+
+        // In-store pickup is paid at the counter; delivery credit orders always use payment terms.
+        if ($order->paysInStore() && !$order->isDelivery()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function isCreditOrder(Order $order): bool
+    {
+        $customer = $this->resolveOrderCustomer($order);
+
+        return $customer !== null && $customer->isCreditCustomer();
+    }
+
+    protected function resolveOrderCustomer(Order $order): ?User
+    {
+        $order->loadMissing('customer');
+        if ($order->customer) {
+            return $order->customer;
+        }
+
+        if (!$order->user_id) {
+            return null;
+        }
+
+        $customer = User::find($order->user_id);
+        if ($customer) {
+            $order->setRelation('customer', $customer);
+        }
+
+        return $customer;
+    }
+
+    protected function orderBaseDate(Order $order): \Carbon\Carbon
+    {
+        $createdAt = $order->created_at ?? now();
+        if (!$createdAt instanceof \Carbon\CarbonInterface) {
+            $createdAt = \Carbon\Carbon::parse($createdAt);
+        }
+
+        return $createdAt->copy()->startOfDay();
     }
 
     private function isPaymentOverdue(Order $order, float $paid, float $total): bool
@@ -561,10 +652,23 @@ class OrderService
             return $order;
         }
 
-        $number = 'INV-' . date('Ymd') . '-' . str_pad((string) $order->id, 5, '0', STR_PAD_LEFT);
-        $order->update(['invoice_number' => $number]);
+        return DB::transaction(function () use ($order) {
+            $order = Order::lockForUpdate()->find($order->id);
+            if (!$order || $order->invoice_number) {
+                return $order;
+            }
 
-        return $order->fresh();
+            $prefix = 'INV-' . now()->format('Ym') . '-';
+            $prefixLength = strlen($prefix);
+            $lastSeq = (int) Order::where('invoice_number', 'like', $prefix . '%')
+                ->lockForUpdate()
+                ->max(DB::raw("CAST(SUBSTRING(invoice_number, {$prefixLength} + 1) AS UNSIGNED)"));
+
+            $number = $prefix . str_pad((string) ($lastSeq + 1), 5, '0', STR_PAD_LEFT);
+            $order->update(['invoice_number' => $number]);
+
+            return $order->fresh();
+        });
     }
 
     public function applyReviewAdjustments(Order $order, array $lineItems, array $data, ?int $adminId): Order
@@ -625,7 +729,7 @@ class OrderService
                 'delivery_fee' => (float) ($data['delivery_fee'] ?? 0),
                 'amount_adjustment' => (float) ($data['amount_adjustment'] ?? 0),
                 'adjustment_remark' => $data['adjustment_remark'] ?? null,
-                'payment_due_date' => $order->isCreditCustomer()
+                'payment_due_date' => $this->shouldHavePaymentDueDate($order)
                     ? $this->resolvePaymentDueDate($order, $data['payment_due_date'] ?? null)
                     : null,
                 'fulfillment_type' => $data['fulfillment_type'] ?? $order->fulfillment_type ?? Order::$fulfillment_types['delivery'],
@@ -640,7 +744,6 @@ class OrderService
                 $order = $order->fresh();
                 if (in_array($order->status, [
                     Order::$status['pending'],
-                    Order::$status['customer_reviewing'],
                 ], true)) {
                     app(OrderStatusService::class)->transition(
                         $order,
@@ -720,7 +823,6 @@ class OrderService
 
             if (in_array($order->status, [
                 Order::$status['packing'],
-                Order::$status['customer_reviewing'],
                 Order::$status['in_route'],
                 Order::$status['delivered'],
             ], true)) {
@@ -743,7 +845,6 @@ class OrderService
 
         if (in_array($order->status, [
             Order::$status['packing'],
-            Order::$status['customer_reviewing'],
             Order::$status['in_route'],
         ], true)) {
             PdfHelper::GenerateOrderInvoice($order);

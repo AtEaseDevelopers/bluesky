@@ -54,10 +54,6 @@ return [
                     'label' => '我的订单',
                     'description' => '查看订单历史和订单摘要。',
                 ],
-                'order_review' => [
-                    'label' => '订单审核',
-                    'description' => '批准或拒绝待客户审核的订单。',
-                ],
                 'order_payments' => [
                     'label' => '订单付款',
                     'description' => '在订单上提交付款凭证。',

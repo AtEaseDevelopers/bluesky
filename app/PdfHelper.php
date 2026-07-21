@@ -106,11 +106,22 @@ class PdfHelper extends Model
             ->get();
     }
 
+    private static function invoiceViewData(Order $order, array $data = []): array
+    {
+        self::resolveCustomer($order);
+        $customer = $order->pdfCustomer();
+
+        return array_merge([
+            'company' => config('portal.company'),
+            'customer_phone' => $order->walk_in_phone ?: ($order->attn_contact ?: ($customer->attn_contact ?? '')),
+        ], $data);
+    }
+
     // Order specific methods (keep original structure but use common helpers)
     public static function GenerateOrderInvoice(Order $order, $void = false, $returnPdf = false)
     {
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
-        $data = [
+        $data = self::invoiceViewData($order, [
             'invoice_number' => $order->invoice_number ?: ('INV-' . $order->id),
             'date' => now()->format('d/m/Y'),
             'order' => $order,
@@ -123,7 +134,7 @@ class PdfHelper extends Model
                 ->orderBy('id')
                 ->get(),
             'payment_method_labels' => OrderPayment::$payment_methods,
-        ];
+        ]);
 
         $pdf = self::configurePdf(PDF::loadView('pdf.invoice', $data));
         $pdf->setPaper('a4', 'portrait');
@@ -136,7 +147,7 @@ class PdfHelper extends Model
     public static function GenerateOrderInvoiceWithoutPrice(Order $order, $void = false, $returnPdf = false)
     {
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
-        $data = [
+        $data = self::invoiceViewData($order, [
             'invoice_number' => $order->invoice_number ?: ('INV-' . $order->id),
             'date' => now()->format('d/m/Y'),
             'order' => $order,
@@ -145,7 +156,7 @@ class PdfHelper extends Model
             'void' => $void,
             'user' => $order->pdfCustomer(),
             'type' => 'order',
-        ];
+        ]);
 
         $pdf = self::configurePdf(PDF::loadView('pdf.invoicewithoutprice', $data));
         $pdf->setPaper('a4', 'portrait');

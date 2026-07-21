@@ -149,7 +149,7 @@ return [
 
     'payment_due_date' => '付款到期日',
     'due_date' => '到期日',
-    'due_date_help' => '仅限账期客户。默认按下单日期加客户付款账期计算。若到期后仍有未付余额，状态将变为到期应付。',
+    'due_date_help' => '仅限账期客户。默认：下单日期 + 客户付款账期（:term）。清空日期并保存可依据客户资料重新计算。若到期后仍有未付余额，状态将变为到期应付。',
     'update_due_date' => '更新到期日',
     'update_driver' => '更新司机',
     'no_drivers' => '尚未配置司机。',
@@ -159,13 +159,18 @@ return [
     'no_status_changes' => '没有可用的状态变更。',
     'cancel_order' => '取消订单',
     'sync_autocount' => '同步至 AutoCount',
+    'autocount_sync_error' => 'AutoCount 错误',
 
     'autocount_sync_status' => [
         'pending' => '待处理',
         'pending_sync' => '待同步',
+        'do_created' => '已创建送货单',
         'synced' => '已同步',
         'synced_successfully' => '同步成功',
+        'paid_synced' => '已同步付款',
+        'sync_error' => '同步错误',
         'skipped' => '已跳过',
+        'not_applicable' => '不适用',
     ],
 
     'payment_due_status_labels' => [

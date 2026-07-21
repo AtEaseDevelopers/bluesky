@@ -114,7 +114,6 @@ class OrderReviewController extends Controller
         }
 
         $wasPending = $order->status === Order::$status['pending'];
-        $wasCustomerReviewing = $order->status === Order::$status['customer_reviewing'];
 
         $orderService->applyReviewAdjustments(
             $order,
@@ -136,7 +135,7 @@ class OrderReviewController extends Controller
         );
 
         $message = $request->boolean('send_to_customer')
-            ? (($wasPending || $wasCustomerReviewing)
+            ? ($wasPending
                 ? __('orders.review_moved_to_packing')
                 : __('orders.review_invoice_updated'))
             : __('orders.review_adjustments_saved');

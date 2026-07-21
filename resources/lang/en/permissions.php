@@ -54,10 +54,6 @@ return [
                     'label' => 'My Orders',
                     'description' => 'View order history and order summary.',
                 ],
-                'order_review' => [
-                    'label' => 'Order Review',
-                    'description' => 'Approve or reject orders pending customer review.',
-                ],
                 'order_payments' => [
                     'label' => 'Order Payments',
                     'description' => 'Submit payment proof on orders.',
