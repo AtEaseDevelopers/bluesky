@@ -91,7 +91,7 @@ class OrderService
 
     public function updatePaymentDueDate(Order $order, ?string $paymentDueDate): Order
     {
-        if (!$order->isCreditCustomer()) {
+        if (!$this->shouldHavePaymentDueDate($order)) {
             throw new \InvalidArgumentException('Payment due date applies to credit customers only.');
         }
 
@@ -108,7 +108,7 @@ class OrderService
 
     public function applyDefaultPaymentDueDate(Order $order, ?string $requestedDate = null, bool $force = false): Order
     {
-        if ($order->paysInStore() || !$this->isCreditOrder($order)) {
+        if (!$this->shouldHavePaymentDueDate($order)) {
             return $order;
         }
 
@@ -128,7 +128,7 @@ class OrderService
 
     public function ensurePaymentDueDate(Order $order): Order
     {
-        if ($order->paysInStore() || !$this->isCreditOrder($order) || $order->payment_due_date) {
+        if (!$this->shouldHavePaymentDueDate($order) || $order->payment_due_date) {
             return $order;
         }
 
@@ -158,7 +158,7 @@ class OrderService
             ->where('status', '!=', Order::$status['cancelled'])
             ->orderBy('id')
             ->each(function (Order $order) {
-                if ($order->paysInStore()) {
+                if (!$this->shouldHavePaymentDueDate($order)) {
                     return;
                 }
 
@@ -173,7 +173,7 @@ class OrderService
             return $requestedDate;
         }
 
-        if ($order->paysInStore() || !$this->isCreditOrder($order)) {
+        if (!$this->shouldHavePaymentDueDate($order)) {
             return null;
         }
 
@@ -185,6 +185,20 @@ class OrderService
         return $this->orderBaseDate($order)
             ->addDays($customer->paymentTermDays())
             ->toDateString();
+    }
+
+    protected function shouldHavePaymentDueDate(Order $order): bool
+    {
+        if (!$this->isCreditOrder($order)) {
+            return false;
+        }
+
+        // In-store pickup is paid at the counter; delivery credit orders always use payment terms.
+        if ($order->paysInStore() && !$order->isDelivery()) {
+            return false;
+        }
+
+        return true;
     }
 
     protected function isCreditOrder(Order $order): bool
@@ -715,7 +729,7 @@ class OrderService
                 'delivery_fee' => (float) ($data['delivery_fee'] ?? 0),
                 'amount_adjustment' => (float) ($data['amount_adjustment'] ?? 0),
                 'adjustment_remark' => $data['adjustment_remark'] ?? null,
-                'payment_due_date' => $order->isCreditCustomer()
+                'payment_due_date' => $this->shouldHavePaymentDueDate($order)
                     ? $this->resolvePaymentDueDate($order, $data['payment_due_date'] ?? null)
                     : null,
                 'fulfillment_type' => $data['fulfillment_type'] ?? $order->fulfillment_type ?? Order::$fulfillment_types['delivery'],

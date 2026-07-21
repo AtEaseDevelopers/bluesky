@@ -275,7 +275,7 @@ class Order extends Model
         }
 
         return $this->customer !== null
-            && ($this->customer->customer_type ?? 'cod') === 'credit';
+            && strtolower((string) ($this->customer->customer_type ?? 'cod')) === 'credit';
     }
 
     public function paysInStore(): bool
