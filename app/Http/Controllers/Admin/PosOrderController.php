@@ -341,8 +341,8 @@ class PosOrderController extends Controller
             'subtotal' => $total,
             'attn_name' => $data['attn_name'],
             'attn_contact' => $data['attn_contact'],
-            'billing_address' => $data['billing_address'],
-            'shipping_address' => $address,
+            'billing_address' => $data['billing_address'] ?? null,
+            'shipping_address' => $address ?: null,
             'payment_method' => $pos->isGuest($request) || !$customer || !$customer->isCreditCustomer() ? 'cod' : null,
             'status' => Order::$status['pending'],
             'payment_status' => Order::$payment_status['unpaid'],
@@ -404,7 +404,7 @@ class PosOrderController extends Controller
         $rules = [
             'attn_name' => ['required', 'string', 'max:30'],
             'attn_contact' => ['required', 'string', 'max:30'],
-            'billing_address' => ['required', 'string', 'max:100'],
+            'billing_address' => ['nullable', 'string', 'max:100'],
             'shipping_address' => ['nullable', 'string', 'max:100'],
             'checkout_action' => ['required', 'in:place_order,make_payment'],
         ];

@@ -96,12 +96,12 @@ class AddOrderController extends Controller
             "attn_contact" => $data['attn_contact'],
             "payment_method" => $data['payment_method'] ?? null,
             "area" => Area::orderStorageValue($request->input('area')),
-            "billing_address" => $data['billing_address'],
+            "billing_address" => $data['billing_address'] ?? null,
             "billing_city" => $request['billing_city'] ?? null,
-            "shipping_city" => $request['shipping_city'],
+            "shipping_city" => $request['shipping_city'] ?? null,
             "billing_postcode" => $data['billing_postcode'] ?? null,
             "billing_state" => $data['billing_state'] ?? null,
-            "shipping_address" => $data['shipping_address'],
+            "shipping_address" => $data['shipping_address'] ?? null,
             "shipping_postcode" => $data['shipping_postcode'] ?? null,
             "shipping_state" => $data['shipping_state'] ?? null,
             "status" => Order::$status['pending'],
@@ -245,7 +245,8 @@ class AddOrderController extends Controller
             "attn_contact" => array_merge(Order::$attribute_rules['attn_contact'], []),
             // "payment_method" => array_merge(Order::$attribute_rules['payment_method'], []),
             'payment_method' => ['nullable'],
-            "billing_address" => $request->boolean('is_walk_in')
+            "billing_address" => ($request->boolean('is_walk_in')
+                || $request->input('payment_method') === User::$payment_method['in-store'])
                 ? ['nullable', 'string', 'max:200']
                 : array_merge(Order::$attribute_rules['billing_address'], []),
             // "billing_postcode" => array_merge(Order::$attribute_rules['billing_postcode'], []),

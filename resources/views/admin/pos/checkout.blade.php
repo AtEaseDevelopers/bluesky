@@ -28,8 +28,8 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="billing_address">{{ __('customers.pos.delivery_address') }} <span class="text-danger">*</span></label>
-                                    <textarea id="billing_address" name="billing_address" class="form-control" rows="3" placeholder="{{ __('orders.billing_address_placeholder') }}" required>{{ old('billing_address', $customer->billing_address) }}</textarea>
+                                    <label class="mb-2" for="billing_address">{{ __('customers.pos.delivery_address') }}</label>
+                                    <textarea id="billing_address" name="billing_address" class="form-control" rows="3" placeholder="{{ __('orders.billing_address_placeholder') }}">{{ old('billing_address', $customer->billing_address) }}</textarea>
                                 </div>
                             </div>
                         </div>
