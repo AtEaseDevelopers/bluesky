@@ -39,7 +39,25 @@ class OrderController extends Controller
     {
         app(OrderService::class)->syncOverduePaymentStatuses();
 
-        $orders = Order::query();
+        $orders = Order::select(
+            "*",
+            DB::raw(
+                "CONCAT_WS('<br />',
+                    NULLIF(orders.billing_address, ''),
+                    NULLIF(orders.billing_city, ''),
+                    NULLIF(orders.billing_postcode, ''),
+                    NULLIF(orders.billing_state, '')
+                ) AS billing_address"
+            ),
+            DB::raw(
+                "CONCAT_WS('<br />',
+                    NULLIF(orders.shipping_address, ''),
+                    NULLIF(orders.shipping_city, ''),
+                    NULLIF(orders.shipping_postcode, ''),
+                    NULLIF(orders.shipping_state, '')
+                ) AS shipping_address"
+            )
+        );
 
         if ($filter_id = $request->input('id')) {
             $orders->where('id', $filter_id);
@@ -157,8 +175,6 @@ class OrderController extends Controller
         }
                             
         foreach ($orders as $key => $value) {
-            $orders[$key]->setAttribute('billing_address', $value->addressHtml('billing'));
-            $orders[$key]->setAttribute('shipping_address', $value->addressHtml('shipping'));
             $orders[$key]->invoice_url = url('/') . '/' . Order::$path.'/' . $value->id . '/invoice-' . $value->id . '.pdf';
             $orders[$key]->invoice_download_url = url('download/') . Order::$path . '/' . $value->id . '/invoice-' . $value->id . '.pdf';
             $orders[$key]->delivery_order_url = url('/') . '/' . Order::$path . '/' . $value->id.'/delivery-order-' . $value->id . '.pdf';
