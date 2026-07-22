@@ -427,6 +427,18 @@ class Order extends Model
         return $this->status !== self::$status['cancelled'] && $this->balanceDue() > 0;
     }
 
+    public function addressHtml(string $type = 'shipping'): string
+    {
+        $parts = array_filter([
+            $this->getAttribute($type . '_address'),
+            $this->getAttribute($type . '_city'),
+            $this->getAttribute($type . '_postcode'),
+            $this->getAttribute($type . '_state'),
+        ], fn ($value) => filled($value));
+
+        return implode('<br />', $parts);
+    }
+
     public function balanceDue(): float
     {
         return max(0, (float) $this->total_price - (float) $this->paid_amount);
