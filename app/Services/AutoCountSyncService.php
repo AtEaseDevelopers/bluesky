@@ -27,6 +27,16 @@ class AutoCountSyncService
             $order = $order->fresh();
         }
 
+        if ($order->usesGenericWalkInDebtor() && !$order->genericWalkInDebtorCode()) {
+            return $this->log(
+                $order,
+                'sync_error',
+                null,
+                'Walk-in / general link order sync requires AUTOCOUNT_WALK_IN_DEBTOR_CODE in OMS config.',
+                $adminId
+            );
+        }
+
         $order->update([
             'autocount_sync_status' => 'pending_sync',
             'autocount_synced_at' => null,

@@ -122,6 +122,39 @@ class Order extends Model
         return $this->order_type === self::$order_types['walk_in'];
     }
 
+    public function isPublicOrder(): bool
+    {
+        return $this->order_type === self::$order_types['public'];
+    }
+
+    /**
+     * Orders with no registered customer account that post to a generic AutoCount debtor.
+     */
+    public function usesGenericWalkInDebtor(): bool
+    {
+        if ($this->isWalkInOrder() || $this->isPublicOrder()) {
+            return true;
+        }
+
+        return $this->isPosOrder() && !$this->user_id;
+    }
+
+    public function genericWalkInDebtorCode(): ?string
+    {
+        if (!$this->usesGenericWalkInDebtor()) {
+            return null;
+        }
+
+        $typeCode = config('autocount.walk_in_debtor_codes.' . $this->order_type);
+        $code = trim((string) ($typeCode ?: config('autocount.walk_in_debtor_code', '')));
+
+        if ($code === '' || strcasecmp($code, '300-0000') === 0) {
+            return null;
+        }
+
+        return $code;
+    }
+
     public function isInStoreOrder(): bool
     {
         if ($this->isPosOrder() || $this->isWalkInOrder()) {

@@ -682,6 +682,8 @@ class AutoCountApiService
         }
 
         $customer = $order->customer;
+        $debtorCode = $this->resolveOrderDebtorCode($order, $customer);
+        $syncCustomer = $this->buildSyncCustomerPayload($order, $customer, $debtorCode);
         $lines = $order->orderProducts()
             ->where('status', OrderProduct::$status['active'])
             ->get();
@@ -701,7 +703,7 @@ class AutoCountApiService
                 'UnitPrice' => number_format($unitPrice, 2, '.', ''),
                 'Description' => $line->product_name,
                 'Location' => '',
-                'AccNo' => $customer ? $customer->sql_customer_code : '',
+                'AccNo' => $debtorCode ?? '',
                 'DeliveryDate' => optional($order->delivery_date)->format('Y-m-d') ?: $order->created_at->format('Y-m-d'),
                 'Discount' => '',
                 'Tax' => '',
@@ -713,6 +715,7 @@ class AutoCountApiService
             'order' => [
                 'id' => $order->id,
                 'invoice_number' => $order->invoice_number,
+                'order_type' => $order->order_type,
                 'api_invoice_id' => $order->api_invoice_id,
                 'api_do_id' => $order->api_do_id,
                 'user_id' => $order->user_id,
@@ -731,23 +734,7 @@ class AutoCountApiService
                 'created_at' => $order->created_at->format('Y-m-d H:i:s'),
                 'updated_at' => $order->updated_at->format('Y-m-d H:i:s'),
                 'agentname' => '',
-                'customer' => $customer ? [
-                    'id' => $customer->id,
-                    'api_account_no' => $customer->sql_customer_code,
-                    'name' => $customer->name,
-                    'phone_no' => $customer->attn_contact,
-                    'billing_address' => $customer->billing_address,
-                    'billing_postcode' => $customer->billing_postcode,
-                    'billing_state' => $customer->billing_state,
-                    'shipping_address' => $customer->shipping_address,
-                    'shipping_postcode' => $customer->shipping_postcode,
-                    'shipping_state' => $customer->shipping_state,
-                    'payment_method' => $this->mapPaymentMethod($order),
-                    'email' => $customer->email,
-                    'status' => $customer->status,
-                    'created_at' => $customer->created_at->format('Y-m-d H:i:s'),
-                    'updated_at' => $customer->updated_at->format('Y-m-d H:i:s'),
-                ] : null,
+                'customer' => $syncCustomer,
             ],
             'detail' => $details,
             'type' => $type,
@@ -758,5 +745,64 @@ class AutoCountApiService
     protected function mapPaymentMethod(Order $order): string
     {
         return $order->isCreditCustomer() ? 'credit' : 'cod';
+    }
+
+    protected function resolveOrderDebtorCode(Order $order, ?User $customer): ?string
+    {
+        if ($customer) {
+            $code = $this->normalizeCustomerCode($customer->sql_customer_code);
+            if ($code) {
+                return $code;
+            }
+        }
+
+        return $order->genericWalkInDebtorCode();
+    }
+
+    protected function buildSyncCustomerPayload(Order $order, ?User $customer, ?string $debtorCode): ?array
+    {
+        if (!$debtorCode) {
+            return null;
+        }
+
+        if ($customer && $this->normalizeCustomerCode($customer->sql_customer_code)) {
+            return [
+                'id' => $customer->id,
+                'api_account_no' => $debtorCode,
+                'name' => $customer->name,
+                'phone_no' => $customer->attn_contact,
+                'billing_address' => $customer->billing_address,
+                'billing_postcode' => $customer->billing_postcode,
+                'billing_state' => $customer->billing_state,
+                'shipping_address' => $customer->shipping_address,
+                'shipping_postcode' => $customer->shipping_postcode,
+                'shipping_state' => $customer->shipping_state,
+                'payment_method' => $this->mapPaymentMethod($order),
+                'email' => $customer->email,
+                'status' => $customer->status,
+                'created_at' => $customer->created_at->format('Y-m-d H:i:s'),
+                'updated_at' => $customer->updated_at->format('Y-m-d H:i:s'),
+            ];
+        }
+
+        $displayName = app(OrderService::class)->displayCustomerName($order);
+
+        return [
+            'id' => 0,
+            'api_account_no' => $debtorCode,
+            'name' => $displayName,
+            'phone_no' => $order->walk_in_phone ?: $order->attn_contact,
+            'billing_address' => $order->billing_address,
+            'billing_postcode' => $order->billing_postcode,
+            'billing_state' => $order->billing_state,
+            'shipping_address' => $order->shipping_address,
+            'shipping_postcode' => $order->shipping_postcode,
+            'shipping_state' => $order->shipping_state,
+            'payment_method' => 'cod',
+            'email' => null,
+            'status' => User::$user_status['active'],
+            'created_at' => $order->created_at->format('Y-m-d H:i:s'),
+            'updated_at' => $order->updated_at->format('Y-m-d H:i:s'),
+        ];
     }
 }
