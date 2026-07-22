@@ -96,12 +96,12 @@ class AddOrderController extends Controller
             "attn_contact" => $data['attn_contact'],
             "payment_method" => $data['payment_method'] ?? null,
             "area" => Area::orderStorageValue($request->input('area')),
-            "billing_address" => $data['billing_address'] ?? null,
+            "billing_address" => $this->optionalAddress($data['billing_address'] ?? null),
             "billing_city" => $request['billing_city'] ?? null,
             "shipping_city" => $request['shipping_city'] ?? null,
             "billing_postcode" => $data['billing_postcode'] ?? null,
             "billing_state" => $data['billing_state'] ?? null,
-            "shipping_address" => $data['shipping_address'] ?? null,
+            "shipping_address" => $this->optionalAddress($data['shipping_address'] ?? null),
             "shipping_postcode" => $data['shipping_postcode'] ?? null,
             "shipping_state" => $data['shipping_state'] ?? null,
             "status" => Order::$status['pending'],
@@ -278,6 +278,13 @@ class AddOrderController extends Controller
         }
 
         return $data;
+    }
+
+    private function optionalAddress(?string $value): string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        return $value === '' ? '' : $value;
     }
 
     public function getCustomerData(Request $request)
