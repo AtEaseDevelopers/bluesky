@@ -414,6 +414,19 @@ class Order extends Model
         ], true);
     }
 
+    /**
+     * A confirmed online gateway payment (Revenue Monster) is authoritative:
+     * the customer has already paid real money, so it must be recorded no
+     * matter where the order sits in fulfilment (customers may "pay now" up
+     * front). Unlike manual admin collection — which is gated by delivery
+     * status via canRecordAdminPayment() — the only order we must not settle
+     * against is a cancelled one, which should be refunded instead.
+     */
+    public function canSettleGatewayPayment(): bool
+    {
+        return $this->status !== self::$status['cancelled'] && $this->balanceDue() > 0;
+    }
+
     public function balanceDue(): float
     {
         return max(0, (float) $this->total_price - (float) $this->paid_amount);

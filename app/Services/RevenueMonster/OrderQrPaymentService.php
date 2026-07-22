@@ -93,7 +93,7 @@ class OrderQrPaymentService
             }
 
             $amountToRecord = min((float) $transaction->amount, $order->balanceDue());
-            if ($amountToRecord > 0 && $order->canRecordAdminPayment()) {
+            if ($amountToRecord > 0 && $order->canSettleGatewayPayment()) {
                 try {
                     $payment = $this->orders->recordPayment(
                         $order,

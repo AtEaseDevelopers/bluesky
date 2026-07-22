@@ -250,6 +250,40 @@ class RevenueMonsterPaymentTest extends TestCase
     }
 
     /** @test */
+    public function webhook_records_payment_when_order_is_not_yet_out_for_delivery(): void
+    {
+        // "Pay now" up front: the QR is generated and paid while the order is
+        // still pending (before it is out for delivery). A confirmed gateway
+        // payment is authoritative and must still be recorded — otherwise the
+        // money is collected but the order keeps showing "unpaid".
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, ['status' => 'pending']);
+
+        $transaction = RevenueMonsterTransaction::create([
+            'order_id' => $order->id,
+            'reference' => 'RM' . $order->id . '-PREPAY',
+            'amount' => '150.00',
+            'currency' => 'MYR',
+            'status' => 'pending',
+        ]);
+
+        $this->postSignedWebhook([
+            'data' => [
+                'status' => 'SUCCESS',
+                'transactionId' => 'TXN-PRE',
+                'amount' => 15000,
+                'order' => ['id' => $transaction->reference],
+            ],
+        ])->assertOk();
+
+        $order->refresh();
+        $this->assertEqualsWithDelta(150.00, (float) $order->paid_amount, 0.001);
+        $this->assertSame('paid', $order->payment_status);
+        $this->assertSame('paid', $transaction->fresh()->status);
+        $this->assertSame(1, OrderPayment::where('order_id', $order->id)->count());
+    }
+
+    /** @test */
     public function webhook_rejects_an_invalid_signature(): void
     {
         $driver = $this->makeDriver();
