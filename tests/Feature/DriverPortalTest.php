@@ -370,6 +370,51 @@ class DriverPortalTest extends TestCase
     }
 
     /** @test */
+    public function driver_sees_record_payment_alongside_online_when_customer_planned_e_wallet()
+    {
+        $driver = $this->makeDriver();
+        $customer = User::forceCreate([
+            'name' => 'E-Wallet COD',
+            'email' => 'ewallet' . rand(1000, 9999) . '@example.com',
+            'password' => Hash::make('password'),
+            'category' => 'cod',
+            'customer_type' => 'cod',
+            'status' => 'active',
+            'payment_method' => json_encode(['cod']),
+            'login_code' => 'code' . rand(1000, 9999),
+            'billing_address' => '1 Market St',
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+            'shipping_address' => '1 Market St',
+            'shipping_postcode' => '50000',
+            'shipping_state' => 'WP',
+        ]);
+
+        $order = Order::forceCreate([
+            'user_id' => $customer->id,
+            'total_price' => 28.00,
+            'paid_amount' => 0,
+            'status' => 'pending',
+            'fulfillment_type' => Order::$fulfillment_types['delivery'],
+            'payment_method' => 'e-wallet',
+            'driver_id' => $driver->id,
+            'billing_address' => '1 Market St',
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+        ]);
+
+        $this->assertFalse($order->canRecordAdminPayment());
+        $this->assertTrue($order->canRecordDriverPayment());
+
+        $this->actingAs($driver, 'web_driver')
+            ->get(route('driver.orders.show', $order->id))
+            ->assertOk()
+            ->assertSee(__('driver_portal.deliveries.record_payment_option'))
+            ->assertSee(__('driver_portal.deliveries.online_payment'))
+            ->assertSee(__('driver_portal.deliveries.expected_payment', ['method' => 'E-Wallet']));
+    }
+
+    /** @test */
     public function driver_can_record_transfer_payment_with_proof_upload()
     {
         Storage::fake('local');

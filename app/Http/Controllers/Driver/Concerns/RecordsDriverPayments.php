@@ -61,7 +61,7 @@ trait RecordsDriverPayments
      */
     protected function recordDriverPayment(Request $request, Order $order)
     {
-        if (!$order->canRecordAdminPayment()) {
+        if (!$order->canRecordDriverPayment()) {
             return back()->with('error', $order->isCodCustomer()
                 ? __('driver_portal.payment.cod_status_required')
                 : __('driver_portal.payment.cannot_record'));

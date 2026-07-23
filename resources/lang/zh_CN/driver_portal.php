@@ -76,7 +76,7 @@ return [
         'status_updated' => '配送状态已更新为「:status」。',
         'delivered_requires_in_route' => '须由办公室先将订单标记为配送中，您才能确认已送达。',
         'wait_for_in_route' => '等待办公室将订单标记为配送中后，方可确认送达。',
-        'expected_payment' => '客户计划付款方式：:method',
+        'expected_payment' => '客户计划付款方式：:method（仅供参考）',
         'payment_timing_label' => '客户何时付款？',
         'pay_now' => '立即付款',
         'pay_later' => '账期付款',

@@ -76,7 +76,7 @@ return [
         'status_updated' => 'Delivery status updated to ":status".',
         'delivered_requires_in_route' => 'This order must be marked In Route by the office before you can mark it delivered.',
         'wait_for_in_route' => 'Waiting for the office to mark this order In Route before you can confirm delivery.',
-        'expected_payment' => 'Customer plans to pay: :method',
+        'expected_payment' => 'Customer plans to pay: :method (reference only)',
         'payment_timing_label' => 'When is the customer paying?',
         'pay_now' => 'Pay Now',
         'pay_later' => 'Credit Payment',

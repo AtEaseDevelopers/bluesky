@@ -423,6 +423,21 @@ class Order extends Model
     }
 
     /**
+     * Whether a driver may record a manual payment in the driver portal.
+     * Checkout payment preference (e.g. e-wallet) is reference only — when
+     * online collection is available, the driver can also record what was
+     * actually collected on delivery.
+     */
+    public function canRecordDriverPayment(): bool
+    {
+        if ($this->canRecordAdminPayment()) {
+            return true;
+        }
+
+        return $this->isDelivery() && $this->canSettleGatewayPayment();
+    }
+
+    /**
      * A confirmed online gateway payment (Revenue Monster) is authoritative:
      * the customer has already paid real money, so it must be recorded no
      * matter where the order sits in fulfilment (customers may "pay now" up

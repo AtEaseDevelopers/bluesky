@@ -103,13 +103,15 @@
     @php
         $latestPayment = $order->payments->where('status', 'confirmed')->sortByDesc('id')->first();
         $canOnlinePayment = $driverCan('make_payment') && $balance > 0.001 && $order->canSettleGatewayPayment();
-        $canRecordPayment = $driverCan('record_payment') && $order->canRecordAdminPayment();
+        $canRecordPayment = $driverCan('record_payment') && $order->canRecordDriverPayment();
         $showPaymentSection = $driverCan('record_payment') || $driverCan('payment_proof') || $canOnlinePayment || $latestPayment;
         $showDeliverySection = $driverCan('update_status');
         $showPaymentModeToggle = $canOnlinePayment && $canRecordPayment;
         $defaultPaymentMode = ($errors->has('payment_method') || $errors->has('paid_amount') || $errors->has('payment_proof') || $errors->has('payment_timing'))
             ? 'record'
-            : ($canRecordPayment && !$canOnlinePayment ? 'record' : 'online');
+            : ($order->hasCodDeliveryPreference() && $canRecordPayment
+                ? 'record'
+                : ($canRecordPayment && !$canOnlinePayment ? 'record' : 'online'));
         $showOnlinePanelInitially = $canOnlinePayment && (!$showPaymentModeToggle || $defaultPaymentMode === 'online');
         $showRecordPanelInitially = $canRecordPayment && (!$showPaymentModeToggle || $defaultPaymentMode === 'record');
     @endphp
