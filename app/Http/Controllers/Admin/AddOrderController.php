@@ -84,6 +84,19 @@ class AddOrderController extends Controller
 
         $total = 0;
 
+        $paymentMethod = $data['payment_method'] ?? null;
+        $isInStorePayment = $paymentMethod === User::$payment_method['in-store'];
+
+        if ($isWalkIn || $isInStorePayment) {
+            $fulfillmentType = Order::$fulfillment_types['pickup'];
+            $driverId = null;
+        } else {
+            $fulfillmentType = $request->input('fulfillment_type', Order::$fulfillment_types['delivery']);
+            $driverId = $fulfillmentType === Order::$fulfillment_types['pickup']
+                ? null
+                : ($request->input('driver_id') ?: null);
+        }
+
         $orderData = [
             "order_type" => $isWalkIn ? Order::$order_types['walk_in'] : Order::$order_types['registered'],
             "user_id" => $isWalkIn ? null : $user->id,
@@ -94,7 +107,7 @@ class AddOrderController extends Controller
             "delivery_fee" => 0,
             "attn_name" => $data['attn_name'],
             "attn_contact" => $data['attn_contact'],
-            "payment_method" => $data['payment_method'] ?? null,
+            "payment_method" => $paymentMethod,
             "area" => Area::orderStorageValue($request->input('area')),
             "billing_address" => $this->optionalAddress($data['billing_address'] ?? null),
             "billing_city" => $request['billing_city'] ?? null,
@@ -106,28 +119,22 @@ class AddOrderController extends Controller
             "shipping_state" => $data['shipping_state'] ?? null,
             "status" => Order::$status['pending'],
             "payment_status" => Order::$payment_status['unpaid'],
-            "driver_id" => $isWalkIn
-                ? null
-                : ($request->input('fulfillment_type') === Order::$fulfillment_types['pickup']
-                    ? null
-                    : ($request->input('driver_id') ?: null)),
-            "fulfillment_type" => $isWalkIn
-                ? Order::$fulfillment_types['pickup']
-                : $request->input('fulfillment_type', Order::$fulfillment_types['delivery']),
+            "driver_id" => $driverId,
+            "fulfillment_type" => $fulfillmentType,
             "is_estimated" => true,
         ];
 
-        if ($request->filled('delivery_slot_id') && $request->filled('delivery_date')
-            && ($data['payment_method'] ?? null) !== User::$payment_method['in-store']) {
+        if (!$isWalkIn
+            && !$isInStorePayment
+            && $fulfillmentType === Order::$fulfillment_types['delivery']
+            && $request->filled('delivery_slot_id')
+            && $request->filled('delivery_date')) {
             $slot = DeliverySlot::find($request->input('delivery_slot_id'));
             if ($slot && $slot->isAvailableForDate($request->input('delivery_date'))) {
                 $orderData['delivery_slot_id'] = $slot->id;
                 $orderData['delivery_date'] = $request->input('delivery_date');
                 $orderData['delivery_time_slot'] = $slot->time_label;
             }
-        } else {
-            $orderData['fulfillment_type'] = Order::$fulfillment_types['pickup'];
-            $orderData['driver_id'] = null;
         }
 
         $order = Order::create($orderData);

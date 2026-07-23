@@ -188,6 +188,7 @@ return [
     'in_store_payment_required_for_packing' => 'Record full payment before moving this in-store order to packing.',
     'in_store_payment_required_for_complete' => 'Record full payment before completing this in-store order.',
     'payment_required_for_complete' => 'Record full payment before completing this order.',
+    'invalid_status_transition' => 'Cannot change order status from :from to :to.',
     'in_store_payment_after_handover' => 'Pack the order, hand items to the customer, then record payment before completing.',
     'method' => 'Method',
     'amount_rm' => 'Amount (RM)',

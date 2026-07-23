@@ -89,8 +89,8 @@ class DeliveryOrderController extends Controller
             'canAdjustOrder' => Order::canDriverAdjustQuantities($order->status),
             'driverStatuses' => self::driverStatusesForOrder($order),
             'paymentMethods' => self::driverPaymentMethodsFor(
-                optional($order->customer)->isCreditCustomer() ? 'credit' : 'cod',
-                optional($order->customer)->isCreditCustomer()
+                $order->isCreditCustomer() ? 'credit' : 'cod',
+                $order->isCreditCustomer()
             ),
             'proofRequiredMethods' => self::$driverProofRequiredMethods,
         ]);

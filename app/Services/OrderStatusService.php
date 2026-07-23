@@ -29,6 +29,7 @@ class OrderStatusService
         'pending' => ['packing', 'cancelled'],
         'packing' => ['handed_to_customer', 'cancelled'],
         'handed_to_customer' => ['completed', 'cancelled'],
+        'delivered' => ['completed', 'cancelled'],
         'completed' => [],
         'cancelled' => [],
     ];
@@ -65,7 +66,10 @@ class OrderStatusService
 
         if (!$this->canTransition($order, $previous, $newStatus)) {
             throw new InvalidArgumentException(
-                "Cannot change order status from {$previous} to {$newStatus}."
+                __('orders.invalid_status_transition', [
+                    'from' => __('order.status.' . $previous),
+                    'to' => __('order.status.' . $newStatus),
+                ])
             );
         }
 
