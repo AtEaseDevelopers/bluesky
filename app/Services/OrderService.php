@@ -63,9 +63,6 @@ class OrderService
         $order = $order->fresh();
 
         if ($order->isFulfilled() && $order->isFullyPaid()) {
-            if (!$order->completed_at) {
-                $order->update(['completed_at' => now()]);
-            }
             if (!$order->invoice_number) {
                 $this->generateInvoiceNumber($order->fresh());
             }

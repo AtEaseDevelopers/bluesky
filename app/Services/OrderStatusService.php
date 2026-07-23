@@ -12,14 +12,16 @@ class OrderStatusService
         'pending' => ['packing', 'cancelled'],
         'packing' => ['in_route', 'cancelled'],
         'in_route' => ['delivered', 'cancelled'],
-        'delivered' => [],
+        'delivered' => ['completed', 'cancelled'],
+        'completed' => [],
         'cancelled' => [],
     ];
 
     private static array $pickupTransitions = [
         'pending' => ['packing', 'cancelled'],
         'packing' => ['cancelled'],
-        'delivered' => [],
+        'delivered' => ['completed', 'cancelled'],
+        'completed' => [],
         'cancelled' => [],
     ];
 
@@ -67,10 +69,12 @@ class OrderStatusService
             );
         }
 
-        if ($order->isInStoreOrder()) {
-            if ($newStatus === Order::$status['completed'] && !$order->isFullyPaid()) {
-                throw new InvalidArgumentException(__('orders.in_store_payment_required_for_complete'));
-            }
+        if ($newStatus === Order::$status['completed'] && !$order->isFullyPaid()) {
+            throw new InvalidArgumentException(
+                $order->isInStoreOrder()
+                    ? __('orders.in_store_payment_required_for_complete')
+                    : __('orders.payment_required_for_complete')
+            );
         }
 
         $order->update(['status' => $newStatus]);
@@ -121,9 +125,7 @@ class OrderStatusService
     {
         $statuses = $this->transitionsFor($order)[$order->status] ?? [];
 
-        if ($order->isInStoreOrder()
-            && in_array(Order::$status['completed'], $statuses, true)
-            && !$order->isFullyPaid()) {
+        if (in_array(Order::$status['completed'], $statuses, true) && !$order->isFullyPaid()) {
             $statuses = array_values(array_filter(
                 $statuses,
                 fn ($status) => $status !== Order::$status['completed']

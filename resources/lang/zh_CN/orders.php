@@ -187,6 +187,7 @@ return [
     'in_store_payment_help' => '将商品交给客户后，在此记录付款（现金、二维码或支付网关）。使用二维码或网关时请上传付款凭证。',
     'in_store_payment_required_for_packing' => '店内订单须先记录全额付款，才能移至打包。',
     'in_store_payment_required_for_complete' => '店内订单须先记录全额付款，才能完成订单。',
+    'payment_required_for_complete' => '须先记录全额付款，才能完成订单。',
     'in_store_payment_after_handover' => '先打包、交给客户，再记录付款，最后完成订单。',
     'method' => '方式',
     'amount_rm' => '金额 (RM)',
