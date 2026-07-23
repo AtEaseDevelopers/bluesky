@@ -154,7 +154,6 @@
                                         <small class="text-muted">{{ __('customers.customer_code_autocount_readonly') }}</small>
                                     @else
                                         <p class="form-control-plaintext text-muted mb-0">{{ __('customers.customer_code_autocount_pending') }}</p>
-                                        <small class="text-muted">{{ __('customers.customer_code_autocount_help') }}</small>
                                     @endif
                                 </div>
                             </div>

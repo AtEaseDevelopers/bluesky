@@ -134,7 +134,6 @@ return [
     'customer_code' => 'Customer Code',
     'customer_code_tooltip' => 'Assigned by AutoCount when the customer is synced.',
     'customer_code_autocount_pending' => 'Pending — assigned by AutoCount on sync',
-    'customer_code_autocount_help' => 'Leave blank in OMS. The AutoCount plugin uses the next debtor number and writes it back here.',
     'customer_code_autocount_readonly' => 'Assigned by AutoCount. Edit the debtor in AutoCount if the code must change.',
     'customer_code_assigned_after_autocount_sync' => 'Customer code will be assigned from AutoCount after the plugin syncs this customer.',
     'enter_customer_code' => 'Enter customer code',
