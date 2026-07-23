@@ -234,10 +234,14 @@
 
     {{-- Update delivery status --}}
     @if ($driverCan('update_status'))
+    @php
+        $deliveryStatusContext = $deliveryStatusContext ?? \App\Http\Controllers\Driver\DeliveryOrderController::driverDeliveryStatusContext($order);
+    @endphp
     <div class="card driver-card mb-3">
         <div class="card-body">
             <h5 class="display-font mb-3" style="font-size:1.15rem;">{{ __('driver_portal.deliveries.update_status') }}</h5>
-            @if (count($driverStatuses))
+            @if ($deliveryStatusContext['mode'] === 'confirm' && count($deliveryStatusContext['statuses'] ?? []))
+                <p class="text-muted-ink mb-3" style="font-size:.92rem;">{{ __('driver_portal.deliveries.update_status_help') }}</p>
                 <form action="{{ route('driver.orders.update-status', $order->id) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="mb-3">
@@ -251,7 +255,7 @@
                         @error('delivery_proof')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                     <div class="d-flex gap-2">
-                        @foreach ($driverStatuses as $value => $label)
+                        @foreach ($deliveryStatusContext['statuses'] as $value => $label)
                             <button type="submit" name="status" value="{{ $value }}"
                                 class="btn btn-block-tall flex-fill btn-outline-brand">
                                 <i class="fa fa-check-circle me-1"></i>
@@ -260,12 +264,19 @@
                         @endforeach
                     </div>
                 </form>
-            @elseif ($canonicalStatus !== 'delivered')
-                <p class="text-muted-ink mb-0">{{ __('driver_portal.deliveries.wait_for_in_route') }}</p>
-            @elseif ($order->delivery_proof)
+            @elseif ($deliveryStatusContext['mode'] === 'done_with_proof')
+                <p class="text-muted-ink mb-3" style="font-size:.92rem;">{{ __('driver_portal.deliveries.already_delivered') }}</p>
                 <a href="{{ route('driver.orders.delivery-proof', $order->id) }}" target="_blank" class="btn btn-outline-brand w-100">
                     <i class="fa fa-file-image-o me-1"></i> {{ __('driver_portal.deliveries.view_delivery_proof') }}
                 </a>
+            @elseif ($deliveryStatusContext['mode'] === 'done_no_proof')
+                <p class="text-muted-ink mb-0">
+                    {{ __('driver_portal.deliveries.delivered_no_proof', [
+                        'status' => \App\Http\Controllers\Driver\DeliveryOrderController::statusLabel($deliveryStatusContext['canonical'] ?? $order->status),
+                    ]) }}
+                </p>
+            @else
+                <p class="text-muted-ink mb-0">{{ __('driver_portal.deliveries.wait_for_in_route') }}</p>
             @endif
         </div>
     </div>

@@ -88,6 +88,7 @@ class DeliveryOrderController extends Controller
             'productsById' => $productsById,
             'canAdjustOrder' => Order::canDriverAdjustQuantities($order->status),
             'driverStatuses' => self::driverStatusesForOrder($order),
+            'deliveryStatusContext' => self::driverDeliveryStatusContext($order),
             'paymentMethods' => self::driverPaymentMethodsFor(
                 $order->isCreditCustomer() ? 'credit' : 'cod',
                 $order->isCreditCustomer()
@@ -299,6 +300,35 @@ class DeliveryOrderController extends Controller
 
         return [
             'delivered' => self::statusLabel('delivered'),
+        ];
+    }
+
+    /**
+     * UI context for the driver delivery-status card on the order detail page.
+     *
+     * @return array{mode: string, statuses?: array<string, string>, canonical?: string}
+     */
+    public static function driverDeliveryStatusContext(Order $order): array
+    {
+        if (self::canDriverMarkDelivered($order)) {
+            return [
+                'mode' => 'confirm',
+                'statuses' => self::driverStatusesForOrder($order),
+            ];
+        }
+
+        $canonical = self::$legacy_status_map[$order->status] ?? $order->status;
+
+        if (in_array($canonical, [Order::$status['delivered'], Order::$status['completed']], true)) {
+            return [
+                'mode' => $order->delivery_proof ? 'done_with_proof' : 'done_no_proof',
+                'canonical' => $canonical,
+            ];
+        }
+
+        return [
+            'mode' => 'waiting',
+            'canonical' => $canonical,
         ];
     }
 
