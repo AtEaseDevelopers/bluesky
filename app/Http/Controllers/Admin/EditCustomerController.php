@@ -98,7 +98,6 @@ class EditCustomerController extends Controller
                 "price_permission" => $request['price_permission'] ?? 0,
                 "invoice_visibility" => $request['invoice_visibility'] ?? 0,
                 "invoice_price_permission" => $request['invoice_price_permission'] ?? 0,
-                'sql_customer_code' => $request['sql_customer_code'] ?? null,
                 'ssm' => $request['ssm'] ?? null,
                 'tin_no' => $request['tin_no'] ?? null,
                 "fax_no" => $data['fax_no'] ?? null,

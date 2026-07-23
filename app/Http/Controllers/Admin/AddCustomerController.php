@@ -89,7 +89,7 @@ class AddCustomerController extends Controller
                 "price_permission" => $request['price_permission'] ?? 0,
                 "invoice_visibility" => $request['invoice_visibility'] ?? 0,
                 "invoice_price_permission" => $request['invoice_price_permission'] ?? 0,
-                'sql_customer_code' => $this->normalizeSqlCustomerCode($request['sql_customer_code'] ?? null),
+                'sql_customer_code' => null,
                 'ssm' => $request['ssm'] ?? null,
                 'tin_no' => $request['tin_no'] ?? null,
                 'registration_completed_at' => now(),
@@ -108,7 +108,7 @@ class AddCustomerController extends Controller
 
         return redirect(route('admin.customers'))->with(
             'success',
-            "$customer->name has been added. Default login password is $default_password."
+            "$customer->name has been added. Default login password is $default_password. " . __('customers.customer_code_assigned_after_autocount_sync')
         );
 
     }
