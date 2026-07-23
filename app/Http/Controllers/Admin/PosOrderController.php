@@ -36,7 +36,7 @@ class PosOrderController extends Controller
 
         $products = Product::query()
             ->withStorefrontStock()
-            ->storefrontAvailable()
+            ->storefrontCatalog()
             ->when($keyword, function ($q) use ($keyword) {
                 $q->where('products.name', 'LIKE', '%' . $keyword . '%');
             })
@@ -79,11 +79,11 @@ class PosOrderController extends Controller
 
         $product = Product::query()
             ->withStorefrontStock()
-            ->storefrontAvailable()
+            ->storefrontCatalog()
             ->where('products.id', $this->decryptId($id))
             ->firstOrFail();
 
-        $data = $this->validateAddToCart($request, $product);
+        $data = $this->validateAddToCart($request, $product, false);
         if (isset($data['error']) && $data['error']) {
             return back()->withInput()->withErrors($data['field_err']);
         }
@@ -128,7 +128,7 @@ class PosOrderController extends Controller
 
         $product = Product::query()
             ->withStorefrontStock()
-            ->storefrontAvailable()
+            ->storefrontCatalog()
             ->where('products.id', $this->decryptId($request->input('id')))
             ->firstOrFail();
 

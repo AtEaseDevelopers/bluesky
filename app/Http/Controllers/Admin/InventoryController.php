@@ -178,8 +178,8 @@ class InventoryController extends Controller
                 'sku' => $record->sku ?: '-',
                 'uom_name' => $uomName,
                 'price' => Product::formatUnitPrice($price, $uomName),
-                'quantity' => number_format($quantity, 3),
-                'weight' => number_format($weight, 3) . ' kg',
+                'quantity' => $this->formatBalanceCell($quantity, $record->sell_in ?? 'qty'),
+                'weight' => $this->formatBalanceCell($weight, 'weight'),
                 'updated_at' => $record->updated_at ? date('d-m-Y H:i', strtotime($record->updated_at)) : '-',
             ];
         }
@@ -197,8 +197,8 @@ class InventoryController extends Controller
         $data = $request->validate([
             'product_id' => 'required|exists:products,id',
             'price' => 'required|numeric|min:0',
-            'quantity' => 'required|numeric|min:0',
-            'weight' => 'nullable|numeric|min:0',
+            'quantity' => 'required|numeric',
+            'weight' => 'nullable|numeric',
             'images' => array_merge(Product::$attribute_rules['images'], []),
         ]);
 
@@ -387,5 +387,19 @@ class InventoryController extends Controller
         return in_array($record->movement_type, ['stock_out', 'sales_deduction'], true)
             ? -abs($amount)
             : abs($amount);
+    }
+
+    private function formatBalanceCell(float $value, string $type): string
+    {
+        $formatted = number_format($value, 3);
+        if ($type === 'weight') {
+            $formatted .= ' kg';
+        }
+
+        if ($value < 0) {
+            return '<span class="text-danger fw-semibold">' . e($formatted) . '</span>';
+        }
+
+        return e($formatted);
     }
 }

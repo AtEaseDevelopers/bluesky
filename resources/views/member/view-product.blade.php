@@ -82,7 +82,7 @@
                             <div class="mb-4">
                                 <label class="mb-2" for="quantity">Quantity</label>
                                 <span class="text-danger"> *</span>
-                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ $product->added_to_cart? $product->added_to_cart->quantity : 1 }}" min="0.001" @if ((float) $product->storefront_available_amount > 0) max="{{ $product->storefront_available_amount }}" @endif step="0.001">
+                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ $product->added_to_cart? $product->added_to_cart->quantity : 1 }}" min="0.001" step="0.001">
                                 @error('quantity')
                                     <span class="text-danger" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -93,7 +93,7 @@
                             <div class="mb-4">
                                 <label class="mb-2" for="quantity">{{ __('orders.quantity_label') }}</label>
                                 <span class="text-danger"> *</span>
-                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ old('quantity', $product->added_to_cart? $product->added_to_cart->quantity : 1) }}" min="0.001" @if ((float) $product->storefront_available_amount > 0) max="{{ $product->storefront_available_amount }}" @endif step="0.001" required>
+                                <input type="number" class="form-control @error('quantity') is-invalid @enderror" id="quantity" name="quantity" value="{{ old('quantity', $product->added_to_cart? $product->added_to_cart->quantity : 1) }}" min="0.001" step="0.001" required>
                                 @error('quantity')
                                     <span class="text-danger" role="alert">
                                         <strong>{{ $message }}</strong>

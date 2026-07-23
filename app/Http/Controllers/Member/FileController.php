@@ -24,10 +24,7 @@ class FileController extends Controller
         }
 
         if (Storage::disk('local')->exists($path)) {
-            $mime = Storage::disk('local')->mimeType($path);
-            $file = Storage::disk('local')->get($path);
-
-            return response($file)->header('Content-Type', $mime);
+            return $this->fileResponse($path, $filename);
         }
 
         abort(404, 'File not found');
@@ -59,13 +56,28 @@ class FileController extends Controller
             }
         }
 
-        $mime = Storage::disk('local')->mimeType($path);
-        $file = Storage::disk('local')->get($path);
+        return $this->fileResponse($path, $filename, true);
+    }
 
-        return response($file, 200, [
-            'Content-Type' => $mime,
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ]);
+    private function fileResponse(string $path, string $filename, bool $attachment = false)
+    {
+        $file = Storage::disk('local')->get($path);
+        $headers = ['Content-Type' => $this->resolveMimeType($path, $filename)];
+
+        if ($attachment) {
+            $headers['Content-Disposition'] = 'attachment; filename="' . $filename . '"';
+        }
+
+        return response($file, 200, $headers);
+    }
+
+    private function resolveMimeType(string $path, string $filename): string
+    {
+        if (str_ends_with(strtolower($filename), '.pdf')) {
+            return 'application/pdf';
+        }
+
+        return Storage::disk('local')->mimeType($path) ?: 'application/octet-stream';
     }
 
     private function guardOrderDocumentAccess(string $folder, $id, string $filename): void

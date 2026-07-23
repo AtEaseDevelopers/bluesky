@@ -186,7 +186,7 @@ class StockService
                 }
 
                 if ($product->inventoryTracksWeight()) {
-                    $stock->weight = max(0, $weightBefore - $weightDeduction);
+                    $stock->weight = $weightBefore - $weightDeduction;
                 } else {
                     $stock->quantity = $quantityBefore - $qtyDeduction;
                 }

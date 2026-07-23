@@ -9,7 +9,7 @@ use Illuminate\Validation\ValidationException;
 
 trait ValidatesProductCartInput
 {
-    protected function validateAddToCart(Request $request, Product $product, bool $enforceStockLimit = true): array
+    protected function validateAddToCart(Request $request, Product $product, bool $enforceStockLimit = false): array
     {
         $rules = [
             'remark' => ['nullable', 'max:200'],

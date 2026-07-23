@@ -53,7 +53,7 @@
             <button type="button" class="btn btn-outline-primary btn-minus" disabled>
                 <i class="fa fa-minus" aria-hidden="true"></i>
             </button>
-            <input type="number" class="form-control px-4" id="quantity" name="quantity" value="1" min="0.001" @if ((float) $product->storefront_available_amount > 0) max="{{ $product->storefront_available_amount }}" @endif step="0.001">
+            <input type="number" class="form-control px-4" id="quantity" name="quantity" value="1" min="0.001" step="0.001">
             <button type="button" class="btn btn-outline-primary btn-plus">
                 <i class="fa fa-plus" aria-hidden="true"></i>
             </button>
@@ -66,7 +66,7 @@
             <button type="button" class="btn btn-outline-primary btn-minus" disabled>
                 <i class="fa fa-minus" aria-hidden="true"></i>
             </button>
-            <input type="number" class="form-control px-4" id="quantity" name="quantity" value="{{ old('quantity', 1) }}" min="0.001" @if ((float) $product->storefront_available_amount > 0) max="{{ $product->storefront_available_amount }}" @endif step="0.001" required>
+            <input type="number" class="form-control px-4" id="quantity" name="quantity" value="{{ old('quantity', 1) }}" min="0.001" step="0.001" required>
             <button type="button" class="btn btn-outline-primary btn-plus">
                 <i class="fa fa-plus" aria-hidden="true"></i>
             </button>

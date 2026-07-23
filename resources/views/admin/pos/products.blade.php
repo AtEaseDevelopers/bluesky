@@ -39,14 +39,12 @@
                                 @endif
                             </div>
                             <div class="full-width-on-mobile">
-                                @if ($posReady && (float) $product->storefront_available_amount > 0)
+                                @if ($posReady)
                                     <button type="button" class="btn btn-outline-primary btn-add-to-cart mb-1" data-id="{{ encrypt($product->id) }}" data-action="{{ route($portal['add_to_cart_name'], encrypt($product->id)) }}" data-bs-toggle="modal" data-bs-target="#add-to-cart">
                                         {{ __('customers.pos.add_to_cart') }}
                                     </button>
-                                @elseif ((float) $product->storefront_available_amount > 0)
-                                    <button type="button" class="btn btn-outline-primary mb-1" disabled>{{ __('customers.pos.add_to_cart') }}</button>
                                 @else
-                                    <button type="button" class="btn btn-secondary mb-1" disabled>{{ __('customers.pos.out_of_stock') }}</button>
+                                    <button type="button" class="btn btn-outline-primary mb-1" disabled>{{ __('customers.pos.add_to_cart') }}</button>
                                 @endif
                                 @if ($product->added_to_cart)
                                     <button type="button" class="btn btn-primary disabled mb-1">

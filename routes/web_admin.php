@@ -224,8 +224,11 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/download_do_zip', 'OrderController@download_do_zip');
 
                 // Order PDF Routes
+                Route::get('/orders/{id}/invoice/download', [OrderPdfController::class, 'downloadInvoice'])->name('order.invoice.download');
                 Route::get('/orders/{id}/invoice', [OrderPdfController::class, 'invoice'])->name('order.invoice');
+                Route::get('/orders/{id}/invoice2/download', [OrderPdfController::class, 'downloadInvoiceWithoutPrice'])->name('order.invoice2.download');
                 Route::get('/orders/{id}/invoice2', [OrderPdfController::class, 'invoiceWithoutPrice'])->name('order.invoice2');
+                Route::get('/orders/{id}/delivery-order/download', [OrderPdfController::class, 'downloadDeliveryOrder'])->name('order.delivery-order.download');
                 Route::get('/orders/{id}/delivery-order', [OrderPdfController::class, 'deliveryOrder'])->name('order.delivery-order');
 
                 Route::get('/daily-sales-report', 'ReportsController@daily_sales_report')->name('daily-sales-report');
