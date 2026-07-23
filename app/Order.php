@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Services\OrderService;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
@@ -330,6 +331,13 @@ class Order extends Model
         return !$this->isCreditCustomer();
     }
 
+    public function driverCustomerTypeLabel(): string
+    {
+        return $this->isCreditCustomer()
+            ? __('driver_portal.customers.credit')
+            : __('driver_portal.customers.cod');
+    }
+
     public function allowsOverpayment(): bool
     {
         return $this->isCreditCustomer();
@@ -430,6 +438,20 @@ class Order extends Model
     public function balanceDue(): float
     {
         return max(0, (float) $this->total_price - (float) $this->paid_amount);
+    }
+
+    /** Ensure delivery orders have a DO number before drivers or PDFs reference them. */
+    public function ensureDoNumber(): self
+    {
+        if ($this->fulfillment_type !== self::$fulfillment_types['delivery']) {
+            return $this;
+        }
+
+        if (preg_match('/^DO-\d{6}-\d+$/', (string) $this->do_no)) {
+            return $this;
+        }
+
+        return app(OrderService::class)->assignDoNumber($this);
     }
 
     public function paymentCollected(): bool

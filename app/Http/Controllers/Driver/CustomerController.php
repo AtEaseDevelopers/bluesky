@@ -62,7 +62,10 @@ class CustomerController extends Controller
             ->orderByRaw('CASE WHEN payment_due_date IS NULL THEN 1 ELSE 0 END')
             ->orderBy('payment_due_date')
             ->orderByDesc('id')
-            ->get();
+            ->get()
+            ->map(function (Order $invoice) {
+                return $invoice->ensureDoNumber();
+            });
 
         $customerType = $customer->isCreditCustomer() ? 'credit' : 'cod';
 

@@ -1,5 +1,25 @@
 @extends('driver.layouts.app')
-@section('title', $order->do_no ?? __('driver_portal.deliveries.order_number', ['id' => $order->id]))
+@section('title', $order->do_no)
+@section('css')
+    <style>
+        .driver-jump-nav {
+            position: sticky;
+            top: 3.5rem;
+            z-index: 1020;
+            background: linear-gradient(180deg, var(--bg) 70%, rgba(233, 241, 246, 0));
+            padding-top: .25rem;
+            padding-bottom: .5rem;
+        }
+        .driver-order-section {
+            scroll-margin-top: 7.5rem;
+        }
+        .driver-jump-link.active {
+            background: var(--deep);
+            color: #fff;
+            border-color: var(--deep);
+        }
+    </style>
+@endsection
 @section('content')
 
     @php
@@ -26,8 +46,11 @@
     <div class="card driver-card mb-3">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start">
-                <h2 class="display-font mb-0" style="font-size:1.5rem;">{{ $order->do_no ?? __('driver_portal.deliveries.order_number', ['id' => $order->id]) }}</h2>
-                <span class="pill pill-{{ $canonicalStatus }}">{{ $statusLabel }}</span>
+                <h2 class="display-font mb-0" style="font-size:1.5rem;">{{ $order->do_no }}</h2>
+                <div class="d-flex flex-column align-items-end gap-1">
+                    <span class="pill pill-{{ $canonicalStatus }}">{{ $statusLabel }}</span>
+                    <span class="pill {{ $order->isCreditCustomer() ? 'pill-due' : 'pill-paid' }}">{{ $order->driverCustomerTypeLabel() }}</span>
+                </div>
             </div>
             @if ($order->do_date)
                 <div class="text-muted-ink mt-1"><i class="fa fa-calendar me-1"></i>{{ \Illuminate\Support\Carbon::parse($order->do_date)->format('d M Y') }}</div>
@@ -38,6 +61,12 @@
                 <div class="col-6">
                     <div class="detail-label">{{ __('driver_portal.deliveries.customer') }}</div>
                     <div>{{ $order->attn_name ?? optional($order->customer)->name ?? '—' }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="detail-label">{{ __('driver_portal.deliveries.customer_type') }}</div>
+                    <div>
+                        <span class="pill {{ $order->isCreditCustomer() ? 'pill-due' : 'pill-paid' }}">{{ $order->driverCustomerTypeLabel() }}</span>
+                    </div>
                 </div>
                 <div class="col-6">
                     <div class="detail-label">{{ __('driver_portal.deliveries.contact') }}</div>
@@ -61,15 +90,50 @@
     <div class="card driver-card mb-3">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start">
-                <h2 class="display-font mb-0" style="font-size:1.5rem;">{{ $order->do_no ?? __('driver_portal.deliveries.order_number', ['id' => $order->id]) }}</h2>
-                <span class="pill pill-{{ $canonicalStatus }}">{{ $statusLabel }}</span>
+                <h2 class="display-font mb-0" style="font-size:1.5rem;">{{ $order->do_no }}</h2>
+                <div class="d-flex flex-column align-items-end gap-1">
+                    <span class="pill pill-{{ $canonicalStatus }}">{{ $statusLabel }}</span>
+                    <span class="pill {{ $order->isCreditCustomer() ? 'pill-due' : 'pill-paid' }}">{{ $order->driverCustomerTypeLabel() }}</span>
+                </div>
             </div>
         </div>
     </div>
     @endif
 
+    @php
+        $latestPayment = $order->payments->where('status', 'confirmed')->sortByDesc('id')->first();
+        $canOnlinePayment = $driverCan('make_payment') && $balance > 0.001 && $order->canSettleGatewayPayment();
+        $canRecordPayment = $driverCan('record_payment') && $order->canRecordAdminPayment();
+        $showPaymentSection = $driverCan('record_payment') || $driverCan('payment_proof') || $canOnlinePayment || $latestPayment;
+        $showDeliverySection = $driverCan('update_status');
+        $showPaymentModeToggle = $canOnlinePayment && $canRecordPayment;
+        $defaultPaymentMode = ($errors->has('payment_method') || $errors->has('paid_amount') || $errors->has('payment_proof') || $errors->has('payment_timing'))
+            ? 'record'
+            : ($canRecordPayment && !$canOnlinePayment ? 'record' : 'online');
+        $showOnlinePanelInitially = $canOnlinePayment && (!$showPaymentModeToggle || $defaultPaymentMode === 'online');
+        $showRecordPanelInitially = $canRecordPayment && (!$showPaymentModeToggle || $defaultPaymentMode === 'record');
+    @endphp
+
+    <div class="driver-jump-nav mb-3">
+        <div class="d-flex gap-2 flex-nowrap overflow-auto pb-1">
+            <a href="#driver-section-items" class="btn btn-sm btn-outline-brand flex-shrink-0 driver-jump-link">
+                <i class="fa fa-list-ul me-1"></i>{{ __('driver_portal.deliveries.jump_items') }}
+            </a>
+            @if ($showPaymentSection)
+                <a href="#driver-section-payment" class="btn btn-sm btn-outline-brand flex-shrink-0 driver-jump-link">
+                    <i class="fa fa-money me-1"></i>{{ __('driver_portal.deliveries.jump_payment') }}
+                </a>
+            @endif
+            @if ($showDeliverySection)
+                <a href="#driver-section-delivery" class="btn btn-sm btn-outline-brand flex-shrink-0 driver-jump-link">
+                    <i class="fa fa-check-circle me-1"></i>{{ __('driver_portal.deliveries.jump_delivery') }}
+                </a>
+            @endif
+        </div>
+    </div>
+
     {{-- Order items / adjust --}}
-    <div class="card driver-card mb-3">
+    <div id="driver-section-items" class="driver-order-section card driver-card mb-3">
         <div class="card-body">
             <h5 class="display-font mb-3" style="font-size:1.15rem;">{{ __('driver_portal.deliveries.order_items') }}</h5>
 
@@ -174,33 +238,101 @@
         </div>
     </div>
 
-    {{-- Payment status --}}
-    @if ($driverCan('record_payment') || $driverCan('payment_proof') || ($driverCan('make_payment') && $balance > 0.001))
-    <div class="card driver-card mb-3">
+    {{-- Payment --}}
+    @if ($showPaymentSection)
+    <div id="driver-section-payment" class="driver-order-section card driver-card mb-3">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="display-font mb-0" style="font-size:1.15rem;">{{ __('driver_portal.deliveries.payment') }}</h5>
                 <span class="pill {{ $payClass }}">{{ $payLabel }}</span>
             </div>
-            <div class="row g-2 text-center">
+            <div class="row g-2 text-center mb-3">
                 <div class="col-4"><div class="detail-label">{{ __('driver_portal.deliveries.total') }}</div><div class="fw-semibold">RM {{ number_format($total, 2) }}</div></div>
                 <div class="col-4"><div class="detail-label">{{ __('driver_portal.deliveries.paid') }}</div><div class="fw-semibold">RM {{ number_format($paid, 2) }}</div></div>
                 <div class="col-4"><div class="detail-label">{{ __('driver_portal.deliveries.balance') }}</div><div class="fw-semibold">RM {{ number_format(max($balance, 0), 2) }}</div></div>
             </div>
-            @if ($driverCan('make_payment') && $balance > 0.001)
-                <div class="mt-3 pt-3" style="border-top:1px solid var(--line);">
-                    <form method="POST" action="{{ route('driver.orders.rm-pay', $order->id) }}">
-                        @csrf
-                        <button type="submit" class="btn btn-accent btn-block-tall w-100">
-                            <i class="fa fa-qrcode me-1"></i> {{ __('driver_portal.deliveries.make_payment') }}
-                        </button>
-                    </form>
-                    <p class="text-muted-ink mb-0 mt-2" style="font-size:.88rem;">{{ __('driver_portal.deliveries.rm_scan_hint') }}</p>
-                </div>
+
+            @if ($canOnlinePayment || $canRecordPayment)
+                @if ($showPaymentModeToggle)
+                    <div class="btn-group w-100 mb-3" role="group" aria-label="{{ __('driver_portal.deliveries.payment') }}">
+                        <input type="radio" class="btn-check" name="driver_payment_mode" id="driver_payment_mode_online" value="online" {{ $defaultPaymentMode === 'online' ? 'checked' : '' }}>
+                        <label class="btn btn-outline-brand" for="driver_payment_mode_online">
+                            <i class="fa fa-qrcode me-1"></i>{{ __('driver_portal.deliveries.online_payment') }}
+                        </label>
+                        <input type="radio" class="btn-check" name="driver_payment_mode" id="driver_payment_mode_record" value="record" {{ $defaultPaymentMode === 'record' ? 'checked' : '' }}>
+                        <label class="btn btn-outline-brand" for="driver_payment_mode_record">
+                            <i class="fa fa-pencil-square-o me-1"></i>{{ __('driver_portal.deliveries.record_payment_option') }}
+                        </label>
+                    </div>
+                @endif
+
+                @if ($canOnlinePayment)
+                    <div id="driver-payment-online" @if (!$showOnlinePanelInitially) style="display:none;" @endif>
+                        <form method="POST" action="{{ route('driver.orders.rm-pay', $order->id) }}">
+                            @csrf
+                            <button type="submit" class="btn btn-accent btn-block-tall w-100">
+                                <i class="fa fa-qrcode me-1"></i> {{ __('driver_portal.deliveries.make_payment') }}
+                            </button>
+                        </form>
+                        <p class="text-muted-ink mb-0 mt-2" style="font-size:.88rem;">{{ __('driver_portal.deliveries.rm_scan_hint') }}</p>
+                    </div>
+                @endif
+
+                @if ($canRecordPayment)
+                    <div id="driver-payment-record" @if (!$showRecordPanelInitially) style="display:none;" @endif>
+                        <form action="{{ route('driver.orders.record-payment', $order->id) }}" method="POST" enctype="multipart/form-data" id="driver-record-payment-form">
+                            @csrf
+                            @if ($order->isCreditCustomer())
+                                @php $defaultPaymentTiming = old('payment_timing', 'pay_now'); @endphp
+                                <div class="mb-3">
+                                    <label class="form-label d-block">{{ __('driver_portal.deliveries.payment_timing_label') }}</label>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="payment_timing" id="payment_timing_pay_now" value="pay_now" {{ $defaultPaymentTiming === 'pay_now' ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="payment_timing_pay_now">{{ __('driver_portal.deliveries.pay_now') }}</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="payment_timing" id="payment_timing_pay_later" value="pay_later" {{ $defaultPaymentTiming === 'pay_later' ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="payment_timing_pay_later">{{ __('driver_portal.deliveries.pay_later') }}</label>
+                                    </div>
+                                </div>
+                                <div id="driverPayNowFields" style="{{ $defaultPaymentTiming === 'pay_now' ? '' : 'display:none;' }}">
+                            @endif
+                            <div class="mb-3">
+                                <label class="form-label" for="payment_method">{{ __('driver_portal.deliveries.payment_method') }}</label>
+                                <select class="form-select @error('payment_method') is-invalid @enderror" name="payment_method" id="payment_method" {{ $order->isCreditCustomer() ? '' : 'required' }}>
+                                    <option value="" disabled {{ old('payment_method', $order->payment_method) ? '' : 'selected' }}>{{ __('driver_portal.deliveries.select_method') }}</option>
+                                    @foreach ($paymentMethods as $value => $label)
+                                        <option value="{{ $value }}" {{ old('payment_method', $order->payment_method) === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                @error('payment_method')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="paid_amount">{{ __('driver_portal.deliveries.amount_collected') }}</label>
+                                <input type="number" step="0.01" min="0" class="form-control @error('paid_amount') is-invalid @enderror"
+                                    name="paid_amount" id="paid_amount" value="{{ old('paid_amount', $order->paid_amount ?: number_format($total, 2, '.', '')) }}" {{ $order->isCreditCustomer() ? '' : 'required' }}>
+                                @error('paid_amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="mb-3" id="proof-wrapper">
+                                <label class="form-label" for="payment_proof">{{ __('driver_portal.deliveries.payment_proof') }} <span class="text-muted-ink" style="font-weight:500;">{{ __('driver_portal.deliveries.payment_proof_hint') }}</span></label>
+                                <input type="file" class="form-control @error('payment_proof') is-invalid @enderror"
+                                    name="payment_proof" id="payment_proof" accept=".jpg,.jpeg,.png,.pdf">
+                                @error('payment_proof')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            </div>
+                            @if ($order->isCreditCustomer())
+                                </div>
+                                <div id="driverPayLaterInfo" class="alert alert-light border mb-3" style="{{ $defaultPaymentTiming === 'pay_later' ? '' : 'display:none;' }}">
+                                    <i class="fa fa-info-circle me-1"></i> {{ __('driver_portal.deliveries.pay_later_help') }}
+                                </div>
+                            @endif
+                            <button type="submit" class="btn btn-accent btn-block-tall w-100">
+                                <i class="fa fa-check me-1"></i> {{ __('driver_portal.deliveries.save_payment') }}
+                            </button>
+                        </form>
+                    </div>
+                @endif
             @endif
-            @php
-                $latestPayment = $order->payments->where('status', 'confirmed')->sortByDesc('id')->first();
-            @endphp
+
             @if ($order->preferredPaymentMethodLabel() && !$latestPayment && in_array($order->payment_method, \App\OrderPayment::codDeliveryPreferenceKeys(), true))
                 <div class="alert alert-warning py-2 px-3 mb-0 mt-3" style="font-size:.92rem;">
                     <i class="fa fa-info-circle me-1"></i>
@@ -233,11 +365,11 @@
     @endif
 
     {{-- Update delivery status --}}
-    @if ($driverCan('update_status'))
+    @if ($showDeliverySection)
     @php
         $deliveryStatusContext = $deliveryStatusContext ?? \App\Http\Controllers\Driver\DeliveryOrderController::driverDeliveryStatusContext($order);
     @endphp
-    <div class="card driver-card mb-3">
+    <div id="driver-section-delivery" class="driver-order-section card driver-card mb-3">
         <div class="card-body">
             <h5 class="display-font mb-3" style="font-size:1.15rem;">{{ __('driver_portal.deliveries.update_status') }}</h5>
             @if ($deliveryStatusContext['mode'] === 'confirm' && count($deliveryStatusContext['statuses'] ?? []))
@@ -282,67 +414,60 @@
     </div>
     @endif
 
-    {{-- Record payment --}}
-    @if ($driverCan('record_payment') && $order->canRecordAdminPayment())
-    <div class="card driver-card mb-3">
-        <div class="card-body">
-            <h5 class="display-font mb-3" style="font-size:1.15rem;">{{ __('driver_portal.deliveries.record_payment') }}</h5>
-            <form action="{{ route('driver.orders.record-payment', $order->id) }}" method="POST" enctype="multipart/form-data" id="driver-record-payment-form">
-                @csrf
-                @if ($order->isCreditCustomer())
-                    @php $defaultPaymentTiming = old('payment_timing', 'pay_now'); @endphp
-                    <div class="mb-3">
-                        <label class="form-label d-block">{{ __('driver_portal.deliveries.payment_timing_label') }}</label>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="payment_timing" id="payment_timing_pay_now" value="pay_now" {{ $defaultPaymentTiming === 'pay_now' ? 'checked' : '' }}>
-                            <label class="form-check-label" for="payment_timing_pay_now">{{ __('driver_portal.deliveries.pay_now') }}</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="payment_timing" id="payment_timing_pay_later" value="pay_later" {{ $defaultPaymentTiming === 'pay_later' ? 'checked' : '' }}>
-                            <label class="form-check-label" for="payment_timing_pay_later">{{ __('driver_portal.deliveries.pay_later') }}</label>
-                        </div>
-                    </div>
-                    <div id="driverPayNowFields" style="{{ $defaultPaymentTiming === 'pay_now' ? '' : 'display:none;' }}">
-                @endif
-                <div class="mb-3">
-                    <label class="form-label" for="payment_method">{{ __('driver_portal.deliveries.payment_method') }}</label>
-                    <select class="form-select @error('payment_method') is-invalid @enderror" name="payment_method" id="payment_method" {{ $order->isCreditCustomer() ? '' : 'required' }}>
-                        <option value="" disabled {{ old('payment_method', $order->payment_method) ? '' : 'selected' }}>{{ __('driver_portal.deliveries.select_method') }}</option>
-                        @foreach ($paymentMethods as $value => $label)
-                            <option value="{{ $value }}" {{ old('payment_method', $order->payment_method) === $value ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    @error('payment_method')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="paid_amount">{{ __('driver_portal.deliveries.amount_collected') }}</label>
-                    <input type="number" step="0.01" min="0" class="form-control @error('paid_amount') is-invalid @enderror"
-                        name="paid_amount" id="paid_amount" value="{{ old('paid_amount', $order->paid_amount ?: number_format($total, 2, '.', '')) }}" {{ $order->isCreditCustomer() ? '' : 'required' }}>
-                    @error('paid_amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                </div>
-                <div class="mb-3" id="proof-wrapper">
-                    <label class="form-label" for="payment_proof">{{ __('driver_portal.deliveries.payment_proof') }} <span class="text-muted-ink" style="font-weight:500;">{{ __('driver_portal.deliveries.payment_proof_hint') }}</span></label>
-                    <input type="file" class="form-control @error('payment_proof') is-invalid @enderror"
-                        name="payment_proof" id="payment_proof" accept=".jpg,.jpeg,.png,.pdf">
-                    @error('payment_proof')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                </div>
-                @if ($order->isCreditCustomer())
-                    </div>
-                    <div id="driverPayLaterInfo" class="alert alert-light border mb-3" style="{{ $defaultPaymentTiming === 'pay_later' ? '' : 'display:none;' }}">
-                        <i class="fa fa-info-circle me-1"></i> {{ __('driver_portal.deliveries.pay_later_help') }}
-                    </div>
-                @endif
-                <button type="submit" class="btn btn-accent btn-block-tall w-100">
-                    <i class="fa fa-check me-1"></i> {{ __('driver_portal.deliveries.save_payment') }}
-                </button>
-            </form>
-        </div>
-    </div>
-    @endif
-
 
 @endsection
 @section('script')
+    <script>
+        (function () {
+            document.querySelectorAll('.driver-jump-link').forEach(function (link) {
+                link.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    var target = document.querySelector(link.getAttribute('href'));
+                    if (!target) {
+                        return;
+                    }
+
+                    document.querySelectorAll('.driver-jump-link').forEach(function (item) {
+                        item.classList.remove('active');
+                    });
+                    link.classList.add('active');
+
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
+
+            function toggleDriverPaymentMode() {
+                var selected = document.querySelector('input[name="driver_payment_mode"]:checked');
+                if (!selected) {
+                    return;
+                }
+
+                var mode = selected.value;
+                var onlinePanel = document.getElementById('driver-payment-online');
+                var recordPanel = document.getElementById('driver-payment-record');
+
+                if (onlinePanel) {
+                    onlinePanel.style.display = mode === 'online' ? '' : 'none';
+                }
+                if (recordPanel) {
+                    recordPanel.style.display = mode === 'record' ? '' : 'none';
+                }
+            }
+
+            document.querySelectorAll('input[name="driver_payment_mode"]').forEach(function (input) {
+                input.addEventListener('change', toggleDriverPaymentMode);
+            });
+            toggleDriverPaymentMode();
+
+            @if ($errors->has('delivery_proof'))
+                document.getElementById('driver-section-delivery')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            @elseif ($errors->has('payment_method') || $errors->has('paid_amount') || $errors->has('payment_proof') || $errors->has('payment_timing'))
+                document.getElementById('driver-section-payment')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            @elseif ($errors->any())
+                document.getElementById('driver-section-items')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            @endif
+        })();
+    </script>
     @if ($canAdjustOrder && $driverCan('adjust_order'))
     <script>
         (function () {
@@ -389,7 +514,7 @@
         })();
     </script>
     @endif
-    @if ($driverCan('record_payment') && $order->canRecordAdminPayment())
+    @if ($canRecordPayment)
     <script>
         (function () {
             var proofRequired = @json($proofRequiredMethods);

@@ -645,24 +645,25 @@ class OrderService
 
     public function generateInvoiceNumber(Order $order): Order
     {
-        if ($order->invoice_number) {
+        if ($this->hasStandardInvoiceNumber($order->invoice_number)) {
             return $order;
         }
 
         return DB::transaction(function () use ($order) {
             $order = Order::lockForUpdate()->find($order->id);
-            if (!$order || $order->invoice_number) {
+            if (!$order || $this->hasStandardInvoiceNumber($order->invoice_number)) {
                 return $order;
             }
 
-            $prefix = 'INV-' . now()->format('Ym') . '-';
-            $prefixLength = strlen($prefix);
-            $lastSeq = (int) Order::where('invoice_number', 'like', $prefix . '%')
-                ->lockForUpdate()
-                ->max(DB::raw("CAST(SUBSTRING(invoice_number, {$prefixLength} + 1) AS UNSIGNED)"));
+            if ($paired = $this->pairedDocumentNumber($order->do_no, 'INV')) {
+                $order->update(['invoice_number' => $paired]);
 
-            $number = $prefix . str_pad((string) ($lastSeq + 1), 5, '0', STR_PAD_LEFT);
-            $order->update(['invoice_number' => $number]);
+                return $order->fresh();
+            }
+
+            $yearMonth = now()->format('Ym');
+            $sequence = $this->nextMonthlyDocumentSequence($yearMonth);
+            $order->update(['invoice_number' => $this->formatDocumentNumber('INV', $yearMonth, $sequence)]);
 
             return $order->fresh();
         });
@@ -870,19 +871,77 @@ class OrderService
 
     public function assignDoNumber(Order $order): Order
     {
-        if ($order->do_no) {
+        if ($this->hasStandardDoNumber($order->do_no)) {
             return $order;
         }
 
-        $prefix = 'AHP' . now()->format('ym');
-        $latest = Order::where('do_no', 'like', $prefix . '%')
-            ->orderBy('do_no', 'desc')
-            ->first();
+        return DB::transaction(function () use ($order) {
+            $order = Order::lockForUpdate()->find($order->id);
+            if (!$order || $this->hasStandardDoNumber($order->do_no)) {
+                return $order;
+            }
 
-        $nextIndex = $latest ? ((int) substr($latest->do_no, strlen($prefix)) + 1) : 1;
-        $order->update(['do_no' => $prefix . sprintf('%04d', $nextIndex)]);
+            if ($paired = $this->pairedDocumentNumber($order->invoice_number, 'DO')) {
+                $order->update(['do_no' => $paired]);
 
-        return $order->fresh();
+                return $order->fresh();
+            }
+
+            $yearMonth = now()->format('Ym');
+            $sequence = $this->nextMonthlyDocumentSequence($yearMonth);
+            $order->update(['do_no' => $this->formatDocumentNumber('DO', $yearMonth, $sequence)]);
+
+            return $order->fresh();
+        });
+    }
+
+    private function formatDocumentNumber(string $type, string $yearMonth, int $sequence): string
+    {
+        return strtoupper($type) . '-' . $yearMonth . '-' . str_pad((string) $sequence, 5, '0', STR_PAD_LEFT);
+    }
+
+    private function hasStandardDoNumber(?string $doNo): bool
+    {
+        return (bool) ($doNo && preg_match('/^DO-\d{6}-\d+$/', $doNo));
+    }
+
+    private function hasStandardInvoiceNumber(?string $invoiceNumber): bool
+    {
+        return (bool) ($invoiceNumber && preg_match('/^INV-\d{6}-\d+$/', $invoiceNumber));
+    }
+
+    private function pairedDocumentNumber(?string $number, string $targetType): ?string
+    {
+        if (!$number || !preg_match('/^(INV|DO)-(\d{6})-(\d+)$/', $number, $matches)) {
+            return null;
+        }
+
+        if (strtoupper($matches[1]) === strtoupper($targetType)) {
+            return $number;
+        }
+
+        return $this->formatDocumentNumber($targetType, $matches[2], (int) $matches[3]);
+    }
+
+    private function nextMonthlyDocumentSequence(string $yearMonth): int
+    {
+        return $this->maxMonthlyDocumentSequence($yearMonth) + 1;
+    }
+
+    private function maxMonthlyDocumentSequence(string $yearMonth): int
+    {
+        $doPrefix = 'DO-' . $yearMonth . '-';
+        $invPrefix = 'INV-' . $yearMonth . '-';
+        $doPrefixLength = strlen($doPrefix);
+        $invPrefixLength = strlen($invPrefix);
+
+        $doMax = (int) Order::where('do_no', 'like', $doPrefix . '%')
+            ->max(DB::raw("CAST(SUBSTRING(do_no, {$doPrefixLength} + 1) AS UNSIGNED)"));
+
+        $invMax = (int) Order::where('invoice_number', 'like', $invPrefix . '%')
+            ->max(DB::raw("CAST(SUBSTRING(invoice_number, {$invPrefixLength} + 1) AS UNSIGNED)"));
+
+        return max($doMax, $invMax);
     }
 
     public function canAdjustAmount($admin): bool

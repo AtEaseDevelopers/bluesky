@@ -338,21 +338,4 @@ class AddOrderController extends Controller
             ]
         );
     }
-
-    /**
-     * Common method to generate DO number
-     */
-    private static function generateDoNumber($order)
-    {
-        $prefix = 'DO' . now()->format('ym');
-        $latest = Order::where('do_no', 'like', $prefix . '%')
-            ->orderBy('do_no', 'desc')
-            ->first();
-
-        $do_no_idx = $latest ? ((int) substr($latest->do_no, strlen($prefix)) + 1) : 1;
-        $ending_digit = sprintf('%04d', $do_no_idx);
-
-        $order->do_no = $prefix . $ending_digit;
-        $order->save();
-    }
 }

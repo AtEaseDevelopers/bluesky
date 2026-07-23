@@ -105,10 +105,12 @@ class RevenueMonsterPaymentController extends Controller
 
     private function findAssignedOrder($id): Order
     {
-        return Order::where('id', $id)
+        $order = Order::where('id', $id)
             ->where('driver_id', Auth::guard('web_driver')->id())
             ->where('fulfillment_type', Order::$fulfillment_types['delivery'])
             ->firstOrFail();
+
+        return $order->ensureDoNumber();
     }
 
     private function authorizeMakePayment(): void

@@ -47,6 +47,29 @@ class DeliveryOrderController extends Controller
             }
         }
 
+        $search = trim((string) $request->query('q', ''));
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search) {
+                $like = '%' . $search . '%';
+
+                $builder->where('orders.do_no', 'like', $like)
+                    ->orWhere('orders.invoice_number', 'like', $like)
+                    ->orWhere('orders.attn_name', 'like', $like)
+                    ->orWhere('orders.attn_contact', 'like', $like)
+                    ->orWhere('orders.walk_in_phone', 'like', $like)
+                    ->orWhere('orders.shipping_address', 'like', $like)
+                    ->orWhere('orders.billing_address', 'like', $like)
+                    ->orWhereHas('customer', function ($customerQuery) use ($like) {
+                        $customerQuery->where('name', 'like', $like)
+                            ->orWhere('attn_contact', 'like', $like);
+                    });
+
+                if (ctype_digit($search)) {
+                    $builder->orWhere('orders.id', (int) $search);
+                }
+            });
+        }
+
         $orders = $query->orderByRaw("CASE status
                 WHEN 'in_route' THEN 0 WHEN 'delivering' THEN 0
                 WHEN 'packing' THEN 1 WHEN 'pending' THEN 1 WHEN 'processing' THEN 1
@@ -56,9 +79,16 @@ class DeliveryOrderController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        $orders->setCollection(
+            $orders->getCollection()->map(function (Order $order) {
+                return $order->ensureDoNumber();
+            })
+        );
+
         return view('driver.orders.index', [
             'orders' => $orders,
             'activeStatus' => $request->status,
+            'searchQuery' => $search,
         ]);
     }
 
@@ -268,10 +298,12 @@ class DeliveryOrderController extends Controller
      */
     protected function findAssignedOrder($id)
     {
-        return Order::where('id', $id)
+        $order = Order::where('id', $id)
             ->where('driver_id', Auth::guard('web_driver')->id())
             ->where('fulfillment_type', Order::$fulfillment_types['delivery'])
             ->firstOrFail();
+
+        return $order->ensureDoNumber();
     }
 
     public static function statusesForFilter(string $filter): array

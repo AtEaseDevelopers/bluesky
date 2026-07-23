@@ -13,5 +13,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(DemoDataSeeder::class);
         $this->call(DriverCustomerVerifySeeder::class);
+        $this->call(OrderStatusDemoSeeder::class);
+        $this->call(Driver1RouteDemoSeeder::class);
     }
 }

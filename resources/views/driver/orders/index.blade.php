@@ -10,14 +10,36 @@
         </div>
     </div>
 
+    <form method="GET" action="{{ route('driver.orders.index') }}" class="mb-3">
+        @if ($activeStatus)
+            <input type="hidden" name="status" value="{{ $activeStatus }}">
+        @endif
+        <div class="input-group">
+            <input type="search"
+                   name="q"
+                   class="form-control"
+                   value="{{ $searchQuery }}"
+                   placeholder="{{ __('driver_portal.deliveries.search_placeholder') }}"
+                   autocomplete="off">
+            <button type="submit" class="btn btn-primary">
+                <i class="fa fa-search"></i>
+            </button>
+            @if ($searchQuery !== '')
+                <a href="{{ route('driver.orders.index', array_filter(['status' => $activeStatus])) }}"
+                   class="btn btn-outline-secondary">{{ __('ui.clear_search') }}</a>
+            @endif
+        </div>
+    </form>
+
     <ul class="nav nav-pills mb-3 flex-nowrap overflow-auto pb-1">
         <li class="nav-item">
-            <a class="nav-link {{ !$activeStatus ? 'active' : '' }}" href="{{ route('driver.orders.index') }}">{{ __('ui.all') }}</a>
+            <a class="nav-link {{ !$activeStatus ? 'active' : '' }}"
+               href="{{ route('driver.orders.index', array_filter(['q' => $searchQuery ?: null])) }}">{{ __('ui.all') }}</a>
         </li>
         @foreach (['processing' => 'order.status.processing', 'in_route' => 'order.status.in_route', 'delivered' => 'order.status.delivered'] as $st => $labelKey)
             <li class="nav-item">
                 <a class="nav-link text-nowrap {{ $activeStatus === $st ? 'active' : '' }}"
-                   href="{{ route('driver.orders.index', ['status' => $st]) }}">{{ __($labelKey) }}</a>
+                   href="{{ route('driver.orders.index', array_filter(['status' => $st, 'q' => $searchQuery ?: null])) }}">{{ __($labelKey) }}</a>
             </li>
         @endforeach
     </ul>
@@ -35,9 +57,10 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
-                            <div class="fw-bold" style="font-size:1.05rem;">{{ $order->do_no ?? __('driver_portal.deliveries.order_number', ['id' => $order->id]) }}</div>
+                            <div class="fw-bold" style="font-size:1.05rem;">{{ $order->do_no }}</div>
                             <div class="text-muted-ink">
                                 <i class="fa fa-user me-1"></i>{{ $order->attn_name ?? optional($order->customer)->name ?? '—' }}
+                                <span class="pill {{ $order->isCreditCustomer() ? 'pill-due' : 'pill-paid' }} ms-1">{{ $order->driverCustomerTypeLabel() }}</span>
                             </div>
                         </div>
                         @php
@@ -67,7 +90,9 @@
         <div class="card driver-card">
             <div class="card-body text-center py-5">
                 <i class="fa fa-inbox fa-3x mb-3" style="color: var(--teal);"></i>
-                <p class="mb-0 text-muted-ink">{{ __('driver_portal.deliveries.empty') }}</p>
+                <p class="mb-0 text-muted-ink">
+                    {{ $searchQuery !== '' ? __('driver_portal.deliveries.search_empty', ['query' => $searchQuery]) : __('driver_portal.deliveries.empty') }}
+                </p>
             </div>
         </div>
     @endforelse

@@ -24,7 +24,7 @@ class DriverOrderController extends Controller
             ->orderByDesc('id')
             ->get()
             ->map(function (Order $order) {
-                return $this->formatOrder($order);
+                return $this->formatOrder($order->ensureDoNumber());
             });
 
         return response()->json([
@@ -40,7 +40,7 @@ class DriverOrderController extends Controller
 
         return response()->json([
             'success' => true,
-            'order' => $this->formatOrder($order->load(['customer:id,name,attn_contact,customer_type', 'orderProducts'])),
+            'order' => $this->formatOrder($order->ensureDoNumber()->load(['customer:id,name,attn_contact,customer_type', 'orderProducts'])),
         ]);
     }
 
@@ -122,16 +122,19 @@ class DriverOrderController extends Controller
 
     private function findDriverOrder(int $driverId, $orderId): Order
     {
-        return Order::where('id', $orderId)
+        $order = Order::where('id', $orderId)
             ->where('driver_id', $driverId)
             ->where('fulfillment_type', Order::$fulfillment_types['delivery'])
             ->firstOrFail();
+
+        return $order->ensureDoNumber();
     }
 
     private function formatOrder(Order $order): array
     {
         return [
             'id' => $order->id,
+            'do_no' => $order->do_no,
             'status' => $order->status,
             'payment_status' => $order->payment_status,
             'total_price' => (float) $order->total_price,

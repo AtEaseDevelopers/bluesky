@@ -54,7 +54,7 @@
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
                         <div class="fw-bold" style="font-size:1.05rem;">
-                            {{ $invoice->invoice_number ?? $invoice->do_no ?? __('driver_portal.deliveries.order_number', ['id' => $invoice->id]) }}
+                            {{ $invoice->do_no }}
                         </div>
                         <div class="text-muted-ink">
                             <i class="fa fa-calendar me-1"></i>{{ \Illuminate\Support\Carbon::parse($invoice->do_date ?? $invoice->created_at)->format('d M Y') }}

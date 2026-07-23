@@ -250,6 +250,126 @@ class DriverPortalTest extends TestCase
     }
 
     /** @test */
+    public function driver_order_detail_shows_credit_customer_type()
+    {
+        $driver = $this->makeDriver();
+        $customer = User::forceCreate([
+            'name' => 'Credit Buyer',
+            'email' => 'credit' . rand(1000, 9999) . '@example.com',
+            'password' => Hash::make('password'),
+            'category' => 'credit',
+            'customer_type' => 'credit',
+            'status' => 'active',
+            'payment_method' => json_encode(['term']),
+            'login_code' => 'code' . rand(1000, 9999),
+            'billing_address' => '1 Market St',
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+            'shipping_address' => '1 Market St',
+            'shipping_postcode' => '50000',
+            'shipping_state' => 'WP',
+        ]);
+
+        $order = Order::forceCreate([
+            'user_id' => $customer->id,
+            'total_price' => 150.00,
+            'paid_amount' => 0,
+            'status' => 'in_route',
+            'payment_method' => 'term',
+            'driver_id' => $driver->id,
+            'billing_address' => '1 Market St',
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->get(route('driver.orders.show', $order->id))
+            ->assertOk()
+            ->assertSee(__('driver_portal.customers.credit'))
+            ->assertSee(__('driver_portal.deliveries.payment_timing_label'))
+            ->assertSee(__('driver_portal.deliveries.pay_later'));
+    }
+
+    /** @test */
+    public function driver_order_detail_shows_cod_for_walk_in_and_general_link_orders()
+    {
+        $driver = $this->makeDriver();
+
+        $walkIn = Order::forceCreate([
+            'user_id' => null,
+            'walk_in_name' => 'Walk-in Guest',
+            'walk_in_phone' => '0123456789',
+            'order_type' => Order::$order_types['walk_in'],
+            'total_price' => 80.00,
+            'paid_amount' => 0,
+            'status' => 'in_route',
+            'payment_method' => 'cash',
+            'driver_id' => $driver->id,
+            'billing_address' => '1 Market St',
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+        ]);
+
+        $generalLink = Order::forceCreate([
+            'user_id' => null,
+            'is_general' => true,
+            'attn_name' => 'Public Buyer',
+            'total_price' => 90.00,
+            'paid_amount' => 0,
+            'status' => 'in_route',
+            'payment_method' => 'cash',
+            'driver_id' => $driver->id,
+            'billing_address' => '2 Market St',
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->get(route('driver.orders.show', $walkIn->id))
+            ->assertOk()
+            ->assertSee(__('driver_portal.customers.cod'));
+
+        $this->actingAs($driver, 'web_driver')
+            ->get(route('driver.orders.show', $generalLink->id))
+            ->assertOk()
+            ->assertSee(__('driver_portal.customers.cod'));
+    }
+
+    /** @test */
+    public function driver_order_list_shows_customer_type_badge()
+    {
+        $driver = $this->makeDriver();
+        $customer = User::forceCreate([
+            'name' => 'Credit List Buyer',
+            'email' => 'creditlist' . rand(1000, 9999) . '@example.com',
+            'password' => Hash::make('password'),
+            'category' => 'credit',
+            'customer_type' => 'credit',
+            'status' => 'active',
+            'payment_method' => json_encode(['term']),
+            'login_code' => 'code' . rand(1000, 9999),
+            'billing_address' => '1 Market St',
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+            'shipping_address' => '1 Market St',
+            'shipping_postcode' => '50000',
+            'shipping_state' => 'WP',
+        ]);
+
+        $this->makeOrder($driver, [
+            'user_id' => $customer->id,
+            'attn_name' => 'Credit List Buyer',
+            'status' => 'in_route',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->get(route('driver.orders.index'))
+            ->assertOk()
+            ->assertSee('Credit List Buyer')
+            ->assertSee(__('driver_portal.customers.credit'));
+    }
+
+    /** @test */
     public function driver_can_record_transfer_payment_with_proof_upload()
     {
         Storage::fake('local');
