@@ -17,6 +17,10 @@
                         <i class="fa fa-search"></i>
                     </button>
                 </div>
+                <div class="form-check mb-3 d-none" id="select-all-products-wrap">
+                    <input type="checkbox" class="form-check-input" id="select-all-products">
+                    <label class="form-check-label" for="select-all-products">{{ __('roles.select_all') }}</label>
+                </div>
                 <div id="productList"></div>
             </div>
             <div class="modal-footer">

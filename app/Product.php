@@ -367,6 +367,12 @@ class Product extends Model
         return $query->where('products.status', self::$status['active']);
     }
 
+    /** Active catalog products this customer is allowed to order. */
+    public function scopeMemberCatalog(Builder $query, User $user): Builder
+    {
+        return $query->storefrontCatalog()->visibleToCustomer($user);
+    }
+
     /** In-stock products only (e.g. POS counter sales). */
     public function scopeStorefrontAvailable(Builder $query): Builder
     {
@@ -384,12 +390,22 @@ class Product extends Model
     }
 
     /**
-     * Optional catalog filter by customer category visible products.
-     * When a category has no products configured, all active catalog products are shown.
-     * Per-customer product_visibilities are admin metadata only — not used to hide portal items.
+     * Restrict catalog to products this customer may order.
+     * 1. When the customer has products in product_visibilities, only those are shown.
+     * 2. Otherwise, when their category has visible products configured, only those are shown.
+     * 3. Otherwise, all active catalog products are shown.
      */
     public function scopeVisibleToCustomer(Builder $query, User $user): Builder
     {
+        if (ProductVisibility::where('user_id', $user->id)->exists()) {
+            return $query->whereExists(function ($sub) use ($user) {
+                $sub->select(DB::raw(1))
+                    ->from('product_visibilities')
+                    ->whereColumn('product_visibilities.product_id', 'products.id')
+                    ->where('product_visibilities.user_id', $user->id);
+            });
+        }
+
         return $query->where(function (Builder $q) use ($user) {
             $q->whereNotExists(function ($sub) use ($user) {
                 $sub->select(DB::raw(1))
@@ -404,6 +420,14 @@ class Product extends Model
                     ->where('customer_categories.category', $user->category);
             });
         });
+    }
+
+    public static function isVisibleToCustomer(int $productId, User $user): bool
+    {
+        return static::query()
+            ->where('products.id', $productId)
+            ->memberCatalog($user)
+            ->exists();
     }
 
     public function storefrontAvailableAmount(): float

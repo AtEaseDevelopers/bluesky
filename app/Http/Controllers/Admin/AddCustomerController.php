@@ -86,7 +86,7 @@ class AddCustomerController extends Controller
                 "password" => Hash::make($default_password),
                 "status" => User::$user_status['active'],
                 "remark" => $data['remark'],
-                "price_permission" => $request['price_permission'] ?? 0,
+                "price_permission" => $request['price_permission'] ?? 1,
                 "invoice_visibility" => $request['invoice_visibility'] ?? 0,
                 "invoice_price_permission" => $request['invoice_price_permission'] ?? 0,
                 'sql_customer_code' => null,

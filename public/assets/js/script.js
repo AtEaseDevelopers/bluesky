@@ -94,6 +94,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
             }
+
+            syncSelectAllControl();
         });
     }
 
@@ -115,6 +117,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     .then(data => {
                         if (data.success) {
                             document.getElementById("productList").innerHTML = data.view;
+                            showSelectAllControl();
+                            syncSelectAllControl();
                         } else {
                             Swal.fire(orderJs('error', 'Error'), orderJs('error_occurred', 'An error occurred.'), 'error');
                         }
@@ -125,6 +129,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
             } else {
                 init_pre_order_data();
+                showSelectAllControl();
+                syncSelectAllControl();
             }
         });
     }
@@ -482,11 +488,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (document.getElementById('select-all')) {
         document.getElementById('select-all').addEventListener('click', function() {
-            const checkboxes = document.querySelectorAll('.products-card input[type="checkbox"]');
-            checkboxes.forEach(function(checkbox) {
-                checkbox.checked = !checkbox.checked;
+            const visible = getVisibleProductCheckboxes();
+            const allChecked = visible.length > 0 && visible.every(function(checkbox) {
+                return checkbox.checked;
             });
-        });        
+            setAllVisibleProductsSelected(!allChecked);
+        });
+    }
+
+    if (document.getElementById('select-all-products')) {
+        document.getElementById('select-all-products').addEventListener('change', function() {
+            setAllVisibleProductsSelected(this.checked);
+        });
     }
 
     if (document.getElementById('report-filters')) {
@@ -555,6 +568,8 @@ document.addEventListener('change', function(event) {
                 el.classList.add('d-none');
             }
         }
+
+        syncSelectAllControl();
     }
 
     if (event.target.matches('input[name="quantity[]"], input[name="weight[]"]')) {
@@ -663,6 +678,59 @@ document.addEventListener('click', function(event) {
 function isWalkInOrder() {
     var walkInCheckbox = document.getElementById('is_walk_in');
     return walkInCheckbox && walkInCheckbox.checked;
+}
+
+function getVisibleProductCheckboxes() {
+    const productList = document.getElementById('productList');
+    if (!productList) {
+        return [];
+    }
+
+    return Array.from(productList.querySelectorAll('.products-card:not(.d-none) .toggle-product-options'));
+}
+
+function setAllVisibleProductsSelected(checked) {
+    getVisibleProductCheckboxes().forEach(function(checkbox) {
+        checkbox.checked = checked;
+
+        if (document.getElementById('order_customer')) {
+            const optionSection = document.getElementById('product-option-' + checkbox.value);
+            if (optionSection) {
+                optionSection.classList.toggle('d-none', !checked);
+            }
+        }
+    });
+
+    syncSelectAllControl();
+}
+
+function showSelectAllControl() {
+    const wrap = document.getElementById('select-all-products-wrap');
+    if (wrap) {
+        wrap.classList.remove('d-none');
+    }
+}
+
+function syncSelectAllControl() {
+    const master = document.getElementById('select-all-products');
+    const visible = getVisibleProductCheckboxes();
+
+    if (!master) {
+        return;
+    }
+
+    if (visible.length === 0) {
+        master.checked = false;
+        master.indeterminate = false;
+        return;
+    }
+
+    const checkedCount = visible.filter(function(checkbox) {
+        return checkbox.checked;
+    }).length;
+
+    master.checked = checkedCount === visible.length;
+    master.indeterminate = checkedCount > 0 && checkedCount < visible.length;
 }
 
 function getOrderCustomerId() {
@@ -1048,6 +1116,8 @@ function init_pre_order_data() {
             }
         });
     }
+
+    syncSelectAllControl();
 }
 
 document.addEventListener('click', function (event) {

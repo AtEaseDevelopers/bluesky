@@ -25,13 +25,13 @@ class AddToCartController extends Controller
 
     public function addToCart(Request $request, $id)
     {
+        $user = Auth::guard('web')->user();
+
         $product = Product::query()
             ->withStorefrontStock()
-            ->storefrontCatalog()
+            ->memberCatalog($user)
             ->where('products.id', decrypt($id))
             ->firstOrFail();
-
-        $user = Auth::guard('web')->user();
 
         $data = $this->validateAddToCart($request, $product, false);
         if (isset($data['error']) && $data['error']) {

@@ -334,14 +334,14 @@
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="hide">
                                                 <input class="form-check-input" type="radio" name="price_permission"
-                                                    id="hide" value="0" checked>
+                                                    id="hide" value="0">
                                                 {{ __('customers.hide_price') }}
                                             </label>
                                         </div>
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="unhide">
                                                 <input class="form-check-input" type="radio" name="price_permission"
-                                                    id="unhide" value="1">
+                                                    id="unhide" value="1" checked>
                                                 {{ __('customers.unhide_price') }}
                                             </label>
                                         </div>

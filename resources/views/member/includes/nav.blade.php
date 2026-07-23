@@ -14,11 +14,6 @@
         }
         return $customerPermissions[$permission] ?? true;
     };
-    $pendingReviewCount = (!$isGuest && $user)
-        ? \App\Order::where('user_id', $user->id)
-            ->where('status', \App\Order::$status['customer_reviewing'])
-            ->count()
-        : 0;
 @endphp
 <nav class="navbar sticky-top navbar-expand-lg bg-body-tertiary">
     <div class="container">
@@ -45,11 +40,8 @@
                 @endif
                 @if (!$isGuest && ($portal['orders_url'] ?? null) && $can('orders'))
                     <li class="nav-item">
-                        <a class="nav-link {{ in_array($currentRoute, ['member.orders', 'member.orders.summary', 'member.orders.review']) ? 'active' : '' }}" href="{{ $portal['orders_url'] }}">
+                        <a class="nav-link {{ in_array($currentRoute, ['member.orders', 'member.orders.summary']) ? 'active' : '' }}" href="{{ $portal['orders_url'] }}">
                             {{ __('ui.nav.my_orders') }}
-                            @if ($pendingReviewCount > 0)
-                                <span class="badge bg-warning text-dark">{{ $pendingReviewCount }}</span>
-                            @endif
                         </a>
                     </li>
                     @if ($user && $user->isCreditCustomer() && ($portal['bulk_payments_url'] ?? null) && $can('bulk_payments'))

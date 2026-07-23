@@ -52,7 +52,10 @@ class BuyAgainController extends Controller
     
             $previous_cart_products = OrderProduct::where('status', OrderProduct::$status['active'])->where('order_id', $order->id)->get();
             foreach ($previous_cart_products as $ind => $prev_cart_product) {
-                $product = Product::where('id', $prev_cart_product->product_id)->where('status', Product::$status['active'])->first();
+                $product = Product::query()
+                    ->memberCatalog($user)
+                    ->where('products.id', $prev_cart_product->product_id)
+                    ->first();
                 if (!empty($product)) {
                     $new_cart_product = CartProduct::create(
                         [

@@ -33,7 +33,7 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->withStorefrontStock()
-            ->storefrontCatalog()
+            ->memberCatalog($user)
             ->when($keyword, function ($q) use ($keyword) {
                 return $q->where(function ($query) use ($keyword) {
                     $query->where('products.name', 'LIKE', '%' . $keyword . '%')
@@ -119,7 +119,7 @@ class ProductController extends Controller
 
         $product = Product::query()
             ->withStorefrontStock()
-            ->storefrontCatalog()
+            ->memberCatalog($user)
             ->where('products.id', decrypt($id))
             ->firstOrFail();
 
@@ -172,13 +172,14 @@ class ProductController extends Controller
 
     public function add_to_cart_product_info(Request $request)
     {
+        $user = Auth::guard('web')->user();
         $product = Product::query()
             ->withStorefrontStock()
-            ->storefrontCatalog()
+            ->memberCatalog($user)
             ->where('products.id', decrypt($request['id']))
             ->firstOrFail();
 
-        $data['product'] = $this->formatProductForMember($product, Auth::guard('web')->user());
+        $data['product'] = $this->formatProductForMember($product, $user);
         $data['product_option'] = Product::getOption(decrypt($request['id']), true);
         $data['cart_product_options'] = DB::table('cart_product_options')
             ->leftJoin('cart_products', 'cart_products.id', '=', 'cart_product_options.cart_product_id')

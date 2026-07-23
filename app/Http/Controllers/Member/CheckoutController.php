@@ -134,6 +134,13 @@ class CheckoutController extends Controller
         if (!$cart_products->count()) {
             return redirect()->to('/products')->with('error', "Something went wrong!");
         }
+
+        foreach ($cart_products as $cartProduct) {
+            if (!Product::isVisibleToCustomer((int) $cartProduct->product_id, $user)) {
+                return redirect()->to('/cart')->with('error', 'Your cart contains products that are no longer available to you.');
+            }
+        }
+
         $total = 0;
         foreach ($cart_products as $key => $value) {
             $cart_products[$key]->options = CartProduct::getOption($value->cart_product_id);
