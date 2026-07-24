@@ -34,7 +34,7 @@ class UpdateOrderStatusController extends Controller
         }
 
         try {
-            if ($status === Order::$status['in_route']) {
+            if ($status === Order::$status['in_route'] && $order->isDelivery()) {
                 $request->validate([
                     'driver_id' => 'required|exists:drivers,id',
                 ]);

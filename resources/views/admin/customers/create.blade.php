@@ -45,6 +45,27 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label class="mb-2">{{ __('customers.status') }}</label>
+                                    <div class="d-flex mt-2">
+                                        <div class="form-check me-3 mb-1">
+                                            <label class="form-check-label" for="status_active">
+                                                <input class="form-check-input" type="radio" name="status" id="status_active" value="active" {{ old('status', 'active') === 'active' ? 'checked' : '' }}>
+                                                {{ __('customers.filter_status.active') }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check me-3 mb-1">
+                                            <label class="form-check-label" for="status_inactive">
+                                                <input class="form-check-input" type="radio" name="status" id="status_inactive" value="inactive" {{ old('status') === 'inactive' ? 'checked' : '' }}>
+                                                {{ __('customers.filter_status.inactive') }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                          <!-- BILLING INFO SECTION -->
 
                         <div class="row">
@@ -353,14 +374,14 @@
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="hide_invoice">
                                                 <input class="form-check-input" type="radio" name="invoice_visibility"
-                                                    id="hide_invoice" value="0" checked>
+                                                    id="hide_invoice" value="0">
                                                 {{ __('customers.hide_invoice') }}
                                             </label>
                                         </div>
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="unhide_invoice">
                                                 <input class="form-check-input" type="radio" name="invoice_visibility"
-                                                    id="unhide_invoice" value="1">
+                                                    id="unhide_invoice" value="1" checked>
                                                 {{ __('customers.unhide_invoice') }}
                                             </label>
                                         </div>
@@ -373,7 +394,7 @@
                                             <label class="form-check-label" for="invoice_price_hide">
                                                 <input class="form-check-input" type="radio"
                                                     name="invoice_price_permission" id="invoice_price_hide"
-                                                    value="0" checked>
+                                                    value="0">
                                                 {{ __('customers.hide_product_price') }}
                                             </label>
                                         </div>
@@ -381,7 +402,7 @@
                                             <label class="form-check-label" for="invoice_price_unhide">
                                                 <input class="form-check-input" type="radio"
                                                     name="invoice_price_permission" id="invoice_price_unhide"
-                                                    value="1">
+                                                    value="1" checked>
                                                 {{ __('customers.unhide_product_price') }}
                                             </label>
                                         </div>

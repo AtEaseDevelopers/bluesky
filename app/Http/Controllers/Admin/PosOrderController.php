@@ -396,7 +396,7 @@ class PosOrderController extends Controller
 
         $order->update(['order_weight' => $orderWeight]);
 
-        return $order->fresh();
+        return app(OrderService::class)->applyDefaultPaymentDueDate($order->fresh());
     }
 
     private function validateCheckout(Request $request)

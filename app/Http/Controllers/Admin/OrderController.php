@@ -295,28 +295,44 @@ class OrderController extends Controller
     {
         $data = $request->validate([
             'orders_id' => 'required',
-            'fulfillment_type' => 'required|in:delivery,pickup',
+            'fulfillment_type' => 'required|in:delivery,pickup,courier',
             'driver_id' => 'nullable|exists:drivers,id',
             'delivery_date' => 'nullable|date',
             'delivery_slot_id' => 'nullable|exists:delivery_slots,id',
         ]);
 
         $order = Order::findOrFail(decrypt($data['orders_id']));
+
+        if (!$order->canEditFulfillment()) {
+            return back()->with('error', __('orders.fulfillment_locked'));
+        }
+
+        if (!$order->canShowFulfillmentPanel()) {
+            return back()->with('error', __('orders.fulfillment_available_after_packing'));
+        }
+
         $fulfillmentType = $data['fulfillment_type'];
-        $driverId = $fulfillmentType === Order::$fulfillment_types['pickup']
-            ? null
-            : ($data['driver_id'] ?? null);
+        $driverId = $fulfillmentType === Order::$fulfillment_types['delivery']
+            ? ($data['driver_id'] ?? null)
+            : null;
 
         $update = [
             'fulfillment_type' => $fulfillmentType,
             'driver_id' => $driverId,
         ];
 
-        if ($fulfillmentType === Order::$fulfillment_types['pickup']) {
+        if ($fulfillmentType !== Order::$fulfillment_types['delivery']) {
             $update['delivery_slot_id'] = null;
             $update['delivery_date'] = null;
             $update['delivery_time_slot'] = null;
         } else {
+            $update['pickup_proof'] = null;
+            $update['pickup_confirmed_at'] = null;
+            $update['pickup_confirmed_by'] = null;
+            $update['courier_proof'] = null;
+            $update['courier_confirmed_at'] = null;
+            $update['courier_confirmed_by'] = null;
+
             $deliveryDate = !empty($data['delivery_date']) ? $data['delivery_date'] : null;
             $deliverySlotId = !empty($data['delivery_slot_id']) ? (int) $data['delivery_slot_id'] : null;
 
@@ -353,21 +369,31 @@ class OrderController extends Controller
     {
         $data = $request->validate([
             'orders_id' => 'required',
-            'fulfillment_type' => 'nullable|in:delivery,pickup',
+            'fulfillment_type' => 'nullable|in:delivery,pickup,courier',
             'driver_id' => 'nullable|exists:drivers,id',
         ]);
 
         $ids = array_filter(explode(',', $data['orders_id']));
         if ($ids) {
             $fulfillmentType = $data['fulfillment_type'] ?? Order::$fulfillment_types['delivery'];
-            $driverId = $fulfillmentType === Order::$fulfillment_types['pickup']
-                ? null
-                : ($data['driver_id'] ?? null);
+            $driverId = $fulfillmentType === Order::$fulfillment_types['delivery']
+                ? ($data['driver_id'] ?? null)
+                : null;
 
-            DB::table('orders')->whereIn('id', $ids)->update([
-                'fulfillment_type' => $fulfillmentType,
-                'driver_id' => $driverId,
-            ]);
+            $updated = Order::query()
+                ->whereIn('id', $ids)
+                ->whereNotIn('status', [
+                    Order::$status['completed'],
+                    Order::$status['cancelled'],
+                ])
+                ->update([
+                    'fulfillment_type' => $fulfillmentType,
+                    'driver_id' => $driverId,
+                ]);
+
+            if ($updated === 0) {
+                return back()->with('error', __('orders.fulfillment_locked'));
+            }
         }
 
         return back()->with('success', __('orders.delivery_assignment_updated'));
@@ -503,49 +529,83 @@ class OrderController extends Controller
 
     public function confirmPickup(Request $request, $id)
     {
+        return $this->confirmHandover($request, $id);
+    }
+
+    public function confirmHandover(Request $request, $id)
+    {
         $order = Order::findOrFail($id);
 
-        if (!$order->canConfirmPickup()) {
-            return back()->with('error', __('orders.pickup_confirm_not_allowed'));
+        if (!$order->canConfirmHandover()) {
+            return back()->with('error', __('orders.handover_confirm_not_allowed'));
+        }
+
+        if (!$order->canEditFulfillment()) {
+            return back()->with('error', __('orders.fulfillment_locked'));
         }
 
         $request->validate([
-            'pickup_proof' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
+            'handover_proof' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
         ], [
-            'pickup_proof.required' => __('orders.pickup_proof_required'),
-            'pickup_proof.image' => __('orders.pickup_proof_format'),
-            'pickup_proof.mimes' => __('orders.pickup_proof_format'),
-            'pickup_proof.max' => __('orders.pickup_proof_size'),
+            'handover_proof.required' => __('orders.handover_proof_required'),
+            'handover_proof.image' => __('orders.handover_proof_format'),
+            'handover_proof.mimes' => __('orders.handover_proof_format'),
+            'handover_proof.max' => __('orders.handover_proof_size'),
         ]);
 
-        $extension = $request->file('pickup_proof')->getClientOriginalExtension();
-        $filename = 'pickup_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $extension = $request->file('handover_proof')->getClientOriginalExtension();
+        $prefix = $order->isCourier() ? 'courier_' : 'pickup_';
+        $filename = $prefix . time() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
         $path = Order::$path . '/' . $order->id;
 
         Storage::disk('local')->put(
             $path . '/' . $filename,
-            file_get_contents($request->file('pickup_proof'))
+            file_get_contents($request->file('handover_proof'))
         );
 
         $adminId = Auth::guard('web_admin')->id();
-
-        $order->update([
-            'pickup_proof' => $filename,
-            'pickup_confirmed_at' => now(),
-            'pickup_confirmed_by' => $adminId,
-        ]);
+        $proofUpdate = $order->isCourier()
+            ? [
+                'courier_proof' => $filename,
+                'courier_confirmed_at' => now(),
+                'courier_confirmed_by' => $adminId,
+            ]
+            : [
+                'pickup_proof' => $filename,
+                'pickup_confirmed_at' => now(),
+                'pickup_confirmed_by' => $adminId,
+            ];
 
         try {
-            app(OrderStatusService::class)->transition(
-                $order->fresh(),
-                Order::$status['delivered'],
-                $adminId
-            );
-        } catch (\InvalidArgumentException $e) {
+            DB::transaction(function () use ($order, $proofUpdate) {
+                $order->update($proofUpdate);
+            });
+        } catch (\Throwable $e) {
+            report($e);
+
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', __('orders.pickup_confirmed_success'));
+        return back()->with('success', __('orders.handover_proof_saved'));
+    }
+
+    public function viewCourierProof($orderId, $filename)
+    {
+        $order = Order::findOrFail($orderId);
+        $safeName = basename($filename);
+
+        if ($order->courier_proof !== $safeName) {
+            abort(404);
+        }
+
+        $path = Order::$path . '/' . $order->id . '/' . $safeName;
+
+        if (!Storage::disk('local')->exists($path)) {
+            abort(404, __('orders.handover_proof_not_found'));
+        }
+
+        return response(Storage::disk('local')->get($path))
+            ->header('Content-Type', Storage::disk('local')->mimeType($path));
     }
 
     public function viewPickupProof($orderId, $filename)

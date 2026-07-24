@@ -186,16 +186,7 @@ class OrderService
 
     protected function shouldHavePaymentDueDate(Order $order): bool
     {
-        if (!$this->isCreditOrder($order)) {
-            return false;
-        }
-
-        // In-store pickup is paid at the counter; delivery credit orders always use payment terms.
-        if ($order->paysInStore() && !$order->isDelivery()) {
-            return false;
-        }
-
-        return true;
+        return $this->isCreditOrder($order);
     }
 
     protected function isCreditOrder(Order $order): bool
@@ -731,9 +722,9 @@ class OrderService
                     ? $this->resolvePaymentDueDate($order, $data['payment_due_date'] ?? null)
                     : null,
                 'fulfillment_type' => $data['fulfillment_type'] ?? $order->fulfillment_type ?? Order::$fulfillment_types['delivery'],
-                'driver_id' => ($data['fulfillment_type'] ?? $order->fulfillment_type ?? Order::$fulfillment_types['delivery']) === Order::$fulfillment_types['pickup']
-                    ? null
-                    : ($data['driver_id'] ?? $order->driver_id),
+                'driver_id' => ($data['fulfillment_type'] ?? $order->fulfillment_type ?? Order::$fulfillment_types['delivery']) === Order::$fulfillment_types['delivery']
+                    ? ($data['driver_id'] ?? $order->driver_id)
+                    : null,
             ]);
 
             $this->recalculateTotals($order->fresh());

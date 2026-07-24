@@ -84,11 +84,13 @@ class AddCustomerController extends Controller
                 "shipping_state" => $data['shipping_state'] ?? '',
                 "fax_no" => $data['fax_no'] ?? '',
                 "password" => Hash::make($default_password),
-                "status" => User::$user_status['active'],
+                "status" => $request->input('status', User::$user_status['active']) === 'inactive'
+                    ? User::$user_status['inactive']
+                    : User::$user_status['active'],
                 "remark" => $data['remark'],
                 "price_permission" => $request['price_permission'] ?? 1,
-                "invoice_visibility" => $request['invoice_visibility'] ?? 0,
-                "invoice_price_permission" => $request['invoice_price_permission'] ?? 0,
+                "invoice_visibility" => $request['invoice_visibility'] ?? 1,
+                "invoice_price_permission" => $request['invoice_price_permission'] ?? 1,
                 'sql_customer_code' => null,
                 'ssm' => $request['ssm'] ?? null,
                 'tin_no' => $request['tin_no'] ?? null,
@@ -137,6 +139,7 @@ class AddCustomerController extends Controller
             "fax_no" => array_merge(User::$attribute_rules['fax_no'], []),
             'ssm' => array_merge(User::$attribute_rules['ssm'], []),
             'tin_no' => array_merge(User::$attribute_rules['tin_no'], []),
+            'status' => ['nullable', 'in:active,inactive'],
         ];
 
         try {

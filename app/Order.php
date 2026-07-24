@@ -47,6 +47,9 @@ class Order extends Model
         'pickup_proof',
         'pickup_confirmed_at',
         'pickup_confirmed_by',
+        'courier_proof',
+        'courier_confirmed_at',
+        'courier_confirmed_by',
         'delivery_proof',
         'delivery_confirmed_at',
         'status',
@@ -68,6 +71,7 @@ class Order extends Model
         'delivery_date' => 'date',
         'completed_at' => 'datetime',
         'pickup_confirmed_at' => 'datetime',
+        'courier_confirmed_at' => 'datetime',
         'is_estimated' => 'boolean',
     ];
 
@@ -91,7 +95,6 @@ class Order extends Model
     public static $status = [
         'pending' => 'pending',
         'packing' => 'packing',
-        'handed_to_customer' => 'handed_to_customer',
         'in_route' => 'in_route',
         'delivered' => 'delivered',
         'completed' => 'completed',
@@ -158,13 +161,7 @@ class Order extends Model
 
     public function isInStoreOrder(): bool
     {
-        if ($this->isPosOrder() || $this->isWalkInOrder()) {
-            return true;
-        }
-
-        return $this->order_type === self::$order_types['registered']
-            && $this->isPickup()
-            && !$this->delivery_slot_id;
+        return $this->isPosOrder() || $this->isWalkInOrder();
     }
 
     public function isPickupFulfillmentOrder(): bool
@@ -176,9 +173,22 @@ class Order extends Model
     {
         return in_array($this->status, [
             self::$status['delivered'],
-            self::$status['handed_to_customer'],
             self::$status['completed'],
         ], true);
+    }
+
+    public function canEditFulfillment(): bool
+    {
+        return $this->canShowFulfillmentPanel()
+            && !in_array($this->status, [
+                self::$status['completed'],
+                self::$status['cancelled'],
+            ], true);
+    }
+
+    public function canShowFulfillmentPanel(): bool
+    {
+        return $this->status !== self::$status['pending'];
     }
 
     public static $contact_methods = [
@@ -189,6 +199,7 @@ class Order extends Model
     public static $fulfillment_types = [
         'delivery' => 'delivery',
         'pickup' => 'pickup',
+        'courier' => 'courier',
     ];
 
     public function isDelivery(): bool
@@ -199,6 +210,26 @@ class Order extends Model
     public function isPickup(): bool
     {
         return ($this->fulfillment_type ?? self::$fulfillment_types['delivery']) === self::$fulfillment_types['pickup'];
+    }
+
+    public function isCourier(): bool
+    {
+        return ($this->fulfillment_type ?? self::$fulfillment_types['delivery']) === self::$fulfillment_types['courier'];
+    }
+
+    public function requiresHandoverProof(): bool
+    {
+        return $this->allowsHandoverProofUpload();
+    }
+
+    /** Pickup and courier orders may attach a handover photo for admin records. */
+    public function allowsHandoverProofUpload(): bool
+    {
+        if ($this->isInStoreOrder()) {
+            return false;
+        }
+
+        return $this->isPickup() || $this->isCourier();
     }
 
     public function fulfillmentTypeLabel(): string
@@ -363,19 +394,68 @@ class Order extends Model
         return OrderPayment::customerSubmitMethodsFor($this->customerType());
     }
 
+    public function canConfirmHandover(): bool
+    {
+        if (!$this->canEditFulfillment() || !$this->allowsHandoverProofUpload()) {
+            return false;
+        }
+
+        if ($this->handoverProofFilename()) {
+            return false;
+        }
+
+        if ($this->isPickup() || $this->isCourier()) {
+            return in_array($this->status, [
+                self::$status['packing'],
+                self::$status['in_route'],
+            ], true);
+        }
+
+        return false;
+    }
+
+    /** @deprecated Use canConfirmHandover() */
     public function canConfirmPickup(): bool
     {
-        return $this->isPickupFulfillmentOrder()
-            && $this->status === self::$status['packing'];
+        return $this->canConfirmHandover();
+    }
+
+    public function handoverProofFilename(): ?string
+    {
+        if (!$this->allowsHandoverProofUpload()) {
+            return null;
+        }
+
+        return $this->courier_proof ?: $this->pickup_proof;
+    }
+
+    public function handoverProofUrl(): ?string
+    {
+        $filename = $this->handoverProofFilename();
+
+        if (!$filename) {
+            return null;
+        }
+
+        if ($this->isCourier() && $this->courier_proof === $filename) {
+            return route('admin.orders.courier-proof', [$this->id, $filename]);
+        }
+
+        return route('admin.orders.pickup-proof', [$this->id, $filename]);
+    }
+
+    public function handoverConfirmedAt(): ?\Illuminate\Support\Carbon
+    {
+        if ($this->courier_confirmed_at) {
+            return $this->courier_confirmed_at;
+        }
+
+        return $this->pickup_confirmed_at;
     }
 
     public function pickupProofUrl(): ?string
     {
-        if (!$this->pickup_proof) {
-            return null;
-        }
-
-        return route('admin.orders.pickup-proof', [$this->id, $this->pickup_proof]);
+        return $this->handoverProofUrl();
     }
 
     public function deliveryProofUrl(): ?string
@@ -391,21 +471,6 @@ class Order extends Model
     {
         if ($this->status === self::$status['cancelled'] || $this->balanceDue() <= 0) {
             return false;
-        }
-
-        if ($this->isInStoreOrder()) {
-            return $this->status === self::$status['handed_to_customer'];
-        }
-
-        if ($this->isPickupFulfillmentOrder()) {
-            if ($this->isCodCustomer()) {
-                return $this->status === self::$status['delivered'];
-            }
-
-            return in_array($this->status, [
-                self::$status['packing'],
-                self::$status['delivered'],
-            ], true);
         }
 
         if ($this->isCodCustomer()) {
@@ -499,14 +564,8 @@ class Order extends Model
 
     public function canShowDeliveryOrder(): bool
     {
-        if ($this->isPickupFulfillmentOrder()) {
-            return in_array($this->status, [
-                self::$status['packing'],
-                self::$status['delivered'],
-            ], true);
-        }
-
         return in_array($this->status, [
+            self::$status['packing'],
             self::$status['in_route'],
             self::$status['delivered'],
         ], true);

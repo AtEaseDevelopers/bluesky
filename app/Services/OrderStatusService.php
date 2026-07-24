@@ -8,7 +8,8 @@ use InvalidArgumentException;
 
 class OrderStatusService
 {
-    private static array $deliveryTransitions = [
+    /** Unified fulfilment flow for delivery, pickup, and courier. */
+    private static array $transitions = [
         'pending' => ['packing', 'cancelled'],
         'packing' => ['in_route', 'cancelled'],
         'in_route' => ['delivered', 'cancelled'],
@@ -17,40 +18,17 @@ class OrderStatusService
         'cancelled' => [],
     ];
 
-    private static array $pickupTransitions = [
-        'pending' => ['packing', 'cancelled'],
-        'packing' => ['cancelled'],
-        'delivered' => ['completed', 'cancelled'],
-        'completed' => [],
-        'cancelled' => [],
-    ];
-
-    private static array $inStoreTransitions = [
-        'pending' => ['packing', 'cancelled'],
-        'packing' => ['handed_to_customer', 'cancelled'],
-        'handed_to_customer' => ['completed', 'cancelled'],
-        'delivered' => ['completed', 'cancelled'],
-        'completed' => [],
-        'cancelled' => [],
-    ];
-
     public function transitionsFor(Order $order): array
     {
-        if ($order->isInStoreOrder()) {
-            return self::$inStoreTransitions;
-        }
-
-        if ($order->isPickupFulfillmentOrder()) {
-            return self::$pickupTransitions;
-        }
-
-        return self::$deliveryTransitions;
+        return self::$transitions;
     }
 
     public function canTransition(Order $order, string $from, string $to): bool
     {
-        if ($to === Order::$status['delivered'] && $order->isPickupFulfillmentOrder()) {
-            return $from === Order::$status['packing'];
+        if ($to === Order::$status['in_route']
+            && $order->isDelivery()
+            && !$order->driver_id) {
+            return false;
         }
 
         return in_array($to, $this->transitionsFor($order)[$from] ?? [], true);
@@ -73,12 +51,14 @@ class OrderStatusService
             );
         }
 
+        if ($newStatus === Order::$status['in_route']
+            && $order->isDelivery()
+            && !$order->driver_id) {
+            throw new InvalidArgumentException(__('orders.assign_driver_required'));
+        }
+
         if ($newStatus === Order::$status['completed'] && !$order->isFullyPaid()) {
-            throw new InvalidArgumentException(
-                $order->isInStoreOrder()
-                    ? __('orders.in_store_payment_required_for_complete')
-                    : __('orders.payment_required_for_complete')
-            );
+            throw new InvalidArgumentException(__('orders.payment_required_for_complete'));
         }
 
         $order->update(['status' => $newStatus]);
@@ -88,13 +68,15 @@ class OrderStatusService
             PdfHelper::GenerateOrderInvoice($order);
             PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
 
-            if ($order->isPickupFulfillmentOrder()) {
+            if (!$order->isDelivery()) {
                 PdfHelper::GenerateDeliveryOrder($order->fresh());
             }
         }
 
         if ($newStatus === Order::$status['in_route']) {
-            PdfHelper::GenerateDeliveryOrder($order->fresh());
+            if ($order->isDelivery()) {
+                PdfHelper::GenerateDeliveryOrder($order->fresh());
+            }
         }
 
         if ($newStatus === Order::$status['completed']) {

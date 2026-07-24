@@ -228,7 +228,7 @@
                                         <td>{{ $user->area ?? '-' }}</td>
                                         <td>{{ $user->billing_address }}</td>
                                         <td>{{ $user->shipping_address }}</td>
-                                        <td>{{ __('user.status.' . $user->status) }}</td>
+                                        <td>{{ $user->statusLabel() }}</td>
                                         <td class="text-center">
                                             @if (!$user->hasCompletedRegistration())
                                                 <span class="badge bg-secondary">{{ __('customers.autocount_sync_status.not_applicable') }}</span>

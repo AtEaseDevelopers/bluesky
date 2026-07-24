@@ -109,9 +109,36 @@ class User extends Authenticatable
 
     public static $user_status = [
         'active' => 'active',
+        'inactive' => 'inactive',
         'locked' => 'locked',
         'terminated' => 'terminated',
     ];
+
+    public function isActiveCustomer(): bool
+    {
+        return $this->status === self::$user_status['active'];
+    }
+
+    public function adminStatusFormValue(): string
+    {
+        return $this->isActiveCustomer() ? 'active' : 'inactive';
+    }
+
+    public function statusLabel(): string
+    {
+        return $this->isActiveCustomer()
+            ? __('user.status.active')
+            : __('user.status.inactive');
+    }
+
+    public static function inactiveStatusValues(): array
+    {
+        return [
+            self::$user_status['inactive'],
+            self::$user_status['locked'],
+            self::$user_status['terminated'],
+        ];
+    }
 
     public function isCreditCustomer(): bool
     {

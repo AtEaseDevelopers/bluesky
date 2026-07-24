@@ -92,9 +92,9 @@ class AddOrderController extends Controller
             $driverId = null;
         } else {
             $fulfillmentType = $request->input('fulfillment_type', Order::$fulfillment_types['delivery']);
-            $driverId = $fulfillmentType === Order::$fulfillment_types['pickup']
-                ? null
-                : ($request->input('driver_id') ?: null);
+            $driverId = $fulfillmentType === Order::$fulfillment_types['delivery']
+                ? ($request->input('driver_id') ?: null)
+                : null;
         }
 
         $orderData = [

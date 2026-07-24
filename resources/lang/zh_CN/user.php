@@ -9,7 +9,7 @@ return [
     ],
     'payment_method' => [
         'cod' => '货到付款',
-        'term' => '账期',
+        'term' => '货到付款 / 账期',
         'in-store' => '店内付款',
         'bank-transfer' => '银行转账',
         'e-wallet' => '电子钱包',

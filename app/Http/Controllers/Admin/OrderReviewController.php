@@ -68,7 +68,7 @@ class OrderReviewController extends Controller
 
         if (!$order->isInStoreOrder() && !$order->isPosOrder()) {
             $rules['driver_id'] = 'nullable|exists:drivers,id';
-            $rules['fulfillment_type'] = 'required|in:delivery,pickup';
+            $rules['fulfillment_type'] = 'required|in:delivery,pickup,courier';
         }
 
         $orderProducts = OrderProduct::query()

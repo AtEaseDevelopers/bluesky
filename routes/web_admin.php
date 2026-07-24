@@ -211,7 +211,9 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/order/{order}/qr-status', 'OrderQrPaymentController@status')->name('orders.qr-status');
                 Route::post('/order/{id}/payment-due-date', 'OrderController@updatePaymentDueDate')->name('orders.payment-due-date');
                 Route::post('/order/{id}/confirm-pickup', 'OrderController@confirmPickup')->name('orders.confirm-pickup');
+                Route::post('/order/{id}/confirm-handover', 'OrderController@confirmHandover')->name('orders.confirm-handover');
                 Route::get('/orders/{order}/pickup-proof/{filename}', 'OrderController@viewPickupProof')->name('orders.pickup-proof');
+                Route::get('/orders/{order}/courier-proof/{filename}', 'OrderController@viewCourierProof')->name('orders.courier-proof');
                 Route::get('/orders/{order}/delivery-proof/{filename}', 'OrderController@viewDeliveryProof')->name('orders.delivery-proof');
                 Route::get('/order/edit/{order}', 'EditOrderController@showForm')->name('orders.edit');
                 Route::post('/order/edit/{order}', 'EditOrderController@editOrder')->name('orders.update');

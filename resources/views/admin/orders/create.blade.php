@@ -52,6 +52,7 @@
                                 <select name="fulfillment_type" id="fulfillment_type" class="form-select">
                                     <option value="delivery">{{ __('orders.fulfillment_delivery') }}</option>
                                     <option value="pickup">{{ __('orders.fulfillment_pickup') }}</option>
+                                    <option value="courier">{{ __('orders.fulfillment_courier') }}</option>
                                 </select>
                             </div>
                             <div class="col-md-6" id="create-driver-wrap">
@@ -234,9 +235,9 @@
         });
 
         function toggleCreateDriverField() {
-            var isPickup = document.getElementById('fulfillment_type').value === 'pickup';
-            document.getElementById('create-driver-wrap').style.display = isPickup ? 'none' : '';
-            document.getElementById('driver_id').disabled = isPickup;
+            var isDelivery = document.getElementById('fulfillment_type').value === 'delivery';
+            document.getElementById('create-driver-wrap').style.display = isDelivery ? '' : 'none';
+            document.getElementById('driver_id').disabled = !isDelivery;
         }
 
         document.getElementById('fulfillment_type').addEventListener('change', toggleCreateDriverField);

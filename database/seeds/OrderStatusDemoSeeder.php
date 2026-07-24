@@ -205,8 +205,8 @@ class OrderStatusDemoSeeder extends Seeder
             ],
             [
                 'do_no' => self::DO_PREFIX . '13-INSTORE',
-                'label' => 'In-store walk-in — handed to customer',
-                'status' => Order::$status['handed_to_customer'],
+                'label' => 'In-store walk-in — delivered',
+                'status' => Order::$status['delivered'],
                 'payment_status' => Order::$payment_status['paid'],
                 'paid_amount' => 0,
                 'customer' => null,
@@ -221,6 +221,16 @@ class OrderStatusDemoSeeder extends Seeder
                 'payments' => [
                     ['method' => 'in-store', 'amount' => 0],
                 ],
+            ],
+            [
+                'do_no' => self::DO_PREFIX . '13-COURIER',
+                'label' => 'Courier — in route awaiting handover',
+                'status' => Order::$status['in_route'],
+                'payment_status' => Order::$payment_status['unpaid'],
+                'customer' => $customers['ocean@demo.test'],
+                'driver' => null,
+                'fulfillment_type' => Order::$fulfillment_types['courier'],
+                'payment_method' => 'cod',
             ],
             [
                 'do_no' => self::DO_PREFIX . '14-PAYMENT-PENDING',

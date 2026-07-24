@@ -56,8 +56,11 @@ class CustomerController extends Controller
             ->when(($shipping_state != null), function ($q) use ($shipping_state) {
                 return $q->where('users.shipping_state', $shipping_state);
             })
-            ->when(($status != null), function ($q) use ($status) {
-                return $q->where('users.status', $status);
+            ->when($status === User::$user_status['active'], function ($q) {
+                return $q->where('users.status', User::$user_status['active']);
+            })
+            ->when($status === 'inactive', function ($q) {
+                return $q->whereIn('users.status', User::inactiveStatusValues());
             })
             ->when($customer_type === 'cod', function ($q) {
                 return $q->where(function ($q) {
@@ -107,8 +110,10 @@ class CustomerController extends Controller
             $users->where('shipping_state', $filter_shipping_state);
         }
 
-        if ($filter_status = $request->input('status')) {
-            $users->where('status', $filter_status);
+        if ($filter_status === User::$user_status['active']) {
+            $users->where('status', User::$user_status['active']);
+        } elseif ($filter_status === 'inactive') {
+            $users->whereIn('status', User::inactiveStatusValues());
         }
 
         if ($filter_customer_type = $request->input('customer_type')) {

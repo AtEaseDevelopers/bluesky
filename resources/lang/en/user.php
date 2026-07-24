@@ -8,7 +8,7 @@ return [
     ],
     'payment_method' => [
         'cod' => 'Cash On Delivery',
-        'term' => 'Credit Term',
+        'term' => 'COD / Credit Term',
         'in-store' => 'In-Store Payment',
         'bank-transfer' => 'Bank Transfers',
         'e-wallet' => 'E-wallet',

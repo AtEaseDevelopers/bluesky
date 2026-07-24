@@ -267,9 +267,11 @@
                                                         </li>
                                                     @endif
                                                     @if ($admin->canModule('orders', 'edit'))
+                                                        @if ($order->canEditFulfillment())
                                                         <li>
                                                             <a class="dropdown-item btn-change-lorry" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-order-id="{{ $order->id }}" data-lorry="{{ $order->driver_id }}" data-fulfillment="{{ $order->fulfillment_type ?? 'delivery' }}" data-delivery-date="{{ $order->delivery_date ? $order->delivery_date->format('Y-m-d') : '' }}" data-delivery-slot="{{ $order->delivery_slot_id }}" data-bs-toggle="modal" data-bs-target="#change-lorry">{{ __('orders.change_lorry') }}</a>
                                                         </li>
+                                                        @endif
                                                         <li>
                                                             <a class="dropdown-item btn-add-order-weight" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-bs-toggle="modal" data-bs-target="#add-weight">{{ __('orders.order_weight') }}</a>
                                                         </li>
@@ -463,6 +465,7 @@
                             <select class="form-select" id="modal_fulfillment_type" name="fulfillment_type">
                                 <option value="delivery">{{ __('orders.fulfillment_delivery') }}</option>
                                 <option value="pickup">{{ __('orders.fulfillment_pickup') }}</option>
+                                <option value="courier">{{ __('orders.fulfillment_courier') }}</option>
                             </select>
                         </div>
                         <div id="modal-delivery-wrap">
@@ -547,6 +550,7 @@
                             <select class="form-select" id="bulk_fulfillment_type" name="fulfillment_type">
                                 <option value="delivery">{{ __('orders.fulfillment_delivery') }}</option>
                                 <option value="pickup">{{ __('orders.fulfillment_pickup') }}</option>
+                                <option value="courier">{{ __('orders.fulfillment_courier') }}</option>
                             </select>
                         </div>
                         <div class="mb-4" id="bulk-driver-wrap">
@@ -693,15 +697,15 @@
             var deliveryWrap = deliveryWrapId ? document.getElementById(deliveryWrapId) : null;
             if (!select || !wrap || !driver) return;
             function sync() {
-                var isPickup = select.value === 'pickup';
-                wrap.style.display = isPickup ? 'none' : '';
-                driver.disabled = isPickup;
+                var isDelivery = select.value === 'delivery';
+                wrap.style.display = isDelivery ? '' : 'none';
+                driver.disabled = !isDelivery;
                 if (deliveryWrap) {
-                    deliveryWrap.style.display = isPickup ? 'none' : '';
+                    deliveryWrap.style.display = isDelivery ? '' : 'none';
                     var dateSelect = deliveryWrap.querySelector('select[name="delivery_date"]');
                     var slotSelect = deliveryWrap.querySelector('select[name="delivery_slot_id"]');
-                    if (dateSelect) dateSelect.disabled = isPickup;
-                    if (slotSelect) slotSelect.disabled = isPickup || !dateSelect || !dateSelect.value;
+                    if (dateSelect) dateSelect.disabled = !isDelivery;
+                    if (slotSelect) slotSelect.disabled = !isDelivery || !dateSelect || !dateSelect.value;
                 }
             }
             select.addEventListener('change', sync);

@@ -131,6 +131,7 @@
                                     <select name="fulfillment_type" id="fulfillment_type" class="form-select">
                                         <option value="delivery" {{ old('fulfillment_type', $order->fulfillment_type ?? 'delivery') === 'delivery' ? 'selected' : '' }}>{{ __('orders.fulfillment_delivery') }}</option>
                                         <option value="pickup" {{ old('fulfillment_type', $order->fulfillment_type ?? 'delivery') === 'pickup' ? 'selected' : '' }}>{{ __('orders.fulfillment_pickup') }}</option>
+                                        <option value="courier" {{ old('fulfillment_type', $order->fulfillment_type ?? 'delivery') === 'courier' ? 'selected' : '' }}>{{ __('orders.fulfillment_courier') }}</option>
                                     </select>
                                 </div>
                             </div>
@@ -226,9 +227,9 @@
                 return;
             }
 
-            var isPickup = fulfillmentEl.value === 'pickup';
-            document.getElementById('review-driver-wrap').style.display = isPickup ? 'none' : '';
-            document.getElementById('driver_id').disabled = isPickup;
+            var isDelivery = fulfillmentEl.value === 'delivery';
+            document.getElementById('review-driver-wrap').style.display = isDelivery ? '' : 'none';
+            document.getElementById('driver_id').disabled = !isDelivery;
         }
 
         var fulfillmentTypeEl = document.getElementById('fulfillment_type');

@@ -4,7 +4,7 @@ return [
     'status' => [
         'pending' => '待处理',
         'packing' => '打包中',
-        'handed_to_customer' => '已交给客户',
+        'handed_to_customer' => '已送达',
         'in_route' => '配送中',
         'delivered' => '已送达',
         'completed' => '已完成',
@@ -22,7 +22,8 @@ return [
     ],
     'fulfillment_types' => [
         'delivery' => '配送',
-        'pickup' => '自提 / 快递',
+        'pickup' => '自提',
+        'courier' => '快递',
     ],
     'order_type' => [
         'registered' => '注册客户',
@@ -45,6 +46,6 @@ return [
         'customer-credit' => '客户信用',
         'cod' => '货到付款',
         'in-store' => '店内付款',
-        'term' => '账期',
+        'term' => '货到付款 / 账期',
     ],
 ];

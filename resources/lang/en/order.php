@@ -4,12 +4,12 @@ return [
     'status' => [
         'pending' => 'Pending',
         'packing' => 'Packing',
-        'handed_to_customer' => 'Handed to Customer',
         'in_route' => 'In Route',
         'delivered' => 'Delivered',
         'completed' => 'Completed',
         'cancelled' => 'Cancelled',
-        // Legacy status kept for old records until migrated.
+        // Legacy status alias for old records.
+        'handed_to_customer' => 'Delivered',
         'paid_completed' => 'Delivered',
         // Legacy values written before status workflow was unified.
         'processing' => 'Processing',
@@ -24,7 +24,8 @@ return [
     ],
     'fulfillment_types' => [
         'delivery' => 'Delivery',
-        'pickup' => 'Pickup / Courier',
+        'pickup' => 'Pickup',
+        'courier' => 'Courier',
     ],
     'order_type' => [
         'registered' => 'Registered Customer',
@@ -47,6 +48,6 @@ return [
         'customer-credit' => 'Customer Credit',
         'cod' => 'COD',
         'in-store' => 'In-Store Payment',
-        'term' => 'Credit Term',
+        'term' => 'COD / Credit Term',
     ],
 ];

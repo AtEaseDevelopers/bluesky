@@ -93,7 +93,9 @@ class EditCustomerController extends Controller
                 "shipping_address" => $data['shipping_address'] ?? "",
                 "shipping_postcode" => $data['shipping_postcode'] ?? "",
                 "shipping_state" => $data['shipping_state'] ?? "",
-                "status" => User::$user_status['active'],
+                "status" => $request->input('status', $customer->adminStatusFormValue()) === 'inactive'
+                    ? User::$user_status['inactive']
+                    : User::$user_status['active'],
                 "remark" => $data['remark'],
                 "price_permission" => $request['price_permission'] ?? 0,
                 "invoice_visibility" => $request['invoice_visibility'] ?? 0,
@@ -194,6 +196,7 @@ class EditCustomerController extends Controller
             "fax_no" => array_merge(User::$attribute_rules['fax_no'], []),
             'ssm' => array_merge(User::$attribute_rules['ssm'], []),
             'tin_no' => array_merge(User::$attribute_rules['tin_no'], []),
+            'status' => ['nullable', 'in:active,inactive'],
         ];
 
         try {

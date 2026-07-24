@@ -55,12 +55,10 @@
                                         </p>
                                     @endif
                                     <p><strong>{{ __('orders.order_date') }}:</strong> {{ $order->created_at->format('Y-m-d h:i a') }}</p>
-                                    @if (!$order->isInStoreOrder())
+                                    <p><strong>{{ __('orders.fulfillment_type') }}:</strong> {{ $order->fulfillmentTypeLabel() }}</p>
+                                    @if ($order->isDelivery())
                                         <p><strong>{{ __('orders.delivery') }}:</strong> {{ $order->delivery_date ? $order->delivery_date->format('d-m-Y') : '-' }} {{ $order->delivery_time_slot }}</p>
-                                        <p><strong>{{ __('orders.fulfillment_type') }}:</strong> {{ $order->fulfillmentTypeLabel() }}</p>
-                                        @if ($order->isDelivery())
-                                            <p><strong>{{ __('orders.assign_driver') }}:</strong> {{ $order->driver_id && isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '-' }}</p>
-                                        @endif
+                                        <p><strong>{{ __('orders.assign_driver') }}:</strong> {{ $order->driver_id && isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '-' }}</p>
                                     @endif
                                 </div>
                                 <div class="col-md-6">
@@ -119,8 +117,8 @@
                                         @endif
                                     @endif
                                     <p><strong>{{ __('orders.estimated') }}:</strong> {{ $order->is_estimated ? __('orders.yes') : __('orders.no') }}</p>
-                                    @if ($order->pickup_confirmed_at && $order->isPickupFulfillmentOrder())
-                                        <p><strong>{{ __('orders.pickup_confirmed_at') }}:</strong> {{ $order->pickup_confirmed_at->format('Y-m-d h:i a') }}</p>
+                                    @if ($order->handoverConfirmedAt() && $order->requiresHandoverProof())
+                                        <p><strong>{{ __('orders.handover_confirmed_at') }}:</strong> {{ $order->handoverConfirmedAt()->format('Y-m-d h:i a') }}</p>
                                     @endif
                                 </div>
                             </div>
@@ -238,22 +236,28 @@
                         </div>
                     @endif
 
-                    @if ($order->isDelivery())
+                    @if ($order->status === Order::$status['pending'])
+                    <div class="alert alert-info mb-4">
+                        {!! __('orders.fulfillment_available_after_packing') !!}
+                    </div>
+                    @elseif ($order->canShowFulfillmentPanel())
                     <div class="card shadow no-border mb-4">
                         <div class="card-body">
                             <h5 class="card-title">{{ __('orders.fulfillment_type') }}</h5>
                             <hr>
-                            @if (count($drivers))
-                                <form action="{{ route('admin.change-order-delivery') }}" method="POST">
-                                    @csrf
-                                    <input type="hidden" name="orders_id" value="{{ encrypt($order->id) }}">
-                                    <div class="mb-3">
-                                        <label class="mb-1">{{ __('orders.fulfillment_type') }}</label>
-                                        <select name="fulfillment_type" id="summary_fulfillment_type" class="form-select">
-                                            <option value="delivery" {{ ($order->fulfillment_type ?? 'delivery') === 'delivery' ? 'selected' : '' }}>{{ __('orders.fulfillment_delivery') }}</option>
-                                            <option value="pickup" {{ ($order->fulfillment_type ?? 'delivery') === 'pickup' ? 'selected' : '' }}>{{ __('orders.fulfillment_pickup') }}</option>
-                                        </select>
-                                    </div>
+                            @if ($order->canEditFulfillment())
+                            <form action="{{ route('admin.change-order-delivery') }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="orders_id" value="{{ encrypt($order->id) }}">
+                                <div class="mb-3">
+                                    <label class="mb-1">{{ __('orders.fulfillment_type') }}</label>
+                                    <select name="fulfillment_type" id="summary_fulfillment_type" class="form-select">
+                                        <option value="delivery" {{ ($order->fulfillment_type ?? 'delivery') === 'delivery' ? 'selected' : '' }}>{{ __('orders.fulfillment_delivery') }}</option>
+                                        <option value="pickup" {{ ($order->fulfillment_type ?? 'delivery') === 'pickup' ? 'selected' : '' }}>{{ __('orders.fulfillment_pickup') }}</option>
+                                        <option value="courier" {{ ($order->fulfillment_type ?? 'delivery') === 'courier' ? 'selected' : '' }}>{{ __('orders.fulfillment_courier') }}</option>
+                                    </select>
+                                </div>
+                                @if (count($drivers))
                                     <div class="mb-3" id="summary-driver-wrap">
                                         <label class="mb-1">{{ __('orders.assign_driver') }}</label>
                                         <select name="driver_id" id="summary_driver_id" class="form-select">
@@ -291,41 +295,67 @@
                                             </select>
                                         </div>
                                     </div>
-                                    <button type="submit" class="btn btn-primary w-100">{{ __('orders.update_driver') }}</button>
-                                </form>
+                                @else
+                                    <p class="text-muted small mb-3">{{ __('orders.no_drivers') }}</p>
+                                @endif
+                                <button type="submit" class="btn btn-primary w-100" id="summary_fulfillment_submit">{{ __('orders.update_fulfillment') }}</button>
+                            </form>
+
+                            @if (!$order->isDelivery() && ($order->allowsHandoverProofUpload() || $order->handoverProofFilename()))
+                                <div id="summary-handover-wrap">
+                                    <hr>
+                                    @if ($order->handoverProofFilename())
+                                        <div class="mb-3">
+                                            <label class="mb-1 d-block">{{ __('orders.handover_proof') }}</label>
+                                            <a href="{{ $order->handoverProofUrl() }}" target="_blank" class="d-block mb-2">
+                                                <img src="{{ $order->handoverProofUrl() }}" alt="{{ __('orders.handover_proof') }}" class="img-fluid rounded border w-100" style="max-height: 220px; object-fit: contain; background: #f8f9fa;">
+                                            </a>
+                                            @if ($order->handoverConfirmedAt())
+                                                <small class="text-muted d-block">{{ __('orders.handover_confirmed_at') }}: {{ $order->handoverConfirmedAt()->format('Y-m-d h:i a') }}</small>
+                                            @endif
+                                        </div>
+                                        <a href="{{ $order->handoverProofUrl() }}" target="_blank" class="btn btn-outline-primary w-100">{{ __('orders.view') }} {{ __('orders.handover_proof') }}</a>
+                                    @elseif ($order->canConfirmHandover() && $admin->canModule('orders', 'edit'))
+                                        <form action="{{ route('admin.orders.confirm-handover', $order->id) }}" method="POST" enctype="multipart/form-data">
+                                            @csrf
+                                            <div class="mb-3">
+                                                <label class="mb-1" for="handover_proof">{{ __('orders.handover_proof') }} <span class="text-danger">*</span></label>
+                                                <input type="file" class="form-control" name="handover_proof" id="handover_proof" accept="image/jpeg,image/png,.jpg,.jpeg,.png" required>
+                                                <small class="text-muted d-block mt-1">{{ __('orders.confirm_handover_help') }}</small>
+                                            </div>
+                                            <button type="submit" class="btn btn-success w-100">{{ __('orders.save_handover_proof') }}</button>
+                                        </form>
+                                    @else
+                                        <p class="text-muted small mb-0">{!! __('orders.handover_pending_help') !!}</p>
+                                    @endif
+                                </div>
+                            @endif
+
+                            @if (!count($drivers))
+                                <a href="{{ route('admin.drivers.create') }}" class="btn btn-outline-primary w-100 mt-3">{{ __('orders.add_driver_lorry') }}</a>
+                            @endif
                             @else
-                                <p class="text-muted mb-3">{{ __('orders.no_drivers') }}</p>
-                                <a href="{{ route('admin.drivers.create') }}" class="btn btn-outline-primary w-100">{{ __('orders.add_driver_lorry') }}</a>
+                                <p><strong>{{ __('orders.fulfillment_type') }}:</strong> {{ $order->fulfillmentTypeLabel() }}</p>
+                                @if ($order->isDelivery())
+                                    <p><strong>{{ __('orders.assign_driver') }}:</strong> {{ $order->driver_id && isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '-' }}</p>
+                                    <p><strong>{{ __('orders.delivery') }}:</strong> {{ $order->delivery_date ? $order->delivery_date->format('d-m-Y') : '-' }} {{ $order->delivery_time_slot }}</p>
+                                @endif
+                                @if (!$order->isDelivery() && $order->handoverProofFilename())
+                                    <div class="mt-3">
+                                        <label class="mb-1 d-block">{{ __('orders.handover_proof') }}</label>
+                                        <a href="{{ $order->handoverProofUrl() }}" target="_blank" class="d-block mb-2">
+                                            <img src="{{ $order->handoverProofUrl() }}" alt="{{ __('orders.handover_proof') }}" class="img-fluid rounded border w-100" style="max-height: 220px; object-fit: contain; background: #f8f9fa;">
+                                        </a>
+                                        <a href="{{ $order->handoverProofUrl() }}" target="_blank" class="btn btn-outline-primary w-100">{{ __('orders.view') }} {{ __('orders.handover_proof') }}</a>
+                                    </div>
+                                @endif
+                                <p class="text-muted small mb-0 mt-3">{{ __('orders.fulfillment_locked') }}</p>
                             @endif
                         </div>
                     </div>
                     @endif
 
-                    @if ($order->canConfirmPickup() && $admin->canModule('orders', 'edit'))
-                    <div class="card shadow no-border mb-4">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ __('orders.confirm_pickup') }}</h5>
-                            <p class="text-muted small">{{ __('orders.confirm_pickup_help') }}</p>
-                            <hr>
-                            <form action="{{ route('admin.orders.confirm-pickup', $order->id) }}" method="POST" enctype="multipart/form-data">
-                                @csrf
-                                <div class="mb-3">
-                                    <label class="mb-1" for="pickup_proof">{{ __('orders.pickup_proof') }} <span class="text-danger">*</span></label>
-                                    <input type="file" class="form-control" name="pickup_proof" id="pickup_proof" accept="image/jpeg,image/png,.jpg,.jpeg,.png" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100">{{ __('orders.confirm_pickup') }}</button>
-                            </form>
-                        </div>
-                    </div>
-                    @elseif ($order->isPickupFulfillmentOrder() && $order->pickup_proof)
-                    <div class="card shadow no-border mb-4">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ __('orders.confirm_pickup') }}</h5>
-                            <hr>
-                            <a href="{{ $order->pickupProofUrl() }}" target="_blank" class="btn btn-outline-primary w-100">{{ __('orders.view') }} {{ __('orders.pickup_proof') }}</a>
-                        </div>
-                    </div>
-                    @elseif ($order->isDelivery() && $order->delivery_proof)
+                    @if ($order->isDelivery() && $order->delivery_proof)
                     <div class="card shadow no-border mb-4">
                         <div class="card-body">
                             <h5 class="card-title">{{ __('orders.delivery_proof') }}</h5>
@@ -427,19 +457,7 @@
                             </form>
                         </div>
                     </div>
-                    @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && $order->isInStoreOrder() && $order->status === Order::$status['handed_to_customer'])
-                    <div class="alert alert-warning mb-4">
-                        {{ __('orders.in_store_payment_required_for_complete') }}
-                    </div>
-                    @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && $order->isInStoreOrder() && in_array($order->status, [Order::$status['pending'], Order::$status['packing']], true))
-                    <div class="alert alert-info mb-4">
-                        {!! __('orders.in_store_payment_after_handover') !!}
-                    </div>
-                    @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && $order->isPickupFulfillmentOrder() && $order->status === Order::$status['pending'])
-                    <div class="alert alert-info mb-4">
-                        {!! __('orders.pickup_pending_help') !!}
-                    </div>
-                    @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && !$isCreditCustomer && !$order->isInStoreOrder() && !$order->isPickupFulfillmentOrder())
+                    @elseif ($order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'] && !$isCreditCustomer && $order->isDelivery())
                     <div class="alert alert-info mb-4">
                         {!! __('orders.cod_record_when_html') !!}
                     </div>
@@ -589,7 +607,7 @@
         $('.btn-change-status').on('click', function () {
             var status = $(this).data('status');
 
-            if (status === '{{ Order::$status['in_route'] }}' && !{{ $order->isInStoreOrder() ? 'true' : 'false' }}) {
+            if (status === '{{ Order::$status['in_route'] }}' && {{ $order->isDelivery() ? 'true' : 'false' }}) {
                 Swal.fire({
                     title: ordersJs.move_to_in_route,
                     html: buildDriverSelectHtml(),
@@ -770,11 +788,17 @@
             var driver = document.getElementById('summary_driver_id');
             var dateSelect = document.getElementById('summary_delivery_date');
             var slotSelect = document.getElementById('summary_delivery_slot_id');
+            var handoverWrap = document.getElementById('summary-handover-wrap');
             var deliverySlotsUrl = @json($deliverySlotsUrl ?? '');
             var summaryOrderId = @json($order->id);
             var summarySlotId = @json($order->delivery_slot_id);
 
-            if (!fulfillment || !driverWrap || !driver) return;
+            if (!fulfillment) return;
+
+            function syncHandoverVisibility() {
+                if (!handoverWrap) return;
+                handoverWrap.style.display = fulfillment.value === 'delivery' ? 'none' : '';
+            }
 
             function loadSummaryDeliverySlots(date, slotId) {
                 if (!slotSelect) return;
@@ -802,13 +826,19 @@
             }
 
             function sync() {
-                var isPickup = fulfillment.value === 'pickup';
-                driverWrap.style.display = isPickup ? 'none' : '';
-                driver.disabled = isPickup;
+                var isDelivery = fulfillment.value === 'delivery';
+                syncHandoverVisibility();
+
+                if (!driverWrap || !driver) {
+                    return;
+                }
+
+                driverWrap.style.display = isDelivery ? '' : 'none';
+                driver.disabled = !isDelivery;
                 if (deliveryWrap) {
-                    deliveryWrap.style.display = isPickup ? 'none' : '';
-                    if (dateSelect) dateSelect.disabled = isPickup;
-                    if (slotSelect) slotSelect.disabled = isPickup || !dateSelect || !dateSelect.value;
+                    deliveryWrap.style.display = isDelivery ? '' : 'none';
+                    if (dateSelect) dateSelect.disabled = !isDelivery;
+                    if (slotSelect) slotSelect.disabled = !isDelivery || !dateSelect || !dateSelect.value;
                 }
             }
 
