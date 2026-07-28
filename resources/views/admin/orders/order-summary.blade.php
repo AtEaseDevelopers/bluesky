@@ -321,12 +321,12 @@
                                             <div class="mb-3">
                                                 <label class="mb-1" for="handover_proof">{{ __('orders.handover_proof') }} <span class="text-danger">*</span></label>
                                                 <input type="file" class="form-control" name="handover_proof" id="handover_proof" accept="image/jpeg,image/png,.jpg,.jpeg,.png" required>
-                                                <small class="text-muted d-block mt-1">{{ __('orders.confirm_handover_help') }}</small>
+                                                <small class="text-muted d-block mt-1">{{ $order->isPickup() ? __('orders.confirm_pickup_handover_help') : __('orders.confirm_courier_handover_help') }}</small>
                                             </div>
-                                            <button type="submit" class="btn btn-success w-100">{{ __('orders.save_handover_proof') }}</button>
+                                            <button type="submit" class="btn btn-success w-100">{{ $order->isPickup() ? __('orders.confirm_pickup') : __('orders.save_handover_proof') }}</button>
                                         </form>
                                     @else
-                                        <p class="text-muted small mb-0">{!! __('orders.handover_pending_help') !!}</p>
+                                        <p class="text-muted small mb-0">{!! $order->isPickup() ? __('orders.pickup_pending_help') : __('orders.handover_pending_help') !!}</p>
                                     @endif
                                 </div>
                             @endif

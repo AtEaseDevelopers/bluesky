@@ -20,14 +20,24 @@ class OrderStatusService
 
     public function transitionsFor(Order $order): array
     {
+        if ($order->isPickup()) {
+            return [
+                'pending' => ['packing', 'cancelled'],
+                'packing' => ['delivered', 'cancelled'],
+                'in_route' => ['delivered', 'cancelled'],
+                'delivered' => ['completed', 'cancelled'],
+                'completed' => [],
+                'cancelled' => [],
+            ];
+        }
+
         return self::$transitions;
     }
 
     public function canTransition(Order $order, string $from, string $to): bool
     {
         if ($to === Order::$status['in_route']
-            && $order->isDelivery()
-            && !$order->driver_id) {
+            && ($order->isPickup() || ($order->isDelivery() && !$order->driver_id))) {
             return false;
         }
 
@@ -118,6 +128,50 @@ class OrderStatusService
             ));
         }
 
+        if ($order->isPickup()) {
+            $statuses = array_values(array_filter(
+                $statuses,
+                fn ($status) => $status !== Order::$status['in_route']
+            ));
+        }
+
         return $statuses;
+    }
+
+    /** After pickup handover proof is saved, advance the order directly to Delivered. */
+    public function markDeliveredAfterPickupHandover(Order $order, ?int $adminId = null): Order
+    {
+        $order = $order->fresh();
+
+        if (!$order->isPickup() || !$order->handoverProofFilename()) {
+            throw new InvalidArgumentException(__('orders.handover_confirm_not_allowed'));
+        }
+
+        if (in_array($order->status, [
+            Order::$status['delivered'],
+            Order::$status['completed'],
+        ], true)) {
+            return $order;
+        }
+
+        $chain = [
+            Order::$status['pending'] => Order::$status['packing'],
+            Order::$status['packing'] => Order::$status['delivered'],
+            Order::$status['in_route'] => Order::$status['delivered'],
+        ];
+
+        while (isset($chain[$order->status])) {
+            $order = $this->transition($order, $chain[$order->status], $adminId);
+            $order = $order->fresh();
+        }
+
+        if (!in_array($order->status, [
+            Order::$status['delivered'],
+            Order::$status['completed'],
+        ], true)) {
+            throw new InvalidArgumentException(__('orders.handover_confirm_not_allowed'));
+        }
+
+        return $order;
     }
 }
