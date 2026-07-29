@@ -20,18 +20,19 @@ class MemberBootstrap
      */
     public function handle($request, Closure $next)
     {
-        if(Auth::guard('web')->check()) {
-            $cartCount = DB::table('carts')
-                ->select('carts.id', DB::raw('count(*) as count'))
-                ->leftJoin('cart_products', 'cart_products.cart_id', '=', 'carts.id')
-                ->where('carts.user_id', Auth::guard('web')->user()->id)
-                ->where('carts.status', Cart::$status['pending'])
-                ->where('cart_products.status', CartProduct::$status['active'])
-                ->groupBy('carts.id');
-            View::share('cartCount', $cartCount->first()->count ?? 0);
+        if (!Auth::guard('web')->check()) {
+            return app(PublicBootstrap::class)->handle($request, $next);
         }
 
-        // Route map mirrored by the public (guest) portal; member targets here.
+        $cartCount = DB::table('carts')
+            ->select('carts.id', DB::raw('count(*) as count'))
+            ->leftJoin('cart_products', 'cart_products.cart_id', '=', 'carts.id')
+            ->where('carts.user_id', Auth::guard('web')->user()->id)
+            ->where('carts.status', Cart::$status['pending'])
+            ->where('cart_products.status', CartProduct::$status['active'])
+            ->groupBy('carts.id');
+        View::share('cartCount', $cartCount->first()->count ?? 0);
+
         View::share('isGuest', false);
         View::share('portal', [
             'is_guest' => false,
@@ -48,9 +49,7 @@ class MemberBootstrap
         ]);
 
         View::share('customerPermissions', app(\App\Services\RolePermissionService::class)->allowedMap(
-            Auth::guard('web')->check()
-                ? (Auth::guard('web')->user()->role_slug ?? 'customer')
-                : 'customer'
+            Auth::guard('web')->user()->role_slug ?? 'customer'
         ));
 
         return $next($request);

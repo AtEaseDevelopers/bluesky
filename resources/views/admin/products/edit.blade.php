@@ -118,18 +118,6 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2" for="weight">{{ __('product.weight') }}</label>
-                                    <span>{{ __('product.weight_in_kg') }}</span>
-                                    <input type="number" step="0.01" min="0" class="form-control" name="weight" id="weight" value="{{ $product->weight }}" placeholder="{{ __('product.placeholder.product_weight') }}">
-                                    @if ($errors->has('weight'))
-                                        <span class="text-danger" role="alert">
-                                            <strong>{{ $errors->first('weight') }}</strong>
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-4">
                                     <label class="mb-2" for="productStatus">{{ __('product.status_label') }}</label>
                                     <span class="text-danger"> *</span>
                                     <select id="productStatus" class="form-select" name="status">
@@ -305,15 +293,6 @@
     <script>
         $('input[name="sell_in"]').on('change', function() {
             let val = $('input[name="sell_in"]:checked').val()
-
-            if (val == 'qty' || val == 'qty_bill_weight') {
-                $('input[name="weight"]').val(null)
-                $('input[name="weight"]').prop('disabled', false)
-            } else if (val == 'weight') {
-                $('input[name="weight"]').val(null)
-                $('input[name="weight"]').prop('disabled', true)
-            }
-
             $('#weight-presets-wrap').toggle(val === 'weight' || val === 'qty_bill_weight')
         })
 

@@ -45,7 +45,7 @@ class AddProductController extends Controller
                 'description' => $data['description'],
                 'sku' => $data['sku'],
                 'price' => $data['price'],
-                'weight' => $request['weight'],
+                'weight' => 1,
                 'status' => $data['status'],
                 'remark' => $data['remark'],
                 'nos' => $data['nos'],

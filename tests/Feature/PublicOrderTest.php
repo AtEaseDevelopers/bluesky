@@ -239,4 +239,18 @@ class PublicOrderTest extends TestCase
             ->assertSee('0181113333')
             ->assertSee('77 Delivery Lane, KL');
     }
+
+    /** @test */
+    public function guest_terms_page_keeps_public_portal_navigation_links()
+    {
+        $this->carrySession($this->get(route('public.guest.index')))
+            ->assertOk();
+
+        $this->get(route('member.policies.show', 'privacy'))
+            ->assertOk()
+            ->assertSee(route('public.guest.index'), false)
+            ->assertSee(route('public.guest.cart'), false)
+            ->assertDontSee(route('member.products'), false)
+            ->assertDontSee(route('member.cart'), false);
+    }
 }

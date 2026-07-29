@@ -57,7 +57,6 @@ class EditProductController extends Controller
                 'description' => $data['description'],
                 'sku' => $data['sku'],
                 'price' => $data['price'],
-                'weight' => $request['weight'],
                 'status' => $data['status'],
                 'remark' => $data['remark'],
                 'nos' => $data['nos'],
