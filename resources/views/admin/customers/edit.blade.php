@@ -42,6 +42,27 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label class="mb-2">{{ __('customers.status') }}</label>
+                                    <div class="d-flex mt-2">
+                                        <div class="form-check me-3 mb-1">
+                                            <label class="form-check-label" for="status_active">
+                                                <input class="form-check-input" type="radio" name="status" id="status_active" value="active" {{ old('status', $customer->adminStatusFormValue()) === 'active' ? 'checked' : '' }}>
+                                                {{ __('customers.filter_status.active') }}
+                                            </label>
+                                        </div>
+                                        <div class="form-check me-3 mb-1">
+                                            <label class="form-check-label" for="status_inactive">
+                                                <input class="form-check-input" type="radio" name="status" id="status_inactive" value="inactive" {{ old('status', $customer->adminStatusFormValue()) === 'inactive' ? 'checked' : '' }}>
+                                                {{ __('customers.filter_status.inactive') }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                           <div class="col-md-12">
                                 <div class="mb-4">
                                     <label class="mb-2" for="billing_address">{{ __('customers.billing_address') }}</label>
