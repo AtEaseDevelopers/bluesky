@@ -178,8 +178,8 @@ class InventoryController extends Controller
                 'sku' => $record->sku ?: '-',
                 'uom_name' => $uomName,
                 'price' => Product::formatUnitPrice($price, $uomName),
-                'quantity' => $this->formatBalanceCell($quantity, $record->sell_in ?? 'qty'),
-                'weight' => $this->formatBalanceCell($weight, 'weight'),
+                'quantity' => $this->formatBalanceCell($quantity),
+                'weight' => $this->formatBalanceCell($weight),
                 'updated_at' => $record->updated_at ? date('d-m-Y H:i', strtotime($record->updated_at)) : '-',
             ];
         }
@@ -389,12 +389,9 @@ class InventoryController extends Controller
             : abs($amount);
     }
 
-    private function formatBalanceCell(float $value, string $type): string
+    private function formatBalanceCell(float $value): string
     {
         $formatted = number_format($value, 3);
-        if ($type === 'weight') {
-            $formatted .= ' kg';
-        }
 
         if ($value < 0) {
             return '<span class="text-danger fw-semibold">' . e($formatted) . '</span>';
