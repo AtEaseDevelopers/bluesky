@@ -92,7 +92,9 @@
                                     <div class="form-group mb-4">
                                         <label class="mb-2" for="transfer_slip">{{ __('orders.upload_transfer_slip') }}</label>
                                         <span class="text-danger"> *</span>
-                                        <input type="file" id="transfer_slip" name="transfer_slip" class="form-control" accept="image/*">
+                                        <input type="file" id="transfer_slip" name="transfer_slip" class="form-control"
+                                            accept="{{ \App\OrderPayment::photoProofAcceptAttribute() }}"
+                                            capture="{{ \App\OrderPayment::proofCaptureAttribute() }}">
                                         @if($order->transfer_slip_url)
                                             <div class="card p-3">
                                                 <img style="width: 70%;" src="{{ $order->transfer_slip_url }}" />

@@ -157,9 +157,22 @@ class OrderPayment extends Model
         return $rules;
     }
 
+    /** Rear-camera hint for mobile browsers (handover, delivery, payment photos). */
+    public const PROOF_CAPTURE = 'environment';
+
     public static function proofAcceptAttribute(): string
     {
-        return 'image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf';
+        return 'image/jpeg,image/png,image/*,application/pdf,.jpg,.jpeg,.png,.pdf';
+    }
+
+    public static function photoProofAcceptAttribute(): string
+    {
+        return 'image/jpeg,image/png,image/*,.jpg,.jpeg,.png';
+    }
+
+    public static function proofCaptureAttribute(): string
+    {
+        return self::PROOF_CAPTURE;
     }
 
     public static function proofHelpText(): string

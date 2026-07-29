@@ -320,7 +320,9 @@
                                             @csrf
                                             <div class="mb-3">
                                                 <label class="mb-1" for="handover_proof">{{ __('orders.handover_proof') }} <span class="text-danger">*</span></label>
-                                                <input type="file" class="form-control" name="handover_proof" id="handover_proof" accept="image/jpeg,image/png,.jpg,.jpeg,.png" required>
+                                                <input type="file" class="form-control" name="handover_proof" id="handover_proof"
+                                                    accept="{{ \App\OrderPayment::photoProofAcceptAttribute() }}"
+                                                    capture="{{ \App\OrderPayment::proofCaptureAttribute() }}" required>
                                                 <small class="text-muted d-block mt-1">{{ $order->isPickup() ? __('orders.confirm_pickup_handover_help') : __('orders.confirm_courier_handover_help') }}</small>
                                             </div>
                                             <button type="submit" class="btn btn-success w-100">{{ $order->isPickup() ? __('orders.confirm_pickup') : __('orders.save_handover_proof') }}</button>
@@ -427,7 +429,8 @@
                                             <div class="col-md-4">
                                                 <label class="mb-1">{{ __('orders.proof') }}</label>
                                                 <input type="file" name="payments[0][payment_proof]" class="form-control payment-proof-input"
-                                                    accept="{{ \App\OrderPayment::proofAcceptAttribute() }}">
+                                                    accept="{{ \App\OrderPayment::proofAcceptAttribute() }}"
+                                                    capture="{{ \App\OrderPayment::proofCaptureAttribute() }}">
                                                 <small class="text-muted">{{ \App\OrderPayment::proofHelpText() }}</small>
                                             </div>
                                             <div class="col-12">
@@ -654,6 +657,7 @@
         var balanceDue = {{ number_format($order->balanceDue(), 2, '.', '') }};
         var requiresExactTotal = {{ $order->requiresExactPayment() ? 'true' : 'false' }};
         var proofAccept = @json(\App\OrderPayment::proofAcceptAttribute());
+        var proofCapture = @json(\App\OrderPayment::proofCaptureAttribute());
         var proofHelpText = @json(\App\OrderPayment::proofHelpText());
         var proofMaxBytes = {{ \App\OrderPayment::PROOF_MAX_KB * 1024 }};
         var proofAllowedExtensions = @json(\App\OrderPayment::$proof_mimes);
@@ -756,7 +760,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="mb-1">${ordersI18n.proof}</label>
-                        <input type="file" name="payments[${idx}][payment_proof]" class="form-control payment-proof-input" accept="${proofAccept}">
+                        <input type="file" name="payments[${idx}][payment_proof]" class="form-control payment-proof-input" accept="${proofAccept}" capture="${proofCapture}">
                         <small class="text-muted">${proofHelpText}</small>
                     </div>
                     <div class="col-12">

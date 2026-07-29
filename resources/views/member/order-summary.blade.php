@@ -209,7 +209,8 @@
                                         <div class="col-md-4">
                                             <label class="mb-1">{{ __('orders.proof') }}</label>
                                             <input type="file" name="payment_proof" class="form-control payment-proof-input"
-                                                accept="{{ \App\OrderPayment::proofAcceptAttribute() }}" required>
+                                                accept="{{ \App\OrderPayment::proofAcceptAttribute() }}"
+                                                capture="{{ \App\OrderPayment::proofCaptureAttribute() }}" required>
                                             <small class="text-muted">{{ \App\OrderPayment::proofHelpText() }}</small>
                                             @error('payment_proof')
                                                 <div class="text-danger small mt-1"><strong>{{ $message }}</strong></div>

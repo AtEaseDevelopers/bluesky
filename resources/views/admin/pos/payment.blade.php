@@ -29,7 +29,9 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="mb-2">{{ __('orders.proof') }}</label>
-                                <input type="file" name="payments[0][payment_proof]" class="form-control" accept="image/*,.pdf">
+                                <input type="file" name="payments[0][payment_proof]" class="form-control"
+                                    accept="{{ \App\OrderPayment::proofAcceptAttribute() }}"
+                                    capture="{{ \App\OrderPayment::proofCaptureAttribute() }}">
                             </div>
                             <div class="col-md-2">
                                 <label class="mb-2">{{ __('orders.notes') }}</label>

@@ -70,7 +70,9 @@
                                 <div class="col-md-12">
                                     <div class="mb-3">
                                         <label class="mb-2">{{ __('orders.member.upload_payment_proof') }}</label>
-                                        <input type="file" name="payment_proof" class="form-control" accept="{{ \App\OrderPayment::proofAcceptAttribute() }}" required>
+                                        <input type="file" name="payment_proof" class="form-control"
+                                            accept="{{ \App\OrderPayment::proofAcceptAttribute() }}"
+                                            capture="{{ \App\OrderPayment::proofCaptureAttribute() }}" required>
                                         <small class="text-muted">{{ \App\OrderPayment::proofHelpText() }}</small>
                                     </div>
                                 </div>

@@ -139,7 +139,9 @@
                                 <div class="col-md-6">
                                     <div class="form-group mb-4" id="transferSlipGroup" style="display: none;">
                                         <label class="mb-2" for="transfer_slip">{{ __('orders.upload_transfer_slip') }}</label>
-                                        <input type="file" id="transfer_slip" name="transfer_slip" class="form-control" accept="image/*">
+                                        <input type="file" id="transfer_slip" name="transfer_slip" class="form-control"
+                                            accept="{{ \App\OrderPayment::photoProofAcceptAttribute() }}"
+                                            capture="{{ \App\OrderPayment::proofCaptureAttribute() }}">
                                     </div>
                                 </div>
                             </div>

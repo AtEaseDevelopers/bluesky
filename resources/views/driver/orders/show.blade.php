@@ -318,7 +318,9 @@
                             <div class="mb-3" id="proof-wrapper">
                                 <label class="form-label" for="payment_proof">{{ __('driver_portal.deliveries.payment_proof') }} <span class="text-muted-ink" style="font-weight:500;">{{ __('driver_portal.deliveries.payment_proof_hint') }}</span></label>
                                 <input type="file" class="form-control @error('payment_proof') is-invalid @enderror"
-                                    name="payment_proof" id="payment_proof" accept=".jpg,.jpeg,.png,.pdf">
+                                    name="payment_proof" id="payment_proof"
+                                    accept="{{ \App\OrderPayment::proofAcceptAttribute() }}"
+                                    capture="{{ \App\OrderPayment::proofCaptureAttribute() }}">
                                 @error('payment_proof')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                             @if ($order->isCreditCustomer())
@@ -384,7 +386,8 @@
                                class="form-control @error('delivery_proof') is-invalid @enderror"
                                name="delivery_proof"
                                id="delivery_proof"
-                               accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                               accept="{{ \App\OrderPayment::photoProofAcceptAttribute() }}"
+                               capture="{{ \App\OrderPayment::proofCaptureAttribute() }}"
                                required>
                         @error('delivery_proof')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
