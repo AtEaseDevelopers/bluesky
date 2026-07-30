@@ -130,10 +130,13 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group mb-4">
-                                        <label class="mb-2" for="payment_method">{{ __('orders.payment_method') }}</label>
-                                        <select id="payment_method" name="payment_method" class="form-select">
+                                        <label class="mb-2" for="payment_method">{{ __('orders.payment_method') }}<span class="text-danger"> *</span></label>
+                                        <select id="payment_method" name="payment_method" class="form-select @error('payment_method') is-invalid @enderror" required>
                                             <option value="" selected>{{ __('orders.select_payment_method') }}</option>
                                         </select>
+                                        @error('payment_method')
+                                            <span class="text-danger" role="alert"><strong>{{ $message }}</strong></span>
+                                        @enderror
                                     </div>
                                 </div>
                                 <div class="col-md-6">

@@ -70,6 +70,11 @@ class AddOrderController extends Controller
             $data['customer_id'] = null;
         } else {
             $user = User::find($data['customer_id']);
+            if (!$user) {
+                return redirect()->back()->withInput()->withErrors([
+                    'customer_id' => __('orders.customer_required'),
+                ]);
+            }
         }
 
         $allowedPaymentMethods = $isWalkIn
@@ -82,9 +87,15 @@ class AddOrderController extends Controller
             ]);
         }
 
+        $paymentMethod = $data['payment_method'] ?? null;
+        if (!$paymentMethod) {
+            return redirect()->back()->withInput()->withErrors([
+                'payment_method' => __('orders.payment_method_required'),
+            ]);
+        }
+
         $total = 0;
 
-        $paymentMethod = $data['payment_method'] ?? null;
         $isInStorePayment = $paymentMethod === User::$payment_method['in-store'];
 
         if ($isWalkIn || $isInStorePayment) {
@@ -250,8 +261,7 @@ class AddOrderController extends Controller
             "walk_in_phone" => ['nullable', 'string', 'max:30'],
             "attn_name" => array_merge(Order::$attribute_rules['attn_name'], []),
             "attn_contact" => array_merge(Order::$attribute_rules['attn_contact'], []),
-            // "payment_method" => array_merge(Order::$attribute_rules['payment_method'], []),
-            'payment_method' => ['nullable'],
+            'payment_method' => ['required', 'string', 'max:30'],
             "billing_address" => ($request->boolean('is_walk_in')
                 || $request->input('payment_method') === User::$payment_method['in-store'])
                 ? ['nullable', 'string', 'max:200']

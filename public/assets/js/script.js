@@ -248,6 +248,18 @@ document.addEventListener('DOMContentLoaded', function () {
                             return false;
                         }
                     });
+
+                    if (allow_continue && step === 'customer_info') {
+                        var paymentMethodField = document.getElementById('payment_method');
+                        if (paymentMethodField && !paymentMethodField.value) {
+                            Swal.fire({
+                                title: orderJs('warning', 'Warning'),
+                                text: orderJs('payment_method_required', 'Please select a payment method before proceeding.'),
+                                icon: 'warning',
+                            });
+                            allow_continue = false;
+                        }
+                    }
         
                     if (!allow_continue) {
                         return false;
@@ -789,6 +801,11 @@ function init_customer_details(options) {
 
     if (!order_customer.value) {
         return Promise.resolve(null);
+    }
+
+    var customerIdField = document.getElementById('id');
+    if (customerIdField) {
+        customerIdField.value = order_customer.value;
     }
 
     const form = new FormData();
