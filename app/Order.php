@@ -233,14 +233,19 @@ class Order extends Model
         return $this->allowsHandoverProofUpload();
     }
 
-    /** Pickup and courier orders may attach a handover photo for admin records. */
+    /** Pickup and courier orders may attach a handover photo (registered and walk-in). */
     public function allowsHandoverProofUpload(): bool
     {
-        if ($this->isInStoreOrder()) {
+        if (!$this->isPickup() && !$this->isCourier()) {
             return false;
         }
 
-        return $this->isPickup() || $this->isCourier();
+        // POS counter sales are paid and handed over in one step.
+        if ($this->isPosOrder()) {
+            return false;
+        }
+
+        return true;
     }
 
     public function fulfillmentTypeLabel(): string
