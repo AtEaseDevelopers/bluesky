@@ -6,8 +6,8 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Product;
 use App\ProductDailyPrice;
-use App\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -40,10 +40,7 @@ class AddProductDailyPriceController extends Controller
         }
                             
         $products = $products->get();
-        $category_list = User::select('category')
-            ->groupBy('category')   
-            ->pluck('category')
-            ->toArray();
+        $category_list = $this->dailyPriceCategories();
 
         return view(
             'admin.products.add-product-daily-price-table', [
@@ -164,11 +161,12 @@ class AddProductDailyPriceController extends Controller
             ],
             "user_category" => ['nullable',
                 function ($attribute, $value, $fail) {
-                    $category_list = User::select('category')
-                        ->groupBy('category')   
-                        ->pluck('category')
-                        ->toArray();
-                    if(!in_array($value, $category_list)) {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+
+                    $categoryList = array_values(array_filter($this->dailyPriceCategories()));
+                    if (!in_array($value, $categoryList, true)) {
                         $fail('validation.in');
                     }
                 }
@@ -186,5 +184,22 @@ class AddProductDailyPriceController extends Controller
         }
 
         return $data;
+    }
+
+    private function dailyPriceCategories(): array
+    {
+        $fromTable = DB::table('customer_categories')->pluck('category')->toArray();
+        $fromUsers = DB::table('users')
+            ->select('category')
+            ->distinct()
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->pluck('category')
+            ->toArray();
+
+        $categories = array_values(array_unique(array_merge($fromTable, $fromUsers)));
+        sort($categories);
+
+        return array_merge([''], $categories);
     }
 }
