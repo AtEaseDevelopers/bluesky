@@ -36,11 +36,24 @@ class AddCustomerController extends Controller
 
         $areas = DB::table('areas')->select('id', 'area_name')->get()->toArray();
         $products = DB::table('products')->select('id', 'name', 'sku')->get()->toArray();
+        $defaultCustomerProducts = Product::query()
+            ->where('status', Product::$status['active'])
+            ->orderBy('name')
+            ->get(['id', 'name', 'price'])
+            ->map(function ($product) {
+                return [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'price' => $product->price ?? 0,
+                ];
+            })
+            ->values();
 
         return view(
             'admin.customers.create',
             [
                 'products' => $products,
+                'default_customer_products' => $defaultCustomerProducts,
                 'areas' => $areas,
                 'category_list' => $category_list,
                 'payment_method_options' => User::$payment_method,
@@ -87,8 +100,8 @@ class AddCustomerController extends Controller
                 "status" => User::$user_status['active'],
                 "remark" => $data['remark'],
                 "price_permission" => $request['price_permission'] ?? 1,
-                "invoice_visibility" => $request['invoice_visibility'] ?? 0,
-                "invoice_price_permission" => $request['invoice_price_permission'] ?? 0,
+                "invoice_visibility" => $request['invoice_visibility'] ?? 1,
+                "invoice_price_permission" => $request['invoice_price_permission'] ?? 1,
                 'sql_customer_code' => null,
                 'ssm' => $request['ssm'] ?? null,
                 'tin_no' => $request['tin_no'] ?? null,
@@ -97,14 +110,7 @@ class AddCustomerController extends Controller
             ]
         );
 
-        if ($request['product_id']) {
-            foreach ($request['product_id'] as $pid) {
-                ProductVisibility::create([
-                    'user_id' => $customer->id,
-                    'product_id' => $pid,
-                ]);
-            }
-        }
+        $this->syncCustomerProductVisibility($customer, $request['product_id'] ?? null);
 
         return redirect(route('admin.customers'))->with(
             'success',
@@ -197,5 +203,36 @@ class AddCustomerController extends Controller
             'ccp_count' => $ccps->count(),
             'products_count' => $products->count()
         ]);
+    }
+
+    protected function syncCustomerProductVisibility(User $customer, ?array $productIds): void
+    {
+        if (empty($productIds)) {
+            return;
+        }
+
+        $requestedIds = collect($productIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->sort()
+            ->values();
+
+        $allActiveIds = Product::query()
+            ->where('status', Product::$status['active'])
+            ->pluck('id')
+            ->sort()
+            ->values();
+
+        if ($requestedIds->count() === $allActiveIds->count() && $requestedIds->diff($allActiveIds)->isEmpty()) {
+            return;
+        }
+
+        foreach ($requestedIds as $productId) {
+            ProductVisibility::create([
+                'user_id' => $customer->id,
+                'product_id' => $productId,
+            ]);
+        }
     }
 }

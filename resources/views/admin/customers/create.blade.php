@@ -334,14 +334,14 @@
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="hide">
                                                 <input class="form-check-input" type="radio" name="price_permission"
-                                                    id="hide" value="0">
+                                                    id="hide" value="0" {{ old('price_permission', '1') === '0' ? 'checked' : '' }}>
                                                 {{ __('customers.hide_price') }}
                                             </label>
                                         </div>
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="unhide">
                                                 <input class="form-check-input" type="radio" name="price_permission"
-                                                    id="unhide" value="1" checked>
+                                                    id="unhide" value="1" {{ old('price_permission', '1') === '1' ? 'checked' : '' }}>
                                                 {{ __('customers.unhide_price') }}
                                             </label>
                                         </div>
@@ -353,14 +353,14 @@
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="hide_invoice">
                                                 <input class="form-check-input" type="radio" name="invoice_visibility"
-                                                    id="hide_invoice" value="0" checked>
+                                                    id="hide_invoice" value="0" {{ old('invoice_visibility', '1') === '0' ? 'checked' : '' }}>
                                                 {{ __('customers.hide_invoice') }}
                                             </label>
                                         </div>
                                         <div class="form-check me-3 mb-1">
                                             <label class="form-check-label" for="unhide_invoice">
                                                 <input class="form-check-input" type="radio" name="invoice_visibility"
-                                                    id="unhide_invoice" value="1">
+                                                    id="unhide_invoice" value="1" {{ old('invoice_visibility', '1') === '1' ? 'checked' : '' }}>
                                                 {{ __('customers.unhide_invoice') }}
                                             </label>
                                         </div>
@@ -373,7 +373,7 @@
                                             <label class="form-check-label" for="invoice_price_hide">
                                                 <input class="form-check-input" type="radio"
                                                     name="invoice_price_permission" id="invoice_price_hide"
-                                                    value="0" checked>
+                                                    value="0" {{ old('invoice_price_permission', '1') === '0' ? 'checked' : '' }}>
                                                 {{ __('customers.hide_product_price') }}
                                             </label>
                                         </div>
@@ -381,7 +381,7 @@
                                             <label class="form-check-label" for="invoice_price_unhide">
                                                 <input class="form-check-input" type="radio"
                                                     name="invoice_price_permission" id="invoice_price_unhide"
-                                                    value="1">
+                                                    value="1" {{ old('invoice_price_permission', '1') === '1' ? 'checked' : '' }}>
                                                 {{ __('customers.unhide_product_price') }}
                                             </label>
                                         </div>
@@ -463,7 +463,8 @@
             const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]')
             tooltips.forEach(el => new bootstrap.Tooltip(el))
         })
-        var selected_products = [];
+        var selected_products = @json($default_customer_products);
+        const productIds = selected_products.map(product => product.product_id);
         $(document).ready(function() {
             function syncPaymentTermField() {
                 const isCredit = $('#customer_type').val() === 'credit';
@@ -551,6 +552,8 @@
                     visibilityPermissionsBtn.querySelector('i').classList.add('fa-chevron-up');
                 });
             }
+
+            display_selected_products();
         });
     </script>
 
