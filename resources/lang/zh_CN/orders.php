@@ -285,7 +285,7 @@ return [
     'handover_move_to_packing_help' => '请先将订单移至<strong>打包中</strong>，再在配送方式区域上传交接凭证。',
     'handover_confirmed_at' => '交接确认时间',
     'confirm_pickup' => '确认自提',
-    'confirm_pickup_handover_help' => '客户取货时上传交接凭证，上传后订单将自动移至已送达。',
+    'confirm_pickup_handover_help' => '客户取货时上传交接凭证。准备好后请使用状态操作将订单移至已送达。',
     'confirm_pickup_help' => '将货物交给快递司机或客户，上传自提凭证照片后确认。',
     'pickup_proof' => '自提凭证照片',
     'pickup_proof_required' => '必须上传自提凭证照片。',
@@ -297,7 +297,7 @@ return [
     'pickup_confirmed_success' => '自提已确认。',
     'pickup_confirm_not_allowed' => '此订单目前无法确认自提。',
     'pickup_confirmed_at' => '自提确认时间',
-    'pickup_pending_help' => '客户取货时上传交接凭证。可在<strong>打包中</strong>上传，上传后订单将自动移至<strong>已送达</strong>。',
+    'pickup_pending_help' => '客户取货时上传交接凭证。可在<strong>打包中</strong>上传。准备好后请使用状态操作将订单移至<strong>已送达</strong>。',
     'pickup_record_payment_when' => '货到付款可在确认自提后记录付款。',
     'remark_label' => '备注：',
 

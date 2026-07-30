@@ -363,17 +363,6 @@ class OrderController extends Controller
         $order->update($update);
         $order = $order->fresh();
 
-        if ($order->isPickup() && $order->handoverProofFilename()) {
-            try {
-                app(OrderStatusService::class)->markDeliveredAfterPickupHandover(
-                    $order,
-                    Auth::guard('web_admin')->id()
-                );
-            } catch (\InvalidArgumentException $e) {
-                return back()->with('error', $e->getMessage());
-            }
-        }
-
         return back()->with('success', __('orders.delivery_assignment_updated'));
     }
 
@@ -443,7 +432,6 @@ class OrderController extends Controller
 
         $order = app(OrderService::class)->ensurePaymentDueDate($order)->fresh();
         $order->load('customer');
-        $order = $this->syncPickupDeliveryStatus($order);
 
         $order_products = DB::table('order_products')
             ->select(
@@ -590,12 +578,8 @@ class OrderController extends Controller
             ];
 
         try {
-            DB::transaction(function () use ($order, $proofUpdate, $adminId) {
+            DB::transaction(function () use ($order, $proofUpdate) {
                 $order->update($proofUpdate);
-
-                if ($order->fresh()->isPickup()) {
-                    app(OrderStatusService::class)->markDeliveredAfterPickupHandover($order->fresh(), $adminId);
-                }
             });
         } catch (\InvalidArgumentException $e) {
             return back()->with('error', $e->getMessage());
@@ -605,35 +589,7 @@ class OrderController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        $message = $order->fresh()->isPickup()
-            ? __('orders.pickup_confirmed_success')
-            : __('orders.handover_proof_saved');
-
-        return back()->with('success', $message);
-    }
-
-    private function syncPickupDeliveryStatus(Order $order): Order
-    {
-        if (!$order->isPickup() || !$order->handoverProofFilename()) {
-            return $order;
-        }
-
-        if (!in_array($order->status, [
-            Order::$status['pending'],
-            Order::$status['packing'],
-            Order::$status['in_route'],
-        ], true)) {
-            return $order;
-        }
-
-        try {
-            return app(OrderStatusService::class)->markDeliveredAfterPickupHandover(
-                $order,
-                Auth::guard('web_admin')->id()
-            );
-        } catch (\InvalidArgumentException $e) {
-            return $order;
-        }
+        return back()->with('success', __('orders.handover_proof_saved'));
     }
 
     public function viewCourierProof($orderId, $filename)

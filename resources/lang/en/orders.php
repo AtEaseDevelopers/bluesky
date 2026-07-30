@@ -285,7 +285,7 @@ return [
     'handover_move_to_packing_help' => 'Move this order to <strong>Packing</strong> first, then upload handover proof in the Fulfillment section.',
     'handover_confirmed_at' => 'Handover Confirmed',
     'confirm_pickup' => 'Confirm Pickup',
-    'confirm_pickup_handover_help' => 'Upload a handover proof photo when the customer collects the order. The order moves to Delivered automatically.',
+    'confirm_pickup_handover_help' => 'Upload a handover proof photo when the customer collects the order. Use Status Actions to move the order to Delivered when ready.',
     'confirm_pickup_help' => 'Upload a handover proof photo when goods are handed over to the customer or courier.',
     'pickup_proof' => 'Handover Proof Photo',
     'pickup_proof_required' => 'Pickup proof photo is required.',
@@ -297,7 +297,7 @@ return [
     'pickup_confirmed_success' => 'Pickup confirmed successfully.',
     'pickup_confirm_not_allowed' => 'Pickup cannot be confirmed for this order.',
     'pickup_confirmed_at' => 'Pickup Confirmed',
-    'pickup_pending_help' => 'Upload handover proof when the customer collects the order. Available from <strong>Packing</strong>. The order moves to <strong>Delivered</strong> automatically after upload.',
+    'pickup_pending_help' => 'Upload handover proof when the customer collects the order. Available from <strong>Packing</strong>. Use Status Actions to move the order to <strong>Delivered</strong> when ready.',
     'pickup_record_payment_when' => 'COD payment can be recorded after pickup is confirmed.',
     'remark_label' => 'Remark:',
 
