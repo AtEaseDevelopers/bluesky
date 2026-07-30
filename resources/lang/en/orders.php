@@ -316,6 +316,7 @@ return [
         'view_detail' => 'View Order Detail',
         'review_approve' => 'Review & Approve',
         'buy_again' => 'Buy Again',
+        'buy_again_unavailable' => 'None of the items from this order are available to order again.',
         'view_invoice' => 'View Invoice',
         'estimated_badge' => 'Estimated — pending final review',
         'awaiting_review' => 'This order is awaiting your review. Please confirm the final amounts before delivery proceeds.',

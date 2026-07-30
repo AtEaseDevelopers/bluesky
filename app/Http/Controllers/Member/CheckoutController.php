@@ -16,6 +16,7 @@ use App\OrderPayment;
 use App\PdfHelper;
 use App\Product;
 use App\System;
+use App\User;
 use App\Services\OrderService;
 use App\Services\CreditService;
 use Illuminate\Support\Facades\Auth;

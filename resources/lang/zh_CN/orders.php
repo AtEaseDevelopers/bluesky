@@ -316,6 +316,7 @@ return [
         'view_detail' => '查看订单详情',
         'review_approve' => '审核并确认',
         'buy_again' => '再次购买',
+        'buy_again_unavailable' => '此订单中的商品目前无法再次购买。',
         'view_invoice' => '查看发票',
         'estimated_badge' => '预估 — 待最终确认',
         'awaiting_review' => '此订单待您审核。请确认最终金额后，配送方可进行。',

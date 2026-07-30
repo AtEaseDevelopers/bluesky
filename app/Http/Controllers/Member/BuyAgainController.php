@@ -31,66 +31,88 @@ class BuyAgainController extends Controller
 
     public function index($id)
     {
-        $order = Order::find(decrypt($id));
         $user = Auth::guard('web')->user();
-        
-        // clear previous buy-again cart
-        Cart::where('user_id', $user->id)
-                ->where('status', Cart::$status['buy-again'])
-                ->update(
-                    [
-                    'status' => Cart::$status['aborted']
-                    ]
-                );
+        $order = Order::where('id', decrypt($id))
+            ->where('user_id', $user->id)
+            ->firstOrFail();
 
-        $previous_cart = Cart::find($order->cart_id);
-        if ($previous_cart) {
-            $new_cart = $previous_cart->replicate();
-            $new_cart->replicated_id = $previous_cart->id;
-            $new_cart->status = Cart::$status['buy-again'];
-            $new_cart->save();
-    
-            $previous_cart_products = OrderProduct::where('status', OrderProduct::$status['active'])->where('order_id', $order->id)->get();
-            foreach ($previous_cart_products as $ind => $prev_cart_product) {
-                $product = Product::query()
-                    ->memberCatalog($user)
-                    ->where('products.id', $prev_cart_product->product_id)
-                    ->first();
-                if (!empty($product)) {
-                    $new_cart_product = CartProduct::create(
-                        [
-                        'cart_id' => $new_cart->id,
-                        'product_id' => $product->id,
-                        'quantity' => $prev_cart_product->quantity,
-                        'unit_price' => Product::get_today_price($product->id, $user),
-                        'price' => $prev_cart_product->quantity * Product::get_today_price($product->id, $user),
-                        'remark' => $prev_cart_product->remark,
-                        'status' => CartProduct::$status['active'],
-                        ]
-                    );
-    
-                    $previous_cart_product_options = OrderProductOption::where('status', OrderProductOption::$status['active'])
-                        ->where('order_product_id', $prev_cart_product->id)
-                        ->get();
-    
-                    $product_options = Product::getOption($product->id, true)['product_option'];
-                    foreach ($previous_cart_product_options as $ind => $prev_cart_product_option) {
-                        if (in_array($prev_cart_product_option->option, array_keys($product_options)) && in_array($prev_cart_product_option->option_item, $product_options[$prev_cart_product_option->option])) {
-                            CartProductOption::create(
-                                [
-                                'cart_product_id' => $new_cart_product->id,
-                                'option' => $prev_cart_product_option->option,
-                                'option_item' => $prev_cart_product_option->option_item,
-                                'status' => CartProductOption::$status['active'],
-                                ]
-                            );
-                        }
-                    }
+        Cart::where('user_id', $user->id)
+            ->where('status', Cart::$status['buy-again'])
+            ->update(['status' => Cart::$status['aborted']]);
+
+        $newCart = Cart::create([
+            'user_id' => $user->id,
+            'replicated_id' => $order->cart_id,
+            'status' => Cart::$status['buy-again'],
+        ]);
+
+        $orderProducts = OrderProduct::where('status', OrderProduct::$status['active'])
+            ->where('order_id', $order->id)
+            ->get();
+
+        $addedCount = 0;
+
+        foreach ($orderProducts as $prevOrderProduct) {
+            $product = Product::query()
+                ->memberCatalog($user)
+                ->where('products.id', $prevOrderProduct->product_id)
+                ->first();
+
+            if (!$product) {
+                continue;
+            }
+
+            $quantity = ($prevOrderProduct->quantity !== null && $prevOrderProduct->quantity !== '')
+                ? (float) $prevOrderProduct->quantity
+                : null;
+            $weight = ($prevOrderProduct->weight !== null && $prevOrderProduct->weight !== '')
+                ? (float) $prevOrderProduct->weight
+                : null;
+            $unitPrice = Product::get_today_price($product->id, $user);
+            $linePrice = $product->calculateLinePrice($unitPrice, $quantity, $weight);
+
+            $newCartProduct = CartProduct::create([
+                'cart_id' => $newCart->id,
+                'product_id' => $product->id,
+                'quantity' => $quantity,
+                'weight' => $weight,
+                'unit_price' => $unitPrice,
+                'price' => $linePrice,
+                'remark' => $prevOrderProduct->remark,
+                'status' => CartProduct::$status['active'],
+            ]);
+
+            $previousOptions = OrderProductOption::where('status', OrderProductOption::$status['active'])
+                ->where('order_product_id', $prevOrderProduct->id)
+                ->get();
+
+            $productOptions = Product::getOption($product->id, true)['product_option'] ?? [];
+
+            foreach ($previousOptions as $prevOption) {
+                if (
+                    isset($productOptions[$prevOption->option])
+                    && in_array($prevOption->option_item, $productOptions[$prevOption->option], true)
+                ) {
+                    CartProductOption::create([
+                        'cart_product_id' => $newCartProduct->id,
+                        'option' => $prevOption->option,
+                        'option_item' => $prevOption->option_item,
+                        'status' => CartProductOption::$status['active'],
+                    ]);
                 }
             }
+
+            $addedCount++;
         }
-        
-        return redirect(url('checkout/buy-again'));
+
+        if ($addedCount === 0) {
+            $newCart->update(['status' => Cart::$status['aborted']]);
+
+            return redirect()->route('member.orders')
+                ->with('error', __('orders.member.buy_again_unavailable'));
+        }
+
+        return redirect('/checkout/buy-again');
     }
 
     public function viewSummary(Request $request, Order $order)
