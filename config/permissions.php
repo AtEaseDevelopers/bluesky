@@ -247,6 +247,7 @@ return [
         'member.bulk-payments' => 'bulk_payments',
         'member.bulk-payments.store' => 'bulk_payments',
         'member.profile' => 'profile',
+        'member.profile.update' => 'profile',
         'member.update.password' => 'profile',
         'member.policies.show' => 'policies',
     ],

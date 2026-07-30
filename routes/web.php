@@ -86,6 +86,7 @@ $adminUrl = config('app.admin_url');
                     Route::get('/cart', 'CartController@index')->name('cart');
 
                     Route::get('/profile', 'ProfileController@index')->name('profile');
+                    Route::post('/profile', 'ProfileController@updateProfile')->name('profile.update');
                     Route::post('/customer/update-password/', 'ProfileController@updatePassword')->name('update.password');
 
                     Route::get('/checkout', 'CheckoutController@viewForm')->name('checkout');
