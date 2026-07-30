@@ -69,7 +69,20 @@ class DeliverySlotController extends Controller
 
     public function destroy($id)
     {
-        DeliverySlot::where('id', decrypt($id))->delete();
+        $slotId = decrypt($id);
+        $ordersCount = Order::query()
+            ->where('delivery_slot_id', $slotId)
+            ->where('status', '!=', Order::$status['cancelled'])
+            ->count();
+
+        if ($ordersCount > 0) {
+            DeliverySlot::where('id', $slotId)->update(['is_enabled' => false]);
+
+            return redirect(route('admin.delivery-slots.index'))
+                ->with('success', __('delivery_slots.slot_disabled_preserved'));
+        }
+
+        DeliverySlot::where('id', $slotId)->delete();
 
         return redirect(route('admin.delivery-slots.index'))
             ->with('success', __('delivery_slots.slot_deleted'));

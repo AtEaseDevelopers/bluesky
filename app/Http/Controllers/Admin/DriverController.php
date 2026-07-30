@@ -84,9 +84,10 @@ class DriverController extends Controller
 
     public function destroy($id)
     {
-        Driver::where('id', decrypt($id))->delete();
+        $driver = Driver::findOrFail(decrypt($id));
+        $driver->deactivate();
 
-        return redirect(route('admin.drivers.index'))->with('success', __('drivers.deleted_success'));
+        return redirect(route('admin.drivers.index'))->with('success', __('drivers.deactivated_success'));
     }
 
     public function fetch(Request $request)

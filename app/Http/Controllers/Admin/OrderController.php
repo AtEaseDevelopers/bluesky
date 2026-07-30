@@ -190,7 +190,7 @@ class OrderController extends Controller
             return [$key => __('order.status.' . $key)];
         })->toArray();
 
-        $drivers_arr = Driver::optionsForSelect();
+        $drivers_arr = Driver::optionsForOrders($orders->pluck('driver_id')->all());
         return view('admin.orders.index', [
                 'orders' => $orders,
                 'statuses' => $statuses,
@@ -508,7 +508,7 @@ class OrderController extends Controller
 
     private function driverOptionsForOrder(Order $order): array
     {
-        return Driver::optionsForSelect($order->driver_id ? (int) $order->driver_id : null);
+        return Driver::optionsForOrders([$order->driver_id]);
     }
 
     public function updatePaymentDueDate(Request $request, $id)

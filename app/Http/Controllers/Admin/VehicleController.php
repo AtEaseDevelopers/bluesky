@@ -70,9 +70,9 @@ class VehicleController extends Controller
 
     public function destroy($id)
     {
-        Vehicle::where('id', decrypt($id))->delete();
+        Vehicle::where('id', decrypt($id))->update(['is_active' => false]);
 
-        return redirect(route('admin.vehicles.index'))->with('success', __('drivers.vehicle_deleted_success'));
+        return redirect(route('admin.vehicles.index'))->with('success', __('drivers.vehicle_deactivated_success'));
     }
 
     public function fetch(Request $request)

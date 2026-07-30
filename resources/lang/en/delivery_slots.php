@@ -22,6 +22,7 @@ return [
     'slot_created' => 'Delivery time slot has been added successfully.',
     'slot_updated' => 'Delivery time slot has been updated successfully.',
     'slot_deleted' => 'Delivery time slot has been deleted successfully.',
+    'slot_disabled_preserved' => 'This time slot is used on existing orders, so it was disabled instead of deleted. Past orders are unchanged.',
 
     'blackouts' => 'No Delivery Periods',
     'blackouts_help' => 'Block deliveries for date ranges such as public holidays (e.g. Chinese New Year).',

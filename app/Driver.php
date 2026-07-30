@@ -76,13 +76,76 @@ class Driver extends Authenticatable
             ->orderBy('name')
             ->get()
             ->mapWithKeys(function ($driver) {
-                $label = $driver->name ?: $driver->username;
-                if (!$driver->is_active) {
-                    $label .= ' (' . __('drivers.status_labels.inactive') . ')';
-                }
-
-                return [$driver->id => $label];
+                return [$driver->id => self::formatSelectLabel(
+                    $driver->name,
+                    $driver->username,
+                    (bool) $driver->is_active
+                )];
             })
             ->all();
+    }
+
+    /**
+     * Active drivers for dropdowns, plus any drivers referenced on existing orders.
+     *
+     * @param  array<int|string|null>  $referencedDriverIds
+     * @return array<int, string>
+     */
+    public static function optionsForOrders(array $referencedDriverIds = []): array
+    {
+        $options = self::optionsForSelect();
+        $missingIds = collect($referencedDriverIds)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->diff(array_map('intval', array_keys($options)));
+
+        if ($missingIds->isEmpty()) {
+            return $options;
+        }
+
+        static::query()
+            ->whereIn('id', $missingIds)
+            ->orderBy('name')
+            ->get()
+            ->each(function (self $driver) use (&$options) {
+                $options[$driver->id] = $driver->displayLabel();
+            });
+
+        return $options;
+    }
+
+    public function displayLabel(): string
+    {
+        return self::formatSelectLabel($this->name, $this->username, (bool) $this->is_active);
+    }
+
+    public static function displayLabelForId(?int $driverId): ?string
+    {
+        if (!$driverId) {
+            return null;
+        }
+
+        $driver = static::find($driverId);
+
+        return $driver ? $driver->displayLabel() : null;
+    }
+
+    public function deactivate(): void
+    {
+        $this->update([
+            'is_active' => false,
+            'api_token' => null,
+        ]);
+    }
+
+    protected static function formatSelectLabel(?string $name, ?string $username, bool $isActive): string
+    {
+        $label = $name ?: $username ?: '-';
+        if (!$isActive) {
+            $label .= ' (' . __('drivers.status_labels.inactive') . ')';
+        }
+
+        return $label;
     }
 }

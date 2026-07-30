@@ -48,9 +48,11 @@ return [
     'added_success' => 'Driver added successfully.',
     'updated_success' => 'Driver updated successfully.',
     'deleted_success' => 'Driver deleted successfully.',
+    'deactivated_success' => 'Driver deactivated successfully. Past orders and reports keep this driver name.',
     'vehicle_added_success' => 'Vehicle added successfully.',
     'vehicle_updated_success' => 'Vehicle updated successfully.',
     'vehicle_deleted_success' => 'Vehicle deleted successfully.',
+    'vehicle_deactivated_success' => 'Vehicle deactivated successfully.',
 
     'datatable' => [
         'processing' => 'Processing...',

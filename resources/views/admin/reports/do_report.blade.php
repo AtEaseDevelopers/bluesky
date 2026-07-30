@@ -59,17 +59,11 @@
                                         <td>{{ $order->billing_address .", ". $order->billing_city .", ". $order->billing_postcode .", ". $order->billing_state }}</td>
                                         <td>{{ $order->shipping_address .", ". $order->shipping_city .", ". $order->shipping_postcode .", ". $order->shipping_state }}</td>
                                         <td>
-                                            @php
-                                                $driver = null;
-                                                for ($i = 0; $i < count($drivers); $i++) {
-                                                    if ($drivers[$i]->id == $order->driver_id) {
-                                                        $driver = $drivers[$i];
-                                                        break;
-                                                    }
-                                                }
-                                            @endphp
                                             @if ($order->driver_id)
-                                                {!! $driver != null ? e($driver->name ?: $driver->username) : '<span class="text-danger">' . e(__('reports.driver_deleted')) . '</span>' !!}
+                                                @php
+                                                    $driverLabel = \App\Driver::displayLabelForId((int) $order->driver_id);
+                                                @endphp
+                                                {!! $driverLabel ? e($driverLabel) : '<span class="text-danger">' . e(__('reports.driver_deleted')) . '</span>' !!}
                                             @else
                                                 -
                                             @endif

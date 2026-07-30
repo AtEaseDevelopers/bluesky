@@ -112,8 +112,17 @@ class CustomerCategoryController extends Controller
     public function destroy($id)
     {
         $id = decrypt($id);
+        $category = CustomerCategory::findOrFail($id);
+        $customerCount = DB::table('users')->where('category', $category->category)->count();
+
+        if ($customerCount > 0) {
+            return redirect(route('admin.customer-categories.index'))
+                ->with('error', __('customers.category_delete_blocked', ['count' => $customerCount]));
+        }
+
         CustomerCategory::where('id', $id)->delete();
         CustomerCategoryProduct::where('customer_category_id', $id)->delete();
+
         return redirect(route('admin.customer-categories.index'))->with('success', "Customer category has been deleted successfully.");
     }
 

@@ -299,7 +299,10 @@
                                         <td>{!! $order->shipping_address !!}</td>
                                         <td>
                                             @if ($order->driver_id)
-                                                {!! isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '<span class="text-danger">' . e(__('orders.lorry_deleted')) . '</span>' !!}
+                                                @php
+                                                    $driverLabel = $drivers[$order->driver_id] ?? \App\Driver::displayLabelForId((int) $order->driver_id);
+                                                @endphp
+                                                {!! $driverLabel ? e($driverLabel) : '<span class="text-danger">' . e(__('orders.lorry_deleted')) . '</span>' !!}
                                             @else
                                                 -
                                             @endif

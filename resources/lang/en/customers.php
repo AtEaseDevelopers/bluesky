@@ -131,6 +131,7 @@ return [
     'customer_type_cod' => 'COD',
     'customer_type_credit' => 'Credit',
     'enter_category_optional' => 'Enter customer category (optional)',
+    'category_delete_blocked' => 'This category is assigned to :count customer(s). Remove or reassign them before deleting the category.',
     'customer_code' => 'Customer Code',
     'customer_code_tooltip' => 'Assigned by AutoCount when the customer is synced.',
     'customer_code_autocount_pending' => 'Pending — assigned by AutoCount on sync',

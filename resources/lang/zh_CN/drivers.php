@@ -40,6 +40,7 @@ return [
     'added_success' => '司机已成功添加。',
     'updated_success' => '司机已成功更新。',
     'deleted_success' => '司机已成功删除。',
+    'deactivated_success' => '司机已停用。历史订单和报表仍会保留该司机姓名。',
 
     'datatable' => [
         'processing' => '处理中...',

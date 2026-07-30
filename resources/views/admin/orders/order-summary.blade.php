@@ -58,7 +58,7 @@
                                     <p><strong>{{ __('orders.fulfillment_type') }}:</strong> {{ $order->fulfillmentTypeLabel() }}</p>
                                     @if ($order->isDelivery())
                                         <p><strong>{{ __('orders.delivery') }}:</strong> {{ $order->delivery_date ? $order->delivery_date->format('d-m-Y') : '-' }} {{ $order->delivery_time_slot }}</p>
-                                        <p><strong>{{ __('orders.assign_driver') }}:</strong> {{ $order->driver_id && isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '-' }}</p>
+                                        <p><strong>{{ __('orders.assign_driver') }}:</strong> {{ $order->driver_id ? ($drivers[$order->driver_id] ?? \App\Driver::displayLabelForId((int) $order->driver_id) ?? '-') : '-' }}</p>
                                     @endif
                                 </div>
                                 <div class="col-md-6">
@@ -340,7 +340,7 @@
                             @else
                                 <p><strong>{{ __('orders.fulfillment_type') }}:</strong> {{ $order->fulfillmentTypeLabel() }}</p>
                                 @if ($order->isDelivery())
-                                    <p><strong>{{ __('orders.assign_driver') }}:</strong> {{ $order->driver_id && isset($drivers[$order->driver_id]) ? $drivers[$order->driver_id] : '-' }}</p>
+                                    <p><strong>{{ __('orders.assign_driver') }}:</strong> {{ $order->driver_id ? ($drivers[$order->driver_id] ?? \App\Driver::displayLabelForId((int) $order->driver_id) ?? '-') : '-' }}</p>
                                     <p><strong>{{ __('orders.delivery') }}:</strong> {{ $order->delivery_date ? $order->delivery_date->format('d-m-Y') : '-' }} {{ $order->delivery_time_slot }}</p>
                                 @endif
                                 @if (!$order->isDelivery() && $order->handoverProofFilename())
