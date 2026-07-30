@@ -43,12 +43,10 @@ class CartController extends Controller
 
         $total = 0;
         foreach ($cart_products as $key => $value) {
-            if ($value->images != null) {
-                $images = json_decode($value->images, true);
-                $cart_products[$key]->image_url = url('/') . '/' . Product::$path."/".$value->product_id."/".$images[0];
-            } else {
-                $cart_products[$key]->image_url = '/assets/images/product-default.jpg';
-            }
+            $cart_products[$key]->image_url = Product::resolveImageUrl((object) [
+                'id' => $value->product_id,
+                'images' => $value->images,
+            ]);
             $cart_products[$key]->options = CartProduct::getOption($value->cart_product_id);
             $cart_products[$key]->unit_price = Product::get_today_price($value->product_id, $user);
             $product = Product::find($value->product_id);
