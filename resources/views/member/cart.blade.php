@@ -48,7 +48,7 @@
                                         <td>
                                             @if ($product->sell_in == 'qty_bill_weight')
                                                 <div class="weight-controls">
-                                                    <small class="text-muted d-block mb-1">{{ __('product.optional') }}</small>
+                                                    <small class="text-muted d-block mb-1">{{ __('product.optional') }} {{ __('product.price_based_on_weight') }}</small>
                                                     <button class="btn btn-sm btn-primary decrease-weight" type="button">-</button>
                                                     <input type="number" name="weight" class="weight-input weight-input-optional" data-id="{{ $product->cart_product_id }}" data-sell-in="qty_bill_weight" value="{{ $product->weight }}" min="0" step="0.001" placeholder="-">
                                                     <button class="btn btn-sm btn-primary increase-weight" type="button">+</button>
@@ -160,7 +160,7 @@
                 }
 
                 if (sellIn === 'qty_bill_weight') {
-                    return qty;
+                    return weight > 0 ? weight : 0;
                 }
 
                 if (sellIn === 'weight') {

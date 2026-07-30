@@ -329,6 +329,9 @@
                                             <span class="badge {{ $paymentBadgeClass }}">
                                                 {{ __('order.payment_status.' . ($order->payment_status ?? 'unpaid')) }}
                                             </span>
+                                            @if ($order->deliveryPaymentPreferenceLabel())
+                                                <br><small class="text-muted">{{ __('orders.expected_cod_payment') }}: {{ $order->deliveryPaymentPreferenceLabel() }}</small>
+                                            @endif
                                         </td>
                                         <td class="text-center">
                                             @if ($customer && ($customer->customer_type ?? 'cod') === 'credit')

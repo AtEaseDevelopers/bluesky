@@ -78,10 +78,11 @@
                                             {{ __('order.payment_status.' . $order->payment_status) }}
                                         </span>
                                     </p>
+                                    @if ($order->hasDeliveryPaymentPreference())
+                                        <p><strong>{{ __('orders.expected_cod_payment') }}:</strong> {{ $order->deliveryPaymentPreferenceLabel() }}</p>
+                                    @endif
                                     @if ($payments->count())
                                         <p><strong>{{ __('orders.payment_methods') }}:</strong> {{ $order->paymentMethodsLabel() }}</p>
-                                    @elseif ($order->hasCodDeliveryPreference())
-                                        <p><strong>{{ __('orders.expected_cod_payment') }}:</strong> {{ $order->preferredPaymentMethodLabel() }}</p>
                                     @endif
                                     @if ($isCreditCustomer)
                                         @if ($customer)
@@ -386,7 +387,7 @@
                                     {{ __('orders.cancel_order') }}
                                 </button>
                             @endif
-                            @if ($order->isFulfilled() && $order->isFullyPaid())
+                            @if ($order->canSyncToAutoCount())
                                 <form action="{{ route('admin.orders.sync-autocount', $order->id) }}" method="POST" class="mt-3">
                                     @csrf
                                     <button type="submit" class="btn btn-outline-secondary w-100">{{ __('orders.sync_autocount') }}</button>

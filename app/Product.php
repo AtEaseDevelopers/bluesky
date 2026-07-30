@@ -298,7 +298,7 @@ class Product extends Model
         if ($this->sell_in === self::SELL_IN_QTY_BILL_WEIGHT) {
             $qty = (float) $quantity;
             $wt = ($weight !== null && $weight !== '') ? (float) $weight : null;
-            $billAmount = ($billByWeight && $wt !== null && $wt > 0) ? $wt : $qty;
+            $billAmount = ($wt !== null && $wt > 0) ? $wt : 0;
 
             return [
                 'quantity' => $qty,

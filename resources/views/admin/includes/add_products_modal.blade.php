@@ -40,6 +40,7 @@
         weight_kg: @json(__('orders.member.weight_kg')),
         estimated_weight: @json(__('product.estimated_weight', ['uom' => 'KG'])),
         optional: @json(__('product.optional')),
+        price_based_on_weight: @json(__('product.price_based_on_weight')),
         remark: @json(__('orders.remark')),
         price_label: @json(__('orders.price_label')),
         total_price_label: @json(__('orders.total_price_label')),

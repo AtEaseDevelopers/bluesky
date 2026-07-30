@@ -141,6 +141,7 @@ class DriverOrderController extends Controller
             'paid_amount' => (float) $order->paid_amount,
             'balance_due' => $order->balanceDue(),
             'payment_methods' => $order->paymentMethodsLabel(),
+            'planned_delivery_payment' => $order->deliveryPaymentPreferenceLabel(),
             'delivery_date' => optional($order->delivery_date)->format('Y-m-d'),
             'delivery_time_slot' => $order->delivery_time_slot,
             'shipping_address' => $order->shipping_address,

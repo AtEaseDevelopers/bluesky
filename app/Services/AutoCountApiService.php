@@ -665,10 +665,7 @@ class AutoCountApiService
         return Order::query()
             ->with(['customer', 'orderProducts'])
             ->where('payment_status', Order::$payment_status['paid'])
-            ->where(function ($query) {
-                $query->where('status', Order::$status['delivered'])
-                    ->orWhere('status', Order::$status['completed']);
-            });
+            ->where('status', Order::$status['completed']);
     }
 
     protected function toSyncPayload(Order $order, string $type): array

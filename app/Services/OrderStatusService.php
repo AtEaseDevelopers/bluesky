@@ -98,6 +98,10 @@ class OrderStatusService
             if (!$order->invoice_number) {
                 app(OrderService::class)->generateInvoiceNumber($order);
             }
+
+            if ($order->canSyncToAutoCount()) {
+                app(AutoCountSyncService::class)->syncIfEligible($order->fresh(), $adminId);
+            }
         }
 
         if ($newStatus === Order::$status['cancelled']) {

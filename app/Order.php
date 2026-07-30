@@ -177,6 +177,17 @@ class Order extends Model
         ], true);
     }
 
+    public function isCompleted(): bool
+    {
+        return $this->status === self::$status['completed'];
+    }
+
+    public function canSyncToAutoCount(): bool
+    {
+        return $this->isCompleted()
+            && $this->payment_status === self::$payment_status['paid'];
+    }
+
     public function canEditFulfillment(): bool
     {
         return $this->canShowFulfillmentPanel()
@@ -319,13 +330,32 @@ class Order extends Model
 
     public function preferredPaymentMethodLabel(): ?string
     {
-        return OrderPayment::paymentMethodLabel($this->payment_method);
+        return $this->deliveryPaymentPreferenceLabel()
+            ?? OrderPayment::paymentMethodLabel($this->payment_method);
+    }
+
+    public function hasDeliveryPaymentPreference(): bool
+    {
+        return in_array($this->payment_method ?? '', OrderPayment::codDeliveryPreferenceKeys(), true);
+    }
+
+    public function deliveryPaymentPreferenceLabel(): ?string
+    {
+        if (!$this->hasDeliveryPaymentPreference()) {
+            return null;
+        }
+
+        $labelKey = 'orders.member.checkout.cod_methods.' . $this->payment_method;
+        $label = __($labelKey);
+
+        return $label !== $labelKey
+            ? $label
+            : OrderPayment::paymentMethodLabel($this->payment_method);
     }
 
     public function hasCodDeliveryPreference(): bool
     {
-        return $this->isCodCustomer()
-            && in_array($this->payment_method, OrderPayment::codDeliveryPreferenceKeys(), true);
+        return $this->isCodCustomer() && $this->hasDeliveryPaymentPreference();
     }
 
     public function orderProducts()
@@ -603,9 +633,7 @@ class Order extends Model
     {
         return in_array($status, [
             self::$status['in_route'],
-            self::$status['delivered'],
             'delivering',
-            'completed',
         ], true);
     }
 

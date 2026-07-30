@@ -18,8 +18,8 @@ class AutoCountSyncService
             return $this->log($order, 'skipped', 'Invoice not paid — sync not allowed.', null, $adminId);
         }
 
-        if (!$order->isFulfilled()) {
-            return $this->log($order, 'skipped', 'Order must be delivered, handed to customer, or completed before sync.', null, $adminId);
+        if (!$order->isCompleted()) {
+            return $this->log($order, 'skipped', 'Order must be completed before AutoCount sync.', null, $adminId);
         }
 
         if (!$order->invoice_number) {

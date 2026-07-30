@@ -61,6 +61,9 @@
                             <div class="text-muted-ink">
                                 <i class="fa fa-user me-1"></i>{{ $order->attn_name ?? optional($order->customer)->name ?? '—' }}
                                 <span class="pill {{ $order->isCreditCustomer() ? 'pill-due' : 'pill-paid' }} ms-1">{{ $order->driverCustomerTypeLabel() }}</span>
+                                @if ($order->deliveryPaymentPreferenceLabel())
+                                    <span class="pill pill-paid ms-1">{{ $order->deliveryPaymentPreferenceLabel() }}</span>
+                                @endif
                             </div>
                         </div>
                         @php

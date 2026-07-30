@@ -101,7 +101,7 @@
                                 @enderror
                             </div>
                             <div class="mb-4">
-                                <label class="mb-2" for="weight">{{ __('product.estimated_weight', ['uom' => $product->uom_name ?? 'KG']) }} {{ __('product.optional') }}</label>
+                                <label class="mb-2" for="weight">{{ __('product.estimated_weight', ['uom' => $product->uom_name ?? 'KG']) }} {{ __('product.optional') }} {{ __('product.price_based_on_weight') }}</label>
                                 <input type="number" class="form-control @error('weight') is-invalid @enderror" id="weight" name="weight" value="{{ old('weight', $product->added_to_cart? $product->added_to_cart->weight : '') }}" min="0" step="0.001">
                                 @error('weight')
                                     <span class="text-danger" role="alert">

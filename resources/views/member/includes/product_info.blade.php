@@ -73,7 +73,7 @@
         </div>
     </div>
     <div class="mb-4">
-        <label class="mb-2" for="weight">{{ __('product.estimated_weight', ['uom' => $product->uom_name ?? 'KG']) }} {{ __('product.optional') }}</label>
+        <label class="mb-2" for="weight">{{ __('product.estimated_weight', ['uom' => $product->uom_name ?? 'KG']) }} {{ __('product.optional') }} {{ __('product.price_based_on_weight') }}</label>
         @include('partials.weight_presets', ['targetId' => 'weight', 'uomLabel' => $product->uom_name ?? 'KG', 'presets' => $product->weightPresetsList()])
         <div class="btn-group w-100" role="group">
             <button type="button" class="btn btn-outline-primary btn-minus-weight" disabled>

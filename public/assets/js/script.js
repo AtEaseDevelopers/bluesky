@@ -32,7 +32,7 @@ function orderLineBillAmount(sellIn, qty, weight, billByWeight) {
     }
 
     if (sellIn === 'qty_bill_weight') {
-        return billByWeight && weight > 0 ? weight : qty;
+        return weight > 0 ? weight : 0;
     }
 
     if (sellIn === 'weight') {
@@ -908,7 +908,7 @@ function display_selected_products() {
                     </div>
                 </div>
                 <div class="form-group mb-3">
-                    <label class="mb-2">${orderUi('estimated_weight', 'Estimated Weight (KG)')} ${orderUi('optional', '(Optional)')}</label>
+                    <label class="mb-2">${orderUi('estimated_weight', 'Estimated Weight (KG)')} ${orderUi('optional', '(Optional)')} ${orderUi('price_based_on_weight', 'Info: Price is based on weight')}</label>
                     <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagBillWeight_${product.product_id}" data-action="minus">
                             <i class="fa fa-minus"></i>

@@ -77,6 +77,12 @@
                         @else — @endif
                     </div>
                 </div>
+                @if ($order->deliveryPaymentPreferenceLabel())
+                <div class="col-6">
+                    <div class="detail-label">{{ __('driver_portal.deliveries.planned_payment') }}</div>
+                    <div class="fw-semibold">{{ $order->deliveryPaymentPreferenceLabel() }}</div>
+                </div>
+                @endif
                 <div class="col-12">
                     <div class="detail-label">{{ __('driver_portal.deliveries.delivery_address') }}</div>
                     <div>{{ $order->shipping_address ?? $order->billing_address ?? '—' }}
@@ -337,10 +343,10 @@
                 @endif
             @endif
 
-            @if ($order->preferredPaymentMethodLabel() && !$latestPayment && in_array($order->payment_method, \App\OrderPayment::codDeliveryPreferenceKeys(), true))
+            @if ($order->deliveryPaymentPreferenceLabel() && !$latestPayment)
                 <div class="alert alert-warning py-2 px-3 mb-0 mt-3" style="font-size:.92rem;">
                     <i class="fa fa-info-circle me-1"></i>
-                    {{ __('driver_portal.deliveries.expected_payment', ['method' => $order->preferredPaymentMethodLabel()]) }}
+                    {{ __('driver_portal.deliveries.expected_payment', ['method' => $order->deliveryPaymentPreferenceLabel()]) }}
                 </div>
             @endif
             @php
@@ -487,7 +493,7 @@
                     return qty;
                 }
                 if (sellIn === 'qty_bill_weight') {
-                    return weight > 0 ? weight : qty;
+                    return weight > 0 ? weight : 0;
                 }
                 if (sellIn === 'weight') {
                     return weight;

@@ -186,7 +186,7 @@
             }
 
             if (sellIn === 'qty_bill_weight') {
-                return weight > 0 ? weight : qty;
+                return weight > 0 ? weight : 0;
             }
 
             if (sellIn === 'weight') {

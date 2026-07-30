@@ -611,6 +611,72 @@ class DriverPortalTest extends TestCase
     }
 
     /** @test */
+    public function driver_cannot_adjust_order_after_delivered()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, [
+            'status' => 'delivered',
+            'total_price' => 30.00,
+            'subtotal' => 30.00,
+            'delivery_fee' => 0,
+        ]);
+
+        $orderProduct = \App\OrderProduct::forceCreate([
+            'order_id' => $order->id,
+            'product_id' => null,
+            'product_name' => 'Frozen Prawn Pack',
+            'quantity' => 3,
+            'unit_price' => 10.00,
+            'price' => 30.00,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.adjust', $order->id), [
+                'line_items' => [
+                    $orderProduct->id => ['quantity' => 5],
+                ],
+            ])->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertEquals(30.00, (float) $order->fresh()->total_price);
+        $this->assertEquals(3, (float) $orderProduct->fresh()->quantity);
+    }
+
+    /** @test */
+    public function driver_cannot_adjust_order_after_completed()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, [
+            'status' => 'completed',
+            'total_price' => 30.00,
+            'subtotal' => 30.00,
+            'delivery_fee' => 0,
+        ]);
+
+        $orderProduct = \App\OrderProduct::forceCreate([
+            'order_id' => $order->id,
+            'product_id' => null,
+            'product_name' => 'Frozen Prawn Pack',
+            'quantity' => 3,
+            'unit_price' => 10.00,
+            'price' => 30.00,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.adjust', $order->id), [
+                'line_items' => [
+                    $orderProduct->id => ['quantity' => 5],
+                ],
+            ])->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertEquals(30.00, (float) $order->fresh()->total_price);
+        $this->assertEquals(3, (float) $orderProduct->fresh()->quantity);
+    }
+
+    /** @test */
     public function driver_can_view_change_password_page()
     {
         $driver = $this->makeDriver();

@@ -91,7 +91,7 @@
                         </div>
                     </div>
                     <div class="form-group mb-3">
-                        <label class="mb-2" for="productWeight_{{ $product->id }}">{{ __('product.estimated_weight', ['uom' => $uomLabel]) }} {{ __('product.optional') }}</label>
+                        <label class="mb-2" for="productWeight_{{ $product->id }}">{{ __('product.estimated_weight', ['uom' => $uomLabel]) }} {{ __('product.optional') }} {{ __('product.price_based_on_weight') }}</label>
                         @include('partials.weight_presets', ['targetId' => 'productWeight_' . $product->id, 'uomLabel' => $uomLabel, 'presets' => $product->weightPresetsList()])
                         <div class="btn-group w-100" role="group">
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productWeight_{{ $product->id }}" data-action="minus">
