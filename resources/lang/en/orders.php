@@ -65,6 +65,8 @@ return [
     'walk_in_name' => 'Walk-in Name',
     'walk_in_phone' => 'Walk-in Phone',
     'delivery_slot' => 'Delivery Slot',
+    'preferred_delivery' => 'Preferred Delivery Time',
+    'delivery_time_optional_help' => 'Optional — leave blank if you have no preference.',
     'delivery_date' => 'Delivery Date',
     'delivery_time' => 'Delivery Time',
     'delivery_schedule' => 'Delivery Date / Time',

@@ -89,6 +89,68 @@
                             </div>
                         </div>
 
+                        @php
+                            $deliveryDates = $deliveryDates ?? [];
+                        @endphp
+                        <h6 class="card-subtitle my-3 text-body-secondary">{{ __('orders.preferred_delivery') }}</h6>
+                        <p class="text-muted small mb-3">{{ __('orders.delivery_time_optional_help') }}</p>
+                        <div class="row">
+                            <div class="col-md-12">
+                                @if (empty($deliveryDates))
+                                    <div class="alert alert-warning mb-4">
+                                        {{ __('orders.no_delivery_dates') }}
+                                    </div>
+                                @else
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-4">
+                                            <label class="mb-2" for="delivery_date">{{ __('orders.delivery_date') }}</label>
+                                            <select name="delivery_date" id="delivery_date" class="form-select">
+                                                <option value="">{{ __('orders.choose_delivery_date') }}</option>
+                                                @foreach ($deliveryDates as $date)
+                                                    <option value="{{ $date }}" {{ old('delivery_date') == $date ? 'selected' : '' }}>
+                                                        {{ \Carbon\Carbon::parse($date)->format('d M Y (l)') }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            @error('delivery_date')
+                                                <span class="text-danger"><strong>{{ $message }}</strong></span>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-4">
+                                            <label class="mb-2" for="delivery_slot_id">{{ __('orders.delivery_time') }}</label>
+                                            <select name="delivery_slot_id" id="delivery_slot_id" class="form-select" disabled>
+                                                <option value="">{{ __('orders.choose_delivery_time') }}</option>
+                                            </select>
+                                            @error('delivery_slot_id')
+                                                <span class="text-danger"><strong>{{ $message }}</strong></span>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+
+                        @unless($isGuest ?? false)
+                        <h6 class="card-subtitle my-3 text-body-secondary">{{ __('orders.member.checkout.shipping_info') }}</h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-4">
+                                    <label class="mb-2" for="shipping_address">{{ __('orders.shipping_address') }}</label>
+                                    <textarea id="shipping_address" name="shipping_address" value="{{ old('shipping_address')? : $customer->shipping_address }}" class="form-control" rows="3" placeholder="{{ __('orders.shipping_address_placeholder') }}" >{{ old('shipping_address')? : $customer->shipping_address }}</textarea>
+                                    @error('shipping_address')
+                                        <span class="text-danger" role="alert">
+                                            <strong>{{ $errors->first('shipping_address') }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        @endunless
+
                         @unless($isGuest ?? false)
                         <h6 class="card-subtitle my-3 text-body-secondary">{{ __('orders.member.checkout.payment_heading') }}</h6>
                         <div class="row">
@@ -125,63 +187,6 @@
                         </div>
                         @endunless
 
-                        @unless($isGuest ?? false)
-                        <h6 class="card-subtitle my-3 text-body-secondary">{{ __('orders.delivery_slot') }}</h6>
-                        <div class="row">
-                            <div class="col-md-12">
-                                @if (empty($deliveryDates))
-                                    <div class="alert alert-warning">
-                                        {{ __('orders.no_delivery_dates') }}
-                                    </div>
-                                @else
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group mb-4">
-                                            <label class="mb-2" for="delivery_date">{{ __('orders.delivery_date') }} <span class="text-danger">*</span></label>
-                                            <select name="delivery_date" id="delivery_date" class="form-select" required>
-                                                <option value="">{{ __('orders.choose_delivery_date') }}</option>
-                                                @foreach ($deliveryDates as $date)
-                                                    <option value="{{ $date }}" {{ old('delivery_date') == $date ? 'selected' : '' }}>
-                                                        {{ \Carbon\Carbon::parse($date)->format('d M Y (l)') }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            @error('delivery_date')
-                                                <span class="text-danger"><strong>{{ $message }}</strong></span>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group mb-4">
-                                            <label class="mb-2" for="delivery_slot_id">{{ __('orders.delivery_time') }} <span class="text-danger">*</span></label>
-                                            <select name="delivery_slot_id" id="delivery_slot_id" class="form-select" required disabled>
-                                                <option value="">{{ __('orders.choose_delivery_time') }}</option>
-                                            </select>
-                                            @error('delivery_slot_id')
-                                                <span class="text-danger"><strong>{{ $message }}</strong></span>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                </div>
-                                @endif
-                            </div>
-                        </div>
-
-                        <h6 class="card-subtitle my-3 text-body-secondary">{{ __('orders.member.checkout.shipping_info') }}</h6>
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="form-group mb-4">
-                                    <label class="mb-2" for="shipping_address">{{ __('orders.shipping_address') }}</label>
-                                    <textarea id="shipping_address" name="shipping_address" value="{{ old('shipping_address')? : $customer->shipping_address }}" class="form-control" rows="3" placeholder="{{ __('orders.shipping_address_placeholder') }}" >{{ old('shipping_address')? : $customer->shipping_address }}</textarea>
-                                    @error('shipping_address')
-                                        <span class="text-danger" role="alert">
-                                            <strong>{{ $errors->first('shipping_address') }}</strong>
-                                        </span>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
-                        @endunless
                         @if($isGuest ?? false)
                             <div class="alert alert-info mb-3">
                                 <i class="fa fa-money" aria-hidden="true"></i>
@@ -220,7 +225,7 @@
                             <div class="col-md-12">
                                 <div class="d-flex justify-content-end">
                                     <a href="{{ $portal['cart_url'] }}" class="btn btn-outline-primary me-3 mb-1 px-3">{{ __('orders.member.checkout.my_cart') }}</a>
-                                    <button type="submit" class="btn btn-primary mb-1 px-3" {{ (!($isGuest ?? false) && isset($deliverySlots) && $deliverySlots->isEmpty()) ? 'disabled' : '' }}>
+                                    <button type="submit" class="btn btn-primary mb-1 px-3">
                                         {{ __('customers.pos.place_order') }}
                                         <div class="spinner-border spinner-border-sm d-none" role="status">
                                             <span class="visually-hidden">{{ __('orders.loading') }}</span>

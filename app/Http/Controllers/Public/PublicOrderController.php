@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Public;
 
 use App\Cart;
 use App\CartProduct;
+use App\DeliverySlot;
+use App\DeliveryBlackout;
 use App\CartProductOption;
 use App\Http\Controllers\Controller;
 use App\Http\Concerns\ValidatesProductCartInput;
+use App\Http\Concerns\ValidatesOptionalDeliverySlot;
 use App\Order;
 use App\OrderPayment;
 use App\OrderProduct;
@@ -28,6 +31,7 @@ use Illuminate\Validation\ValidationException;
 class PublicOrderController extends Controller
 {
     use ValidatesProductCartInput;
+    use ValidatesOptionalDeliverySlot;
 
     /** Storefront — renders the member product screen with guest pricing. */
     public function index(Request $request)
@@ -197,6 +201,8 @@ class PublicOrderController extends Controller
             'customer' => $this->guestUser(),
             'products' => $products,
             'total' => number_format($total, 2, '.', ''),
+            'deliveryDates' => DeliverySlot::availableDates(),
+            'deliverySlotsUrl' => route('public.guest.checkout.delivery-slots'),
         ]);
     }
 
@@ -217,6 +223,7 @@ class PublicOrderController extends Controller
         $cart->update(['status' => Cart::$status['completed']]);
 
         $address = $data['shipping_address'] ?? $data['billing_address'];
+        $deliveryFields = $this->deliveryFieldsFromValidated($data);
 
         $order = Order::create([
             'user_id' => null,
@@ -233,6 +240,9 @@ class PublicOrderController extends Controller
             'shipping_address' => $address,
             'payment_method' => $data['payment_method'],
             'status' => Order::$status['pending'],
+            'delivery_slot_id' => $deliveryFields['delivery_slot_id'],
+            'delivery_date' => $deliveryFields['delivery_date'],
+            'delivery_time_slot' => $deliveryFields['delivery_time_slot'],
         ]);
 
         $order_weight = 0;
@@ -391,12 +401,41 @@ class PublicOrderController extends Controller
             'billing_address' => ['required', 'string', 'max:100'],
             'shipping_address' => ['nullable', 'string', 'max:100'],
             'payment_method' => ['required', 'in:' . implode(',', OrderPayment::codDeliveryPreferenceKeys())],
+            'delivery_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'delivery_slot_id' => ['nullable', 'exists:delivery_slots,id'],
         ];
 
         try {
-            return $request->validate($rules);
+            $data = $request->validate($rules);
         } catch (ValidationException $err) {
             return ['error' => true, 'field_err' => $err->validator->errors()->getMessages()];
         }
+
+        $deliveryError = $this->validateOptionalDelivery($data);
+        if ($deliveryError) {
+            return $deliveryError;
+        }
+
+        return $data;
+    }
+
+    public function deliverySlotsForDate(Request $request)
+    {
+        $data = $request->validate([
+            'date' => ['required', 'date', 'after_or_equal:today'],
+        ]);
+
+        if (DeliveryBlackout::isDateBlocked($data['date'])) {
+            return response()->json(['slots' => []]);
+        }
+
+        $slots = DeliverySlot::slotsAvailableForDate($data['date'])
+            ->map(fn (DeliverySlot $slot) => [
+                'id' => $slot->id,
+                'label' => $slot->time_label,
+            ])
+            ->values();
+
+        return response()->json(['slots' => $slots]);
     }
 }

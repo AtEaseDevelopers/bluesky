@@ -56,6 +56,7 @@ $adminUrl = config('app.admin_url');
             Route::get('/remove-cart-item/{cart_product}', 'PublicOrderController@removeCartItem')->name('remove-cart-item');
             Route::get('/cart', 'PublicOrderController@cart')->name('cart');
             Route::get('/checkout', 'PublicOrderController@checkout')->name('checkout');
+            Route::get('/checkout/delivery-slots', 'PublicOrderController@deliverySlotsForDate')->name('checkout.delivery-slots');
             Route::post('/checkout', 'PublicOrderController@placeOrder')->name('checkout.submit');
         }
     );

@@ -65,6 +65,8 @@ return [
     'walk_in_name' => '散客姓名',
     'walk_in_phone' => '散客电话',
     'delivery_slot' => '配送时段',
+    'preferred_delivery' => '首选配送时间',
+    'delivery_time_optional_help' => '选填 — 如无偏好可留空。',
     'delivery_date' => '配送日期',
     'delivery_time' => '配送时间',
     'delivery_schedule' => '配送日期 / 时段',

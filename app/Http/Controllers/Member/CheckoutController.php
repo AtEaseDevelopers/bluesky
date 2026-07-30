@@ -9,6 +9,7 @@ use App\DeliveryBlackout;
 use App\Helper;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Http\Concerns\ValidatesOptionalDeliverySlot;
 use App\Order;
 use App\OrderProduct;
 use App\OrderProductOption;
@@ -25,6 +26,8 @@ use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
+    use ValidatesOptionalDeliverySlot;
+
     public function __construct()
     {
         $this->middleware('web');
@@ -154,10 +157,7 @@ class CheckoutController extends Controller
                 : 0;
         }
 
-        $deliverySlot = DeliverySlot::findOrFail($data['delivery_slot_id']);
-        if (!$deliverySlot->isAvailableForDate($data['delivery_date'])) {
-            return redirect()->back()->withInput()->with('error', 'Selected delivery slot is no longer available.');
-        }
+        $deliveryFields = $this->deliveryFieldsFromValidated($data);
 
         $cart = Cart::find($cart_products[0]->cart_id);
         $cart->update(
@@ -184,9 +184,9 @@ class CheckoutController extends Controller
                 "payment_status" => Order::$payment_status['unpaid'],
                 "driver_id" => null,
                 "fulfillment_type" => Order::$fulfillment_types['delivery'],
-                "delivery_slot_id" => $deliverySlot->id,
-                "delivery_date" => $data['delivery_date'],
-                "delivery_time_slot" => $deliverySlot->time_label,
+                "delivery_slot_id" => $deliveryFields['delivery_slot_id'],
+                "delivery_date" => $deliveryFields['delivery_date'],
+                "delivery_time_slot" => $deliveryFields['delivery_time_slot'],
                 "is_estimated" => true,
                 "payment_method" => $this->resolveCheckoutPaymentMethod($user, $data),
             ]
@@ -290,8 +290,8 @@ class CheckoutController extends Controller
             'shipping_postcode' => ['nullable'],
             // "shipping_state" => array_merge(Order::$attribute_rules['shipping_state'], []),
             'shipping_state' => ['nullable'],
-            'delivery_date' => ['required', 'date', 'after_or_equal:today'],
-            'delivery_slot_id' => ['required', 'exists:delivery_slots,id'],
+            'delivery_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'delivery_slot_id' => ['nullable', 'exists:delivery_slots,id'],
         ];
 
         try {
@@ -303,19 +303,9 @@ class CheckoutController extends Controller
             ];
         }
 
-        if (DeliveryBlackout::isDateBlocked($data['delivery_date'])) {
-            return [
-                'error' => true,
-                'field_err' => ['delivery_date' => ['Delivery is not available on the selected date.']],
-            ];
-        }
-
-        $slot = DeliverySlot::find($data['delivery_slot_id']);
-        if (!$slot || !$slot->isAvailableForDate($data['delivery_date'])) {
-            return [
-                'error' => true,
-                'field_err' => ['delivery_slot_id' => ['Selected delivery slot is no longer available.']],
-            ];
+        $deliveryError = $this->validateOptionalDelivery($data);
+        if ($deliveryError) {
+            return $deliveryError;
         }
 
         $user = $request->user('web');
