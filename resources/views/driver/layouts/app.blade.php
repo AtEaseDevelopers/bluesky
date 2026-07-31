@@ -115,7 +115,8 @@
         <nav class="navbar navbar-expand driver-navbar sticky-top">
             <div class="container-fluid px-3 px-md-4">
                 <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('driver.orders.index') }}">
-                    <i class="fa fa-anchor"></i> <span class="d-none d-sm-inline">{{ __('ui.nav.driver_app') }}</span>
+                    @include('partials.brand-logo', ['height' => '36px'])
+                    <span class="d-none d-sm-inline">{{ __('ui.nav.driver_app') }}</span>
                 </a>
                 <ul class="navbar-nav flex-row align-items-center gap-1 me-auto ms-2">
                     @if ($driverPermissions['delivery_orders'] ?? false)

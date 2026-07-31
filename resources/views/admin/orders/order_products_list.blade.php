@@ -11,7 +11,7 @@
     <tbody>
         @foreach ($products as $key => $product)
             <tr>
-                <td>{{ $product->name }}</td>
+                <td>{{ \App\OrderProduct::displayName($product) }}</td>
                 <td>
                     <div class="input-group">
                         <input type="number" step="0.01" class="form-control" name="order_product_{{ $product->id }}" placeholder="Product Weight" min="1" value="{{ $product->weight }}">

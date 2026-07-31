@@ -114,7 +114,7 @@
                                 @foreach ($products as $product)
                                     <tr>
                                         <td>
-                                            <strong>{{ $product->name }}</strong>
+                                            <strong>{{ \App\OrderProduct::displayName($product) }}</strong>
                                             @foreach($product->options as $opt => $opt_itm)
                                                 <br><small>{{ $opt }}: {{ $opt_itm }}</small>
                                             @endforeach

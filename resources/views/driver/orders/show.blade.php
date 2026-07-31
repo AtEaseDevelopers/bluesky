@@ -184,7 +184,7 @@
                                         }
                                     @endphp
                                     <tr class="driver-adjust-line" data-unit-price="{{ $item->unit_price }}" data-sell-in="{{ $sellIn }}">
-                                        <td>{{ $item->product_name }}</td>
+                                        <td>{{ \App\OrderProduct::displayName($item) }}</td>
                                         <td>{{ number_format((float) $item->unit_price, 2) }}</td>
                                         <td>{{ $estLabel }}</td>
                                         <td>
@@ -227,7 +227,7 @@
                     @endphp
                     <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--line);">
                         <div>
-                            <div>{{ $item->product_name }}</div>
+                            <div>{{ \App\OrderProduct::displayName($item) }}</div>
                             <div class="text-muted-ink" style="font-size:.9rem;">
                                 {{ __('driver_portal.deliveries.qty', ['qty' => $qtyLabel]) }}
                             </div>

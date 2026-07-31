@@ -5,7 +5,7 @@
     <div class="row my-5">
         <div class="col-md-4 mx-auto">
             <div class="text-center">
-                <img src="{{ asset('assets/images/logo.png') }}" alt="{{ env('APP_NAME') }}" class="mb-3" style="width: 120px;">
+                @include('partials.brand-logo', ['height' => '120px', 'class' => 'mb-3'])
             </div>
             <div class="card no-border shadow">
                 <div class="card-body">

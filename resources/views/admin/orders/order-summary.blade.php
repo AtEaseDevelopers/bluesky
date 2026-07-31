@@ -149,7 +149,7 @@
                                             @endphp
                                             <tr>
                                                 <td>
-                                                    <strong>{{ $product->name }}</strong>
+                                                    <strong>{{ \App\OrderProduct::displayName($product) }}</strong>
                                                     <br><small class="text-muted">{{ __('orders.sell_in_label') }}: {{ $sellInLabels[$sellIn] ?? $sellIn }}</small>
                                                     @if ($product->remark)
                                                         <br><small>{{ __('orders.remark_label') }} {{ $product->remark }}</small>

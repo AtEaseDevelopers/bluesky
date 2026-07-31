@@ -121,7 +121,7 @@
                                                 {{ __('order.status.' . $order->status) }}
                                             @endif
                                         </td>
-                                        <td>{{ $order->product_name }}</td>
+                                        <td>{{ \App\OrderProduct::displayName($order) }}</td>
                                         <td>{{ $order->sku }}</td>
                                         <td>{{ $order->quantity }}</td>
                                         <td>RM {{ number_format($order->unit_price, 2) }}</td>

@@ -164,7 +164,7 @@ class EditOrderController extends Controller
                 [
                 "order_id" => $order->id,
                 "product_id" => $product_id,
-                "product_name" => $product->name,
+                "product_name" => Product::orderLineName($product),
                 "quantity" => $line['quantity'],
                 "weight" => $line['weight'],
                 "product_weight" => $line['product_weight'],

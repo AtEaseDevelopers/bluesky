@@ -49,7 +49,7 @@
                                         </td>
                                         <td>{{ $order->created_at }}</td>
                                         <td>{{ $order->name }}</td>
-                                        <td>{{ $order->product_name }}</td>
+                                        <td>{{ \App\OrderProduct::displayName($order) }}</td>
                                         <td>{{ $order->sku }}</td>
                                         <td>{{ '-' }}</td>
                                         <td>{{ $order->quantity }}</td>

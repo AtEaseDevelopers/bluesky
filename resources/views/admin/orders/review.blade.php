@@ -51,7 +51,7 @@
                                                 : (float) $product->price;
                                         @endphp
                                         <tr class="review-line" data-unit-price="{{ $product->unit_price }}" data-sell-in="{{ $sellIn }}">
-                                            <td>{{ $product->product_name }}</td>
+                                            <td>{{ \App\OrderProduct::displayName($product) }}</td>
                                             <td>{{ number_format($product->unit_price, 2) }}</td>
                                             <td>{{ $estLabel }}</td>
                                             <td>

@@ -80,6 +80,8 @@ class DailySalesReportService
                 'orders.status',
                 DB::raw("COALESCE(users.name, orders.walk_in_name, orders.attn_name, 'Walk-in / Public') AS name"),
                 'order_products.product_name',
+                'order_products.product_id',
+                'products.description as product_description',
                 'products.sku',
                 'order_products.quantity',
                 'order_products.weight',

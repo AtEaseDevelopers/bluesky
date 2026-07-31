@@ -18,7 +18,7 @@
 <nav class="navbar sticky-top navbar-expand-lg bg-body-tertiary">
     <div class="container">
         <a class="navbar-brand" href="{{ $portal['products_url'] }}">
-            <img src="{{ asset('assets/images/logo.png') }}" alt="{{ env('APP_NAME') }}" class="app-logo">
+            @include('partials.brand-logo')
         </a>
         <div>
             @if ($can('cart'))

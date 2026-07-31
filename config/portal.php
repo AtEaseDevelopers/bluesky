@@ -8,6 +8,7 @@ return [
         'phone' => env('PORTAL_COMPANY_PHONE', ''),
         'email' => env('PORTAL_COMPANY_EMAIL', ''),
         'address' => env('PORTAL_COMPANY_ADDRESS', 'Jln 11, Kampung Baru Ampang, 68000 Ampang, Selangor.'),
+        'logo' => 'assets/images/logo.png',
     ],
 
     'kyc_note' => 'Additional documents might be required by our risk team upon KYC risk assessment.',

@@ -1,7 +1,7 @@
 <nav class="navbar sticky-top navbar-expand-lg bg-body-tertiary border-bottom">
     <div class="container">
         <a class="navbar-brand" href="{{ route('admin.pos.index') }}">
-            <img src="{{ asset('assets/images/logo.png') }}" alt="{{ env('APP_NAME') }}" class="app-logo">
+            @include('partials.brand-logo')
         </a>
         <div>
             <a href="{{ $portal['cart_url'] ?? route('admin.pos.cart') }}" class="navbar-toggler-cart btn btn-success">

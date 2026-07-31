@@ -252,7 +252,9 @@ class PublicOrderController extends Controller
             $order_product = OrderProduct::create([
                 'order_id' => $order->id,
                 'product_id' => $value->product_id,
-                'product_name' => $value->name,
+                'product_name' => ($productModel = Product::find($value->product_id))
+                    ? Product::orderLineName($productModel)
+                    : $value->name,
                 'quantity' => $value->quantity ?? null,
                 'weight' => $value->weight ?? null,
                 'product_weight' => $product_weight,

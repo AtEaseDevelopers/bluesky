@@ -80,9 +80,11 @@ class PdfHelper extends Model
                 'products.id as product_id', 
                 'products.show_qty as show_qty',
                 'products.show_weight as show_weight',
+                'products.description as product_description',
                 "{$type}s.id as {$type}_id", 
                 "{$type}s.transfer_slip as transfer_slip", 
                 "{$type}_products.product_name as name", 
+                "{$type}_products.product_name",
                 "{$type}_products.quantity", 
                 "{$type}_products.unit_price", 
                 "{$type}_products.price",
@@ -103,7 +105,12 @@ class PdfHelper extends Model
             ->leftJoin('products', 'products.id', '=', "{$type}_products.product_id")
             ->where("{$type}_products.status", $productModel::$status['active'])
             ->where("{$type}s.id", $id)
-            ->get();
+            ->get()
+            ->map(function ($line) {
+                $line->name = OrderProduct::displayName($line);
+
+                return $line;
+            });
     }
 
     private static function invoiceViewData(Order $order, array $data = []): array

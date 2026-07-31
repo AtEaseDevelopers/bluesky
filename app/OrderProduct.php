@@ -38,6 +38,34 @@ class OrderProduct extends Model
         return $prod_opt;
     }
 
+    /** Resolve bilingual line name from snapshot or linked product catalog. */
+    public static function displayName(object $line): string
+    {
+        $snapshot = trim((string) ($line->product_name ?? $line->name ?? ''));
+
+        if ($snapshot !== '' && str_contains($snapshot, ' / ')) {
+            return $snapshot;
+        }
+
+        $description = $line->product_description ?? $line->description ?? null;
+        if ($description !== null) {
+            $resolved = Product::bilingualDisplayName($snapshot, (string) $description);
+            if ($resolved !== $snapshot) {
+                return $resolved;
+            }
+        }
+
+        $productId = $line->product_id ?? null;
+        if ($productId) {
+            $product = Product::query()->select('name', 'description')->find($productId);
+            if ($product) {
+                return Product::bilingualDisplayName($product->name, $product->description);
+            }
+        }
+
+        return $snapshot;
+    }
+
     /**
      * @param  iterable<int, object>  $products
      * @param  array<int, iterable<int, object>>  $optionsByOrderProduct
@@ -59,7 +87,7 @@ class OrderProduct extends Model
      */
     public static function formatAdminListLine(object $product, iterable $options = []): string
     {
-        $parts = ['<strong>' . e($product->product_name) . '</strong>'];
+        $parts = ['<strong>' . e(self::displayName($product)) . '</strong>'];
 
         if (!empty($product->sku)) {
             $parts[] = '<small>SKU: ' . e($product->sku) . '</small>';

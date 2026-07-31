@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Order;
+use App\OrderProduct;
 use App\Services\OrderService;
 use App\Services\OrderStatusService;
 use Illuminate\Http\Request;
@@ -151,7 +152,7 @@ class DriverOrderController extends Controller
             'products' => $order->relationLoaded('orderProducts')
                 ? $order->orderProducts->map(function ($item) {
                     return [
-                        'name' => $item->product_name,
+                        'name' => OrderProduct::displayName($item),
                         'quantity' => $item->quantity,
                         'weight' => $item->weight,
                         'price' => (float) $item->price,

@@ -129,6 +129,12 @@ class Product extends Model
         return $name;
     }
 
+    /** Snapshot name stored on order line items. */
+    public static function orderLineName(self $product): string
+    {
+        return self::bilingualDisplayName($product->name, $product->description);
+    }
+
     /**
      * Price shown to public / General Customer (no account, no category).
      * Uses today's "all categories" daily price, else the product default price.

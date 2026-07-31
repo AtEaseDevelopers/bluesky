@@ -34,7 +34,7 @@
                             <tbody>
                                 @forelse ($orders as $order)
                                     <tr>
-                                        <td>{{ $order->product_name }}</td>
+                                        <td>{{ \App\OrderProduct::displayName($order) }}</td>
                                         <td>{{ $order->sku }}</td>
                                         <td>{{ '-' }}</td>
                                         <td>{{ $order->quantity }}</td>

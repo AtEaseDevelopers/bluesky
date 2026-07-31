@@ -152,7 +152,8 @@ class OrderController extends Controller
                 ->select(
                     'order_products.*',
                     'products.sku',
-                    'products.sell_in'
+                    'products.sell_in',
+                    'products.description as product_description'
                 )
                 ->leftJoin('products', 'products.id', '=', 'order_products.product_id')
                 ->whereIn('order_products.order_id', $orderIds)

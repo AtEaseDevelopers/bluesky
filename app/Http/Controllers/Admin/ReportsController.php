@@ -69,6 +69,8 @@ class ReportsController extends Controller
                 'orders.created_at',
                 'users.name',
                 'order_products.product_name',
+                'order_products.product_id',
+                'products.description as product_description',
                 'products.sku',
                 'order_products.quantity',
                 'order_products.weight',
@@ -127,6 +129,8 @@ class ReportsController extends Controller
             ->join('orders', 'orders.id', '=', 'order_products.order_id') // <-- Add this join
             ->select(
                 'order_products.product_name',
+                DB::raw('MIN(order_products.product_id) as product_id'),
+                DB::raw('MIN(products.description) as product_description'),
                 'products.sku',
                 DB::raw('SUM(order_products.quantity) AS quantity')
             )

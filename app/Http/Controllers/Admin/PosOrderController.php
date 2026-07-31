@@ -370,7 +370,7 @@ class PosOrderController extends Controller
             $orderProduct = OrderProduct::create([
                 'order_id' => $order->id,
                 'product_id' => $value->product_id,
-                'product_name' => $value->name,
+                'product_name' => $product ? Product::orderLineName($product) : $value->name,
                 'quantity' => $line['quantity'],
                 'weight' => $line['weight'],
                 'product_weight' => $line['product_weight'],
