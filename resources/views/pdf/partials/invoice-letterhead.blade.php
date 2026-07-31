@@ -4,11 +4,19 @@
     $logoPath = public_path($company['logo'] ?? 'assets/images/logo.png');
 @endphp
 <table style="width: 100%; border-collapse: collapse;">
+    @if (file_exists($logoPath))
+        <tr>
+            <td style="text-align: center; width: 100%; padding-bottom: 8px;">
+                <img
+                    src="{{ $logoPath }}"
+                    alt="{{ $company['name'] ?? config('app.name') }}"
+                    style="display: block; height: 90px; width: auto; margin: 0 auto;"
+                >
+            </td>
+        </tr>
+    @endif
     <tr>
         <td style="text-align: center; width: 100%;">
-            @if (file_exists($logoPath))
-                <img src="{{ $logoPath }}" alt="{{ $company['name'] ?? config('app.name') }}" style="height: 90px; width: auto; margin-bottom: 8px;">
-            @endif
             <span style="font-size: 22px; font-weight: 700;">{{ $company['name'] ?? env('APP_NAME') }}</span><br>
             @if (!empty($company['registration_no']))
                 <span style="font-size: 12px;">({{ $company['registration_no'] }})</span><br>
