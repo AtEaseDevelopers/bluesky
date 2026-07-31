@@ -106,6 +106,28 @@
                 </div>
             </a>
         </div>
+        <div class="col-md-4">
+            <a href="{{ route('admin.orders') }}?fdate={{ $currentDate }}&tdate={{ $currentDate }}"
+                class="text-decoration-none">
+                <div class="card shadow no-border box-bg-7 mb-4">
+                    <div class="card-body">
+                        <i class="fa fa-usd" aria-hidden="true"></i> {{ __('dashboard.credit_sales_today') }}<br />
+                        <h4>RM {{ number_format($summary['credit_sales_today'], 2) }}</h4>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a href="{{ route('admin.orders') }}?fdate={{ $firstOfMonth }}&tdate={{ $lastOfMonth }}"
+                class="text-decoration-none">
+                <div class="card shadow no-border box-bg-8 mb-4">
+                    <div class="card-body">
+                        <i class="fa fa-usd" aria-hidden="true"></i> {{ __('dashboard.credit_sales_month') }}<br />
+                        <h4>RM {{ number_format($summary['credit_sales_month'], 2) }}</h4>
+                    </div>
+                </div>
+            </a>
+        </div>
     </div>
 
     <div class="row mb-5">

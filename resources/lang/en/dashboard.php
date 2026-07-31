@@ -9,6 +9,8 @@ return [
     'total_sales' => 'Total Sales',
     'total_sales_month' => 'This Month Sales',
     'today_total_sales' => 'Today Total Sales',
+    'credit_sales_today' => 'Today Sales from Credit Customers',
+    'credit_sales_month' => 'This Month Sales from Credit Customers',
 
     'today_orders' => 'Today Orders',
     'daily_sales_this_month' => 'Daily Sales This Month',

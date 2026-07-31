@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Services\OrderService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
@@ -376,6 +377,14 @@ class Order extends Model
 
         return $this->customer !== null
             && strtolower((string) ($this->customer->customer_type ?? 'cod')) === 'credit';
+    }
+
+    public function scopeForCreditCustomers(Builder $query): Builder
+    {
+        return $query->whereNotNull('orders.user_id')
+            ->whereHas('customer', function (Builder $customerQuery) {
+                $customerQuery->where('customer_type', 'credit');
+            });
     }
 
     public function paysInStore(): bool

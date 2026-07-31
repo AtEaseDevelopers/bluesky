@@ -208,6 +208,16 @@ body {
     background: linear-gradient(45deg, #448aff, #0d47a1);
 }
 
+.box-bg-7 {
+    color: #fff;
+    background: linear-gradient(45deg, #7c4dff, #4527a0);
+}
+
+.box-bg-8 {
+    color: #fff;
+    background: linear-gradient(45deg, #00bcd4, #006064);
+}
+
 .text-decoration-none {
     text-decoration: none;
 }

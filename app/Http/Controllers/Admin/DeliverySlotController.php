@@ -33,7 +33,7 @@ class DeliverySlotController extends Controller
             'time_start' => $data['time_start'],
             'time_end' => $data['time_end'],
             'max_orders' => $data['max_orders'] ?? null,
-            'is_enabled' => $request->boolean('is_enabled', true),
+            'is_enabled' => $request->boolean('is_enabled'),
         ]);
 
         return redirect(route('admin.delivery-slots.index'))
@@ -60,7 +60,7 @@ class DeliverySlotController extends Controller
             'time_start' => $data['time_start'],
             'time_end' => $data['time_end'],
             'max_orders' => $data['max_orders'] ?? null,
-            'is_enabled' => $request->boolean('is_enabled', true),
+            'is_enabled' => $request->boolean('is_enabled'),
         ]);
 
         return redirect(route('admin.delivery-slots.index'))

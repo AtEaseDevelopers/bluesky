@@ -9,6 +9,8 @@ return [
     'total_sales' => '销售总额',
     'total_sales_month' => '本月销售额',
     'today_total_sales' => '今日销售额',
+    'credit_sales_today' => '今日账期客户销售额',
+    'credit_sales_month' => '本月账期客户销售额',
 
     'today_orders' => '今日订单',
     'daily_sales_this_month' => '本月每日销售',

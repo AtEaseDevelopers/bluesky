@@ -50,6 +50,19 @@ class DashboardController extends Controller
             ->where('created_at', '<=', Carbon::now()->format('Y-m-d 23:59:59'))
             ->sum('total_price');
 
+        $creditSalesToday = Order::query()
+            ->where('status', '!=', Order::$status['cancelled'])
+            ->forCreditCustomers()
+            ->where('created_at', '>=', Carbon::now()->format('Y-m-d 00:00:00'))
+            ->where('created_at', '<=', Carbon::now()->format('Y-m-d 23:59:59'))
+            ->sum('total_price');
+        $creditSalesMonth = Order::query()
+            ->where('status', '!=', Order::$status['cancelled'])
+            ->forCreditCustomers()
+            ->whereMonth('created_at', $currentMonth)
+            ->whereYear('created_at', $currentYear)
+            ->sum('total_price');
+
         
         $today_orders = Order::where('status', '!=', Order::$status['cancelled'])
             ->whereDay('created_at', $currentDay)
@@ -89,6 +102,8 @@ class DashboardController extends Controller
                 'total_sales' => $total_sales ?? 0,
                 'total_sales_month' => $total_sales_month ?? 0,
                 'total_sales_today' => $total_sales_today ?? 0,
+                'credit_sales_today' => $creditSalesToday ?? 0,
+                'credit_sales_month' => $creditSalesMonth ?? 0,
             ],
             'today_orders' => $today_orders,
             'charts' => [
