@@ -116,6 +116,19 @@ class Product extends Model
         return 'RM ' . number_format($price, 2) . ' / ' . ($uomName ?: 'KG');
     }
 
+    /** English name with Chinese suffix when stored in description as "English / 中文". */
+    public static function bilingualDisplayName(?string $name, ?string $description): string
+    {
+        $name = trim((string) $name);
+        $description = trim((string) $description);
+
+        if ($description !== '' && str_contains($description, ' / ')) {
+            return $description;
+        }
+
+        return $name;
+    }
+
     /**
      * Price shown to public / General Customer (no account, no category).
      * Uses today's "all categories" daily price, else the product default price.

@@ -179,7 +179,7 @@
                                         </td>
                                         <td><img src="{{ $image_url }}" width="80px" /></td>
                                         <td>{{ $product->sku }}</td>
-                                        <td>{{ $product->name }}</td>
+                                        <td>{{ \App\Product::bilingualDisplayName($product->name, $product->description) }}</td>
                                         <td>{{ $product->category_name }}</td>
                                         <td>{{ $product->uom_name }}</td>
                                         <td>{{ $product->description }}</td>
