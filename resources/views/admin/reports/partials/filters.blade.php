@@ -1,8 +1,17 @@
 @php
     $req = request();
 @endphp
-<div class="card shadow no-border">
-    <div class="card-body">
+@php
+    $reportFilterExpanded = collect($req ?? request()->query())
+        ->except(['page'])
+        ->filter(fn ($value) => $value !== null && $value !== '')
+        ->isNotEmpty();
+@endphp
+@include('admin.includes.collapsible-filter-start', [
+    'panelId' => 'reportsFilterPanel',
+    'title' => __('ui.filter'),
+    'expanded' => $reportFilterExpanded,
+])
         <form method="GET" class="form-wrapper" id="report-filters">
             <div class="row">
                 <div class="col-md-4">
@@ -111,5 +120,4 @@
                 </div>
             </div>
         </form>
-    </div>
-</div>
+@include('admin.includes.collapsible-filter-end')

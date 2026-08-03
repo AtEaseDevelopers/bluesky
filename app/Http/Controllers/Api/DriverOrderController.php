@@ -75,10 +75,17 @@ class DriverOrderController extends Controller
         ], \App\OrderPayment::proofValidationMessages());
 
         $balanceDue = $order->balanceDue();
-        if (abs((float) $data['amount'] - $balanceDue) > 0.009) {
+        if ((float) $data['amount'] <= 0) {
             return response()->json([
                 'success' => false,
-                'message' => 'COD orders require the exact balance due: RM ' . number_format($balanceDue, 2) . '.',
+                'message' => 'Payment amount must be greater than zero.',
+            ], 422);
+        }
+
+        if ((float) $data['amount'] > $balanceDue + 0.009) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment amount exceeds balance due: RM ' . number_format($balanceDue, 2) . '.',
             ], 422);
         }
 

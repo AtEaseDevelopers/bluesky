@@ -2,13 +2,14 @@
 @section('title', __('orders.add'))
 @section('content')
 
-    <form method="POST" action="{{ route('admin.orders.store') }}" enctype="multipart/form-data" class="form-wrapper" id="admin-order-create-form" data-form-draft="order-create" data-form-draft-defer>
+    <form method="POST" action="{{ route('admin.orders.store') }}" enctype="multipart/form-data" class="form-wrapper admin-order-create-form" id="admin-order-create-form" data-form-draft="order-create" data-form-draft-defer>
         @csrf
         <input type="hidden" id="id" name="customer_id" value="" />
-        <div class="row">
-            <div class="col-md-8">
+        <div class="row admin-order-create-layout">
+            <div class="col-md-8 admin-order-create-main">
                 <div class="card shadow no-border mb-0">
                     <div class="card-body">
+                        <div class="admin-order-create-customer-fields">
                         <h5 class="mb-4">{{ __('orders.customer_details') }}</h5>
 
                         <div class="row">
@@ -29,7 +30,14 @@
                                 <input type="text" name="walk_in_phone" id="walk_in_phone" class="form-control" value="{{ old('walk_in_phone') }}">
                             </div>
                         </div>
-                        <div class="row mb-3" id="order_fulfillment_fields">
+                        <div id="createOrderFulfillmentSection">
+                        @include('admin.includes.collapsible-section-start', [
+                            'panelId' => 'createOrderFulfillmentPanel',
+                            'title' => __('orders.delivery_scheduling_optional'),
+                            'subtitle' => __('orders.delivery_scheduling_optional_help'),
+                            'expanded' => old('delivery_date') || old('delivery_slot_id') || old('driver_id') || old('fulfillment_type'),
+                        ])
+                        <div class="row mb-0" id="order_fulfillment_fields">
                             <div class="col-md-6">
                                 <label class="mb-2">{{ __('orders.delivery_date') }}</label>
                                 <select name="delivery_date" id="create_delivery_date" class="form-select">
@@ -64,6 +72,8 @@
                                     @endforeach
                                 </select>
                             </div>
+                        </div>
+                        @include('admin.includes.collapsible-section-end')
                         </div>
                         <div class="row" id="order_customer_row">
                             <div class="col-md-6">
@@ -148,41 +158,52 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="mb-4 d-none" id="add-product-info">
-                            <button type="button" class="btn btn-outline-primary mb-4" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                                <i class="fa fa-plus" aria-hidden="true"></i> {{ __('orders.add_products') }}
-                            </button>
-                            <div class="alert alert-info">{{ __('orders.add_products_hint') }}</div>
-                        </div>
-
-                        <div class="row mb-2">
-                            <div class="col-md-12">
-                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                                    <div>
-                                        <button type="button" class="btn btn-outline-primary px-5 disabled" disabled>
-                                            {{ __('orders.grand_total_rm') }} <span id="total-price">0.00</span>
-                                        </button>
-                                    </div>
-                                    <div>
-                                        <a href="{{ route('admin.orders') }}" class="btn btn-secondary me-2 mb-1">{{ __('ui.back') }}</a>
-                                        <button type="submit" class="btns-order-action back d-none btn btn-primary me-2 mb-1">{{ __('orders.back_previous_step') }}</button>
-                                        <button type="submit" class="btns-order-action next d-none btn btn-primary mb-1">{{ __('orders.next_step') }}</button>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-4">
+                                        <label class="mb-2" for="delivery_fee">{{ __('orders.delivery_fee_rm') }}</label>
+                                        <input type="number" step="0.01" min="0" name="delivery_fee" id="delivery_fee" class="form-control text-end"
+                                            value="{{ old('delivery_fee', number_format(0, 2, '.', '')) }}">
+                                        <small class="text-muted">{{ __('orders.delivery_fee_hint') }}</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        </div>
+
+                        <div class="mb-0 d-none" id="add-product-info">
+                            <button type="button" class="btn btn-outline-primary mb-3 w-100 w-md-auto" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                <i class="fa fa-plus" aria-hidden="true"></i> {{ __('orders.add_products') }}
+                            </button>
+                            <div class="alert alert-info mb-0">{{ __('orders.add_products_hint') }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card shadow no-border mb-0">
-                    <div class="card-body">
-                        <h5>{{ __('orders.order_products') }}</h5>
-                        <hr>
-                        <div id="product_bag-item"></div>
+            <div class="col-md-4 mb-4 mb-md-0 d-none d-md-block" id="admin-order-products-sidebar">
+                <div class="card shadow no-border mb-0 admin-order-products-panel h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="mb-0">{{ __('orders.order_products') }}</h5>
+                        <hr class="admin-order-products-divider">
+                        <div id="product_bag-item" class="admin-order-products-scroll">
+                            <p class="text-muted small mb-0 admin-order-products-empty">{{ __('orders.order_products_empty') }}</p>
+                        </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-order-create-actions">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 gap-md-3">
+                <div class="flex-grow-1 flex-sm-grow-0">
+                    <button type="button" class="btn btn-outline-primary w-100 w-sm-auto px-3 px-md-5 disabled" disabled>
+                        {{ __('orders.grand_total_rm') }} <span id="total-price">0.00</span>
+                    </button>
+                </div>
+                <div class="d-flex flex-wrap gap-2 ms-sm-auto">
+                    <a href="{{ route('admin.orders') }}" id="admin-order-create-exit" class="btn btn-secondary">{{ __('ui.back') }}</a>
+                    <button type="button" class="btns-order-action back d-none btn btn-secondary">{{ __('ui.back') }}</button>
+                    <button type="submit" class="btns-order-action next d-none btn btn-primary">{{ __('orders.next_step') }}</button>
                 </div>
             </div>
         </div>
@@ -207,6 +228,7 @@
         var selectPaymentMethodPlaceholder = @json(__('orders.select_payment_method'));
         window.selectPaymentMethodPlaceholder = selectPaymentMethodPlaceholder;
         var walkInPaymentMethodKeys = @json(\App\User::walkInOrderPaymentMethodKeys());
+        window.orderProductsEmptyText = @json(__('orders.order_products_empty'));
         
         var deliverySlotsUrl = @json($deliverySlotsUrl ?? '');
         var oldCreateSlotId = @json(old('delivery_slot_id'));
@@ -237,6 +259,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             toggleTransferSlip();
             toggleCreateDriverField();
+            applyOrderCreateStepUi(step);
         });
 
         function toggleCreateDriverField() {
@@ -306,7 +329,7 @@
         function applyWalkInUiForRestore() {
             $('#walk_in_fields').removeClass('d-none');
             $('#order_customer_row').addClass('d-none');
-            $('#order_fulfillment_fields').addClass('d-none');
+            $('#createOrderFulfillmentSection').addClass('d-none');
             $('#order_customer').prop('disabled', true);
             $('#id').val('');
             $('#billing_address').prop('required', false);
@@ -323,17 +346,45 @@
             $('form button.next').removeClass('d-none');
         }
 
+        function syncOrderCreateProductsSidebar(currentStep) {
+            var sidebar = document.getElementById('admin-order-products-sidebar');
+            if (!sidebar) {
+                return;
+            }
+
+            if (currentStep === 'select_products') {
+                sidebar.classList.remove('d-none');
+                sidebar.classList.add('d-block');
+            } else {
+                sidebar.classList.remove('d-block');
+                sidebar.classList.add('d-none');
+                if (!sidebar.classList.contains('d-md-block')) {
+                    sidebar.classList.add('d-md-block');
+                }
+            }
+        }
+
         function applyOrderCreateStepUi(currentStep) {
+            var form = document.getElementById('admin-order-create-form');
             var customerInfo = document.getElementById('customer_info');
             var addProductInfo = document.getElementById('add-product-info');
             var backBtn = document.querySelector('button.back');
+            var exitLink = document.getElementById('admin-order-create-exit');
             var orderCustomer = document.getElementById('order_customer');
+
+            if (form) {
+                form.classList.toggle('admin-order-create-step-products', currentStep === 'select_products');
+                form.classList.toggle('admin-order-create-step-customer', currentStep !== 'select_products');
+            }
 
             if (currentStep === 'select_products') {
                 customerInfo.classList.add('d-none');
                 addProductInfo.classList.remove('d-none');
                 if (backBtn) {
                     backBtn.classList.remove('d-none');
+                }
+                if (exitLink) {
+                    exitLink.classList.add('d-none');
                 }
                 if (orderCustomer) {
                     orderCustomer.disabled = true;
@@ -347,6 +398,9 @@
                 if (backBtn) {
                     backBtn.classList.add('d-none');
                 }
+                if (exitLink) {
+                    exitLink.classList.remove('d-none');
+                }
                 if (orderCustomer && !document.getElementById('is_walk_in').checked) {
                     orderCustomer.disabled = false;
                     if (window.jQuery) {
@@ -354,7 +408,11 @@
                     }
                 }
             }
+
+            syncOrderCreateProductsSidebar(currentStep);
         }
+
+        window.applyOrderCreateStepUi = applyOrderCreateStepUi;
 
         function finishOrderCreateRestore(fields, extra) {
             if (extra && extra.payment_method) {
@@ -427,7 +485,7 @@
         function enableWalkInMode() {
             $('#walk_in_fields').removeClass('d-none');
             $('#order_customer_row').addClass('d-none');
-            $('#order_fulfillment_fields').addClass('d-none');
+            $('#createOrderFulfillmentSection').addClass('d-none');
             $('#order_customer').prop('disabled', true).val('').trigger('change.select2');
             $('#id').val('');
 
@@ -447,12 +505,13 @@
             $('#total-price').text('0.00');
             $('#billing_address').prop('required', false);
             $('#billing_address_required_mark').addClass('d-none');
+            applyOrderCreateStepUi('customer_info');
         }
 
         function disableWalkInMode() {
             $('#walk_in_fields').addClass('d-none');
             $('#order_customer_row').removeClass('d-none');
-            $('#order_fulfillment_fields').removeClass('d-none');
+            $('#createOrderFulfillmentSection').removeClass('d-none');
             $('#order_customer').prop('disabled', false);
             $('#billing_address').prop('required', true);
             $('#billing_address_required_mark').removeClass('d-none');
@@ -461,6 +520,7 @@
             $('form button.back').addClass('d-none');
             $('#add-product-info').addClass('d-none');
             step = 'customer_info';
+            applyOrderCreateStepUi('customer_info');
         }
     </script>
 

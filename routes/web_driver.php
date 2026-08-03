@@ -19,6 +19,7 @@ Route::namespace('Driver')->middleware(['web'])->prefix('driver')->group(
                 });
 
                 Route::get('/orders', 'DeliveryOrderController@index')->name('orders.index');
+                Route::get('/notifications/assignments', 'DeliveryOrderController@assignmentNotifications')->name('notifications.assignments');
                 Route::get('/orders/{id}', 'DeliveryOrderController@show')->name('orders.show');
                 Route::post('/orders/{id}/status', 'DeliveryOrderController@updateStatus')->name('orders.update-status');
                 Route::post('/orders/{id}/adjust', 'DeliveryOrderController@adjustOrder')->name('orders.adjust');

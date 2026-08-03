@@ -106,6 +106,7 @@ return [
         'invoices_heading' => '发票',
         'due_date' => '到期日',
         'cod_full_balance' => '货到付款需收取全部未付余额。',
+        'cod_partial_balance' => '输入本次收取金额。允许部分付款，直至付清余额。',
         'no_invoices' => '该客户暂无发票。',
     ],
 
@@ -164,5 +165,14 @@ return [
     'errors' => [
         'no_payment_proof' => '尚未上传付款凭证。',
         'file_not_found' => '找不到文件。',
+    ],
+
+    'notifications' => [
+        'new_assignment_title' => '新配送订单',
+        'new_assignment_body' => '订单 :label — :status',
+        'view_order' => '查看订单',
+        'dismiss' => '关闭',
+        'sound_enabled' => '提示音已开启。有新订单分配时会播放提示音。',
+        'test_sound' => '测试提示音',
     ],
 ];

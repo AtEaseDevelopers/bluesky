@@ -327,7 +327,7 @@ class OrderService
         if (!$order->canRecordAdminPayment()) {
             throw new \InvalidArgumentException(
                 $order->isCodCustomer()
-                    ? 'COD payment can only be recorded when the order is in route or delivered.'
+                    ? 'COD payment can only be recorded when the order is packing, in route, or delivered.'
                     : 'Payment cannot be recorded for this order in its current status.'
             );
         }
@@ -341,9 +341,13 @@ class OrderService
             $balanceDue = $order->balanceDue();
             if (abs($totalAmount - $balanceDue) > 0.009) {
                 throw new \InvalidArgumentException(
-                    'COD orders require the full exact balance (RM ' . number_format($balanceDue, 2) . '). Partial or excess payment is not allowed.'
+                    'In-store orders require the full exact balance (RM ' . number_format($balanceDue, 2) . ').'
                 );
             }
+        } elseif ($totalAmount > $order->balanceDue() + 0.009 && !$order->allowsOverpayment()) {
+            throw new \InvalidArgumentException(
+                'Payment total exceeds balance due (RM ' . number_format($order->balanceDue(), 2) . ').'
+            );
         }
 
         $recorded = [];
@@ -362,7 +366,7 @@ class OrderService
                 $paymentData['notes'] ?? null,
                 $adminId,
                 $driverId,
-                $order->requiresExactPayment()
+                true
             );
         }
 
@@ -388,7 +392,7 @@ class OrderService
             $balanceDue = $order->balanceDue();
             if (abs($totalAmount - $balanceDue) > 0.009) {
                 throw new \InvalidArgumentException(
-                    'COD orders require the full exact balance (RM ' . number_format($balanceDue, 2) . ').'
+                    'In-store orders require the full exact balance (RM ' . number_format($balanceDue, 2) . ').'
                 );
             }
         }
@@ -445,9 +449,13 @@ class OrderService
             $balanceDue = $order->balanceDue();
             if (abs($amount - $balanceDue) > 0.009) {
                 throw new \InvalidArgumentException(
-                    'COD orders require payment of the exact balance due (RM ' . number_format($balanceDue, 2) . ').'
+                    'In-store orders require payment of the exact balance due (RM ' . number_format($balanceDue, 2) . ').'
                 );
             }
+        } elseif ($amount > $order->balanceDue() + 0.009 && !$order->allowsOverpayment()) {
+            throw new \InvalidArgumentException(
+                'Payment amount exceeds balance due (RM ' . number_format($order->balanceDue(), 2) . ').'
+            );
         }
 
         OrderPayment::assertValidProof($proof, true);
@@ -460,7 +468,7 @@ class OrderService
         $payment = OrderPayment::create([
             'order_id' => $order->id,
             'payment_method' => $method,
-            'amount' => $amount,
+            'amount' => min($amount, $order->balanceDue()),
             'status' => OrderPayment::STATUS_PENDING,
             'payment_proof' => $filename,
             'submitted_by_user_id' => $customer->id,
@@ -532,19 +540,17 @@ class OrderService
 
             if ($order->requiresExactPayment() && abs($amount - $balanceDue) > 0.009) {
                 throw new \InvalidArgumentException(
-                    'COD payment must match the exact balance due (RM ' . number_format($balanceDue, 2) . ').'
+                    'In-store payment must match the exact balance due (RM ' . number_format($balanceDue, 2) . ').'
                 );
             }
 
-            $amountToOrder = $order->requiresExactPayment()
-                ? $balanceDue
-                : min($amount, $balanceDue);
+            $amountToOrder = min($amount, $balanceDue);
             $overpayment = $order->allowsOverpayment()
                 ? max(0, round($amount - $balanceDue, 2))
                 : 0;
 
             if (!$order->allowsOverpayment() && $amount > $balanceDue + 0.009) {
-                throw new \InvalidArgumentException('COD orders cannot accept overpayment.');
+                throw new \InvalidArgumentException('Payment amount exceeds balance due.');
             }
 
             $payment->update([
@@ -612,25 +618,19 @@ class OrderService
         }
 
         if ($order->requiresExactPayment()) {
-            if ($splitLine) {
-                if ($amount > $balanceDue + 0.009) {
-                    throw new \InvalidArgumentException(
-                        'COD payment line cannot exceed balance due (RM ' . number_format($balanceDue, 2) . ').'
-                    );
-                }
-                return;
-            }
-
             if (abs($amount - $balanceDue) > 0.009) {
                 throw new \InvalidArgumentException(
-                    'COD orders require the exact balance due (RM ' . number_format($balanceDue, 2) . ').'
+                    'In-store orders require the exact balance due (RM ' . number_format($balanceDue, 2) . ').'
                 );
             }
+
             return;
         }
 
         if ($amount > $balanceDue + 0.009 && !$order->allowsOverpayment()) {
-            throw new \InvalidArgumentException('Payment amount exceeds balance due.');
+            throw new \InvalidArgumentException(
+                'Payment amount exceeds balance due (RM ' . number_format($balanceDue, 2) . ').'
+            );
         }
     }
 
@@ -729,8 +729,9 @@ class OrderService
 
             $this->recalculateTotals($order->fresh());
 
+            $order = $order->fresh();
+
             if (!empty($data['send_to_customer'])) {
-                $order = $order->fresh();
                 if (in_array($order->status, [
                     Order::$status['pending'],
                 ], true)) {
@@ -743,6 +744,12 @@ class OrderService
                     PdfHelper::GenerateOrderInvoice($order);
                     PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
                 }
+            } elseif (in_array($order->status, [
+                Order::$status['in_route'],
+                Order::$status['delivered'],
+            ], true)) {
+                PdfHelper::GenerateOrderInvoice($order);
+                PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
             }
 
             return $order->fresh();
@@ -825,8 +832,8 @@ class OrderService
 
     public function updateDeliveryFee(Order $order, float $deliveryFee): Order
     {
-        if (!Order::canEditDeliveryFee($order->status)) {
-            throw new \InvalidArgumentException('Delivery fee cannot be changed after the order has been delivered.');
+        if (!$order->canAdminAdjustPricing()) {
+            throw new \InvalidArgumentException(__('orders.cannot_adjust_order'));
         }
 
         $order->update(['delivery_fee' => $deliveryFee]);
@@ -835,6 +842,7 @@ class OrderService
         if (in_array($order->status, [
             Order::$status['packing'],
             Order::$status['in_route'],
+            Order::$status['delivered'],
         ], true)) {
             PdfHelper::GenerateOrderInvoice($order);
             PdfHelper::GenerateOrderInvoiceWithoutPrice($order);

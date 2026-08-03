@@ -94,6 +94,8 @@ class AddOrderController extends Controller
             ]);
         }
 
+        $deliveryFee = max(0, (float) ($request->input('delivery_fee', 0)));
+
         $total = 0;
 
         $isInStorePayment = $paymentMethod === User::$payment_method['in-store'];
@@ -115,7 +117,7 @@ class AddOrderController extends Controller
             "walk_in_phone" => $isWalkIn ? $request->input('walk_in_phone') : null,
             "total_price" => $total,
             "subtotal" => $total,
-            "delivery_fee" => 0,
+            "delivery_fee" => $deliveryFee,
             "attn_name" => $data['attn_name'],
             "attn_contact" => $data['attn_contact'],
             "payment_method" => $paymentMethod,
@@ -225,7 +227,8 @@ class AddOrderController extends Controller
         $order->fill(
             [
                 'subtotal' => $total,
-                'total_price' => $total,
+                'delivery_fee' => $deliveryFee,
+                'total_price' => $total + $deliveryFee,
                 'order_weight' => $order_weight
             ]
         )->save();
@@ -277,6 +280,7 @@ class AddOrderController extends Controller
             'shipping_state' => ['nullable'],
             // "transfer_slip" => array_merge(Order::$attribute_rules['transfer_slip'], []),
             'transfer_slip' => ['nullable'],
+            'delivery_fee' => ['nullable', 'numeric', 'min:0'],
             "product_id" => ['array'],
             "product_options" => ['array'],
             "remark" => ['array'],

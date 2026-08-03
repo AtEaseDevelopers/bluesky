@@ -4,11 +4,14 @@
 @php
     $admin = Auth::guard('web_admin')->user();
 @endphp
-    <div class="row mb-5">
+    <div class="row mb-5 mb-md-5">
         <div class="col-md-12">
-            <div class="card shadow no-border mb-0">
-                <div class="card-body">
-                    <h5 class="mb-4">{{ __('customers.filter') }}</h5>
+            @include('admin.includes.collapsible-filter-start', [
+                'panelId' => 'customersFilterPanel',
+                'title' => __('customers.filter'),
+                'expanded' => false,
+                'expandWhenFilled' => ['name', 'email', 'category', 'shipping_state', 'status', 'customer_type', 'area'],
+            ])
                     <form method="GET" class="form-wrapper">
                         <div class="row">
                             <div class="col-md-4">
@@ -90,8 +93,7 @@
                             </div>
                         </div>
                     </form>
-                </div>
-            </div>
+            @include('admin.includes.collapsible-filter-end')
         </div>
     </div>
 

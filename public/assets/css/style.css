@@ -172,11 +172,13 @@ body {
     border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color) !important;
 }
 
-#productList,
-#product_bag-item {
-    height: 400px;
-    padding: 10px;
-    overflow-y: scroll;
+#productList {
+    padding: 0;
+}
+
+#product_bag-item,
+.admin-order-products-scroll {
+    padding: 0.25rem 0.125rem;
 }
 
 .box-bg-1 {

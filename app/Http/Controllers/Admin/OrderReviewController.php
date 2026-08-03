@@ -24,9 +24,9 @@ class OrderReviewController extends Controller
     {
         $order = Order::with('customer')->findOrFail($id);
 
-        if (!Order::canAdjustQuantities($order->status)) {
+        if (!$order->canAdminAdjustPricing()) {
             return redirect(route('admin.orders.summary', $order->id))
-                ->with('warning', 'This order can no longer be adjusted.');
+                ->with('warning', __('orders.cannot_adjust_order'));
         }
 
         $products = OrderProduct::query()
@@ -54,8 +54,8 @@ class OrderReviewController extends Controller
     {
         $order = Order::with('customer')->findOrFail($id);
 
-        if (!Order::canAdjustQuantities($order->status)) {
-            return back()->with('error', 'This order can no longer be adjusted.');
+        if (!$order->canAdminAdjustPricing()) {
+            return back()->with('error', __('orders.cannot_adjust_order'));
         }
 
         $rules = [

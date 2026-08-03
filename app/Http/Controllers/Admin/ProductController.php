@@ -49,11 +49,20 @@ class ProductController extends Controller
         }
 
         if (!empty($request['sku'])) {
-            $products->where('sku', 'LIKE', "%{$request['sku']}%");
+            $pattern = Helper::likePattern($request['sku']);
+            if ($pattern !== null) {
+                $products->where('sku', 'LIKE', $pattern);
+            }
         }
 
         if (!empty($request['name'])) {
-            $products->where('name', 'LIKE', "%{$request['name']}%");
+            $pattern = Helper::likePattern($request['name']);
+            if ($pattern !== null) {
+                $products->where(function ($query) use ($pattern) {
+                    $query->where('products.name', 'LIKE', $pattern)
+                        ->orWhere('products.description', 'LIKE', $pattern);
+                });
+            }
         }
 
         if (!empty($request['status'])) {

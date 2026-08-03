@@ -28,7 +28,7 @@ class OrderPaymentController extends Controller
 
         if (!$order->canRecordAdminPayment()) {
             return back()->with('error', $order->isCodCustomer()
-                ? 'COD payment can only be recorded when the order is in route or delivered.'
+                ? 'COD payment can only be recorded when the order is packing, in route, or delivered.'
                 : 'Payment cannot be recorded for this order in its current status.');
         }
 

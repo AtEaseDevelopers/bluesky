@@ -1,16 +1,14 @@
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down modal-lg">
         <div class="modal-content">
             <div class="modal-header d-flex align-content-center flex-wrap gap-2">
-                <div>
-                    <h5 class="modal-title" id="addProductModalLabel">{{ __('orders.add_product') }}</h5>
-                    <p class="mx-auto text-muted">{{ __('orders.add_product_intro') }}</p>
+                <div class="flex-grow-1">
+                    <h5 class="modal-title mb-1" id="addProductModalLabel">{{ __('orders.add_product') }}</h5>
+                    <p class="mb-0 text-muted small">{{ __('orders.add_product_intro') }}</p>
                 </div>
-                <div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
-                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body pt-2">
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" id="product-search" placeholder="{{ __('orders.product_search_placeholder') }}">
                     <button class="btn bg-transparent border">
@@ -23,10 +21,10 @@
                 </div>
                 <div id="productList"></div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn" style="background-color: lightblue;" id="select-all">{{ __('roles.select_all') }}</button>
+            <div class="modal-footer flex-wrap gap-2 admin-add-product-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" id="select-all">{{ __('roles.select_all') }}</button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}">{{ __('ui.close') }}</button>
-                <button type="button" class="btn btn-primary" id="add-products">{{ __('orders.add_products') }}</button>
+                <button type="button" class="btn btn-primary flex-grow-1 flex-sm-grow-0" id="add-products">{{ __('orders.add_products') }}</button>
             </div>
         </div>
     </div>

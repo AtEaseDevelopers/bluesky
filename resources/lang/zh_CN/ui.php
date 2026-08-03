@@ -21,6 +21,9 @@ return [
     'submit' => '提交',
     'close' => '关闭',
     'all' => '全部',
+    'filter' => '筛选',
+    'show_filters' => '显示筛选',
+    'hide_filters' => '隐藏筛选',
     'export_excel' => '导出 Excel',
     'no_records' => '没有找到记录。',
 

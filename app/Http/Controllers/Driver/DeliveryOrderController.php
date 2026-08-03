@@ -93,6 +93,39 @@ class DeliveryOrderController extends Controller
     }
 
     /**
+     * JSON feed for live "new assignment" notifications in the driver web app.
+     */
+    public function assignmentNotifications(Request $request)
+    {
+        $driver = Auth::guard('web_driver')->user();
+
+        $orders = Order::query()
+            ->with('customer:id,name')
+            ->where('driver_id', $driver->id)
+            ->where('fulfillment_type', Order::$fulfillment_types['delivery'])
+            ->whereIn('status', self::activeAssignmentStatuses())
+            ->orderByDesc('id')
+            ->get(['id', 'do_no', 'status', 'attn_name', 'user_id', 'updated_at']);
+
+        return response()->json([
+            'orders' => $orders->map(function (Order $order) {
+                $order->ensureDoNumber();
+
+                return [
+                    'id' => $order->id,
+                    'label' => $order->do_no ?: ('#' . $order->id),
+                    'status' => $order->status,
+                    'status_label' => __('order.status.' . $order->status),
+                    'customer' => $order->attn_name ?: optional($order->customer)->name,
+                    'url' => route('driver.orders.show', $order->id),
+                    'updated_at' => optional($order->updated_at)->toIso8601String(),
+                ];
+            })->values(),
+            'server_time' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
      * Delivery order detail.
      */
     public function show($id)
@@ -314,6 +347,18 @@ class DeliveryOrderController extends Controller
             'delivered', 'completed' => ['delivered', 'completed'],
             default => [],
         };
+    }
+
+    /** @return array<int, string> */
+    public static function activeAssignmentStatuses(): array
+    {
+        return [
+            Order::$status['pending'],
+            Order::$status['packing'],
+            Order::$status['in_route'],
+            'processing',
+            'delivering',
+        ];
     }
 
     public static function canDriverMarkDelivered(Order $order): bool

@@ -12,7 +12,7 @@
                     <a href="{{ route('admin.orders') }}" class="btn btn-secondary">
                         <i class="fa fa-chevron-circle-left"></i> {{ __('ui.back') }}
                     </a>
-                    @if (Order::canAdjustQuantities($order->status) && $admin->canModule('orders', 'edit'))
+                    @if ($order->canAdminAdjustPricing() && $admin->canModule('orders', 'edit'))
                         <a href="{{ route('admin.orders.review', $order->id) }}" class="btn btn-primary">{{ __('orders.adjust_order') }}</a>
                     @endif
                     @if ($order->canShowInvoice() || $order->canShowDeliveryOrder())
@@ -717,6 +717,18 @@
             }
 
             if (!requiresExactTotal) {
+                var total = 0;
+                document.querySelectorAll('.payment-amount').forEach(function (input) {
+                    total += parseFloat(input.value) || 0;
+                });
+                if (total > balanceDue + 0.009) {
+                    event.preventDefault();
+                    Swal.fire(
+                        ordersJs.invalid_amount,
+                        (ordersJs.payment_exceeds_balance || 'Payment total cannot exceed the balance due (RM :amount).').replace(':amount', balanceDue.toFixed(2)),
+                        'warning'
+                    );
+                }
                 return;
             }
             var total = 0;

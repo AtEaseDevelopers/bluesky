@@ -112,6 +112,9 @@
 
 <body>
     @auth('web_driver')
+        @if ($driverPermissions['delivery_orders'] ?? false)
+            @include('driver.partials.assignment-notifications')
+        @endif
         <nav class="navbar navbar-expand driver-navbar sticky-top">
             <div class="container-fluid px-3 px-md-4">
                 <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('driver.orders.index') }}">
@@ -166,6 +169,7 @@
 
     <script src="{{ asset('assets/js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('assets/js/numeric-input.js') }}?v=1"></script>
     <script>
         // Enable Bootstrap tooltips (used on icon-only buttons).
         document.addEventListener('DOMContentLoaded', function () {

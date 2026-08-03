@@ -112,6 +112,157 @@
     }
 }
 
+.admin-filter-toggle .admin-filter-chevron,
+.admin-collapsible-section .admin-filter-chevron {
+    transition: transform 0.2s ease;
+}
+
+.admin-filter-toggle[aria-expanded="true"] .admin-filter-chevron,
+.admin-collapsible-section .admin-filter-toggle[aria-expanded="true"] .admin-filter-chevron {
+    transform: rotate(180deg);
+}
+
+.admin-filter-panel .admin-filter-toggle:hover,
+.admin-filter-panel .admin-filter-toggle:focus {
+    text-decoration: none;
+}
+
+@media (max-width: 767.98px) {
+    main .container.my-5 {
+        margin-top: 1rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .admin-filter-panel {
+        margin-bottom: 1rem !important;
+    }
+
+    .admin-order-create-form {
+        padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0));
+    }
+
+    .admin-order-create-actions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1030;
+        background: #fff;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        margin: 0;
+        padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0));
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .admin-order-create-actions .btn {
+        min-height: 44px;
+    }
+
+    .admin-order-create-step-products .admin-order-create-customer-fields {
+        display: none !important;
+    }
+
+    .admin-order-create-step-products .admin-order-create-main .card {
+        margin-bottom: 0.75rem;
+    }
+
+    .admin-order-create-step-products .admin-order-create-main .card-body {
+        padding: 0.75rem 1rem;
+    }
+
+    .admin-order-create-step-products #admin-order-products-sidebar {
+        display: flex !important;
+        flex-direction: column;
+        min-height: 0;
+        margin-bottom: 0 !important;
+    }
+
+    .admin-order-create-step-products .admin-order-products-panel {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        margin-bottom: 0;
+    }
+
+    .admin-order-create-step-products .admin-order-products-panel .card-body {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: 0.75rem 1rem;
+        overflow: hidden;
+    }
+
+    .admin-order-create-step-products .admin-order-products-scroll,
+    .admin-order-create-step-products #product_bag-item {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: calc(100vh - 17rem - env(safe-area-inset-bottom, 0));
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        padding: 0.25rem 0.125rem;
+    }
+
+    .admin-order-create-step-products .sel-product .card-body {
+        padding: 0.75rem;
+    }
+
+    #addProductModal .products-card .card-body {
+        padding: 0.75rem;
+    }
+
+    #addProductModal .products-card img {
+        width: 72px;
+        height: 72px;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    #addProductModal .products-card h5 {
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    #addProductModal .products-card p {
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+    }
+
+    #addProductModal .admin-add-product-modal-footer {
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0));
+    }
+
+    #addProductModal .admin-add-product-modal-footer .btn {
+        min-height: 44px;
+    }
+}
+
+@media (min-width: 768px) {
+    .admin-order-create-actions {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .admin-order-products-scroll,
+    #product_bag-item {
+        max-height: calc(100vh - 14rem);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+}
+
+.admin-order-products-empty {
+    padding: 0.25rem 0;
+}
+
+.admin-order-products-panel:not(:has(.sel-product)) .admin-order-products-divider {
+    margin-bottom: 0.75rem;
+}
+
 /* For other small screens, fallback to the default Bootstrap grid */
 @media (max-width: 575.98px) {
     .col-custom-2 {

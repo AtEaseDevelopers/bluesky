@@ -124,10 +124,11 @@
                                     <label class="form-label" for="amount-{{ $invoice->id }}">{{ __('driver_portal.deliveries.amount_collected') }}</label>
                                     <input type="number" step="0.01" min="0.01" class="form-control js-pay-amount"
                                         name="paid_amount" id="amount-{{ $invoice->id }}"
+                                        max="{{ number_format($balance, 2, '.', '') }}"
                                         value="{{ number_format($balance, 2, '.', '') }}"
-                                        {{ $isCredit ? '' : 'readonly required' }}>
+                                        {{ $isCredit ? '' : 'required' }}>
                                     @unless ($isCredit)
-                                        <div class="text-muted-ink mt-1" style="font-size:.9rem;">{{ __('driver_portal.customers.cod_full_balance') }}</div>
+                                        <div class="text-muted-ink mt-1" style="font-size:.9rem;">{{ __('driver_portal.customers.cod_partial_balance') }}</div>
                                     @endunless
                                 </div>
                                 <div class="mb-3">

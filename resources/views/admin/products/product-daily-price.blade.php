@@ -2,11 +2,14 @@
 @section('title', __('product-daily-price.title'))
 @section('content')
 
-    <div class="row mb-5">
+    <div class="row mb-5 mb-md-5">
         <div class="col-md-12">
-            <div class="card shadow no-border mb-0">
-                <div class="card-body">
-                    <h5 class="mb-4">{{ __('product-daily-price.filter') }}</h5>
+            @include('admin.includes.collapsible-filter-start', [
+                'panelId' => 'dailyPriceFilterPanel',
+                'title' => __('product-daily-price.filter'),
+                'expanded' => false,
+                'expandWhenFilled' => ['fdate', 'tdate'],
+            ])
                     <form method="GET" class="form-wrapper">
                         <div class="row">
                             <div class="col-md-4">
@@ -29,8 +32,7 @@
                             </div>
                         </div>
                     </form>
-                </div>
-            </div>
+            @include('admin.includes.collapsible-filter-end')
         </div>
     </div>
 

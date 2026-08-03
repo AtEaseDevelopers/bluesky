@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/font-awesome.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}?v=" />
+    <link rel="stylesheet" href="{{ asset('assets/css/custom.css') }}?v=1.4" />
     <link rel="stylesheet" href="{{ asset('assets/css/select2.min.css') }}?v=" />
 
     @yield('css')
@@ -31,7 +32,8 @@
 
     <script src="{{ asset('assets/js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ asset('assets/js/script.js') }}?v=2.1"></script>
+    <script src="{{ asset('assets/js/numeric-input.js') }}?v=1"></script>
+    <script src="{{ asset('assets/js/script.js') }}?v=2.3"></script>
     <script src="{{ asset('assets/js/select2.min.js') }}?v="></script>
     <script src="{{ asset('assets/js/form-draft.js') }}?v=3"></script>
     @yield('script')

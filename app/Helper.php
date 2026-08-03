@@ -18,6 +18,16 @@ class Helper extends Model
         return "?".http_build_query($query);
     }
 
+    public static function likePattern(?string $term): ?string
+    {
+        $term = trim((string) $term);
+        if ($term === '') {
+            return null;
+        }
+
+        return '%' . addcslashes($term, '%_\\') . '%';
+    }
+
     public static function generateRandomString($length = 30, $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') {
         $randomString = '';
     

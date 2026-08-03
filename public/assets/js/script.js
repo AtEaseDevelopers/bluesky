@@ -21,6 +21,37 @@ function orderJs(key, fallback) {
     return (labels.js && labels.js[key]) || fallback || '';
 }
 
+function textContainsSearch(text, searchValue) {
+    text = String(text || '');
+    searchValue = String(searchValue || '');
+
+    if (searchValue === '') {
+        return true;
+    }
+
+    if (text.indexOf(searchValue) > -1) {
+        return true;
+    }
+
+    try {
+        return text.toLocaleLowerCase('und').includes(searchValue.toLocaleLowerCase('und'));
+    } catch (e) {
+        return false;
+    }
+}
+
+function adminSelect2UnicodeMatcher(params, data) {
+    if ($.trim(params.term) === '') {
+        return data;
+    }
+
+    if (typeof data.text === 'undefined') {
+        return null;
+    }
+
+    return textContainsSearch(data.text, params.term) ? data : null;
+}
+
 function orderLineBillAmount(sellIn, qty, weight, billByWeight) {
     sellIn = sellIn || 'qty';
     qty = parseFloat(qty) || 0;
@@ -78,16 +109,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const productList = document.getElementById('productList');
 
         searchInput.addEventListener('input', function() {
-            const searchValue = this.value.toLowerCase().trim();
+            const searchValue = this.value.trim();
             const productCards = productList.querySelectorAll('.products-card');
     
             if (searchValue === '') {
                 productCards.forEach(card => card.classList.remove('d-none'));
             } else {
                 productCards.forEach(card => {
-                    const name = card.getAttribute('data-name').toLowerCase();
-                    const sku = card.getAttribute('data-sku').toLowerCase();
-                    if (name.includes(searchValue) || sku.includes(searchValue)) {
+                    const name = card.getAttribute('data-name') || '';
+                    const sku = card.getAttribute('data-sku') || '';
+                    if (textContainsSearch(name, searchValue) || textContainsSearch(sku, searchValue)) {
                         card.classList.remove('d-none');
                     } else {
                         card.classList.add('d-none');
@@ -223,13 +254,17 @@ document.addEventListener('DOMContentLoaded', function () {
         
                 if (this.classList.contains('back')) {
                     if (step === 'select_products') {
-                        document.getElementById("customer_info").classList.toggle('d-none');
-                        document.getElementById("add-product-info").classList.toggle('d-none');
-                        document.querySelector("button.back").classList.toggle('d-none');
-                        if (!isWalkInOrder()) {
-                            document.getElementById("order_customer").disabled = false;
-                        }
                         step = 'customer_info';
+                        if (typeof window.applyOrderCreateStepUi === 'function') {
+                            window.applyOrderCreateStepUi(step);
+                        } else {
+                            document.getElementById("customer_info").classList.toggle('d-none');
+                            document.getElementById("add-product-info").classList.toggle('d-none');
+                            document.querySelector("button.back").classList.toggle('d-none');
+                            if (!isWalkInOrder()) {
+                                document.getElementById("order_customer").disabled = false;
+                            }
+                        }
                     }
                 } 
                 
@@ -281,11 +316,15 @@ document.addEventListener('DOMContentLoaded', function () {
                             document.getElementById('attn_contact').value = walkInPhone.value.trim();
                         }
 
-                        document.getElementById("customer_info").classList.toggle('d-none');
-                        document.getElementById("add-product-info").classList.toggle('d-none');
-                        document.querySelector("button.back").classList.toggle('d-none');
-                        document.getElementById("order_customer").disabled = true;
                         step = 'select_products';
+                        if (typeof window.applyOrderCreateStepUi === 'function') {
+                            window.applyOrderCreateStepUi(step);
+                        } else {
+                            document.getElementById("customer_info").classList.toggle('d-none');
+                            document.getElementById("add-product-info").classList.toggle('d-none');
+                            document.querySelector("button.back").classList.toggle('d-none');
+                            document.getElementById("order_customer").disabled = true;
+                        }
                     } else if (step === 'select_products') {
                         if (!selected_products.length) {
                             Swal.fire({
@@ -588,11 +627,19 @@ document.addEventListener('change', function(event) {
         syncBagQuantityToSelectedProducts(event.target);
         calculateTotal();
     }
+
+    if (event.target.matches('#delivery_fee')) {
+        calculateTotal();
+    }
 });
 
 document.addEventListener('input', function(event) {
     if (event.target.matches('input[name="quantity[]"], input[name="weight[]"]')) {
         syncBagQuantityToSelectedProducts(event.target);
+        calculateTotal();
+    }
+
+    if (event.target.matches('#delivery_fee')) {
         calculateTotal();
     }
 });
@@ -1000,10 +1047,12 @@ function display_selected_products() {
         totalPrice += totalPriceForProduct;
     });
 
-    document.getElementById('product_bag-item').innerHTML = productHtml;
-    if (document.getElementById('total-price')) {
-        document.getElementById('total-price').textContent = totalPrice.toFixed(2);
-    }
+    document.getElementById('product_bag-item').innerHTML = productHtml || (
+        '<p class="text-muted small mb-0 admin-order-products-empty">' +
+        (window.orderProductsEmptyText || 'Products you add will appear here.') +
+        '</p>'
+    );
+    updateGrandTotalDisplay(totalPrice);
 
     var modal = bootstrap.Modal.getInstance(document.getElementById('addProductModal'));
     if (modal) {
@@ -1039,6 +1088,22 @@ function syncBagQuantityToSelectedProducts(input) {
         * orderLineBillAmount(product.sell_in, product.quantity, product.weight);
 }
 
+function getOrderDeliveryFee() {
+    var deliveryFeeInput = document.getElementById('delivery_fee');
+    if (!deliveryFeeInput) {
+        return 0;
+    }
+
+    return parseFloat(deliveryFeeInput.value) || 0;
+}
+
+function updateGrandTotalDisplay(subtotal) {
+    var grandTotal = subtotal + getOrderDeliveryFee();
+    if (document.getElementById('total-price')) {
+        document.getElementById('total-price').textContent = grandTotal.toFixed(2);
+    }
+}
+
 function calculateTotal() {
     let total = 0;
     const pids = new Set();
@@ -1070,9 +1135,7 @@ function calculateTotal() {
         }
     });
 
-    if (document.getElementById('total-price')) {
-        document.getElementById('total-price').textContent = total.toFixed(2);
-    }
+    updateGrandTotalDisplay(total);
 }
 
 function updateButtonState(quantity) {

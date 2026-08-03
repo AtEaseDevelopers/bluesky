@@ -34,7 +34,8 @@
     <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/js/select2.min.js') }}?v="></script>
     @yield('script')
-    <script src="{{ asset('assets/js/script.js') }}?v=1.7"></script>
+    <script src="{{ asset('assets/js/numeric-input.js') }}?v=1"></script>
+    <script src="{{ asset('assets/js/script.js') }}?v=1.8"></script>
 </body>
 
 </html>

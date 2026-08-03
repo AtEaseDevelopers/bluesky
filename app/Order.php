@@ -102,6 +102,94 @@ class Order extends Model
         'cancelled' => 'cancelled',
     ];
 
+    public const LIST_STATUS_PENDING_PACKING = 'pending_packing';
+
+    public const LIST_STATUS_ALL = 'all';
+
+    public static function defaultListStatuses(): array
+    {
+        return [
+            self::$status['pending'],
+            self::$status['packing'],
+        ];
+    }
+
+    public static function listStatusFilterKey(\Illuminate\Http\Request $request): string
+    {
+        if (!$request->has('status')) {
+            return self::LIST_STATUS_PENDING_PACKING;
+        }
+
+        return (string) $request->input('status', self::LIST_STATUS_ALL);
+    }
+
+    public static function applyListStatusFilter($query, string $statusFilter): void
+    {
+        if ($statusFilter === self::LIST_STATUS_ALL) {
+            return;
+        }
+
+        if ($statusFilter === self::LIST_STATUS_PENDING_PACKING) {
+            $query->whereIn('status', self::defaultListStatuses());
+
+            return;
+        }
+
+        $query->where('status', $statusFilter);
+    }
+
+    public function scopeFilterByContactSearch($query, ?string $term)
+    {
+        $pattern = Helper::likePattern($term);
+        if ($pattern === null) {
+            return $query;
+        }
+
+        return $query->where(function ($query) use ($pattern) {
+            $query->where('orders.attn_contact', 'like', $pattern)
+                ->orWhere('orders.walk_in_phone', 'like', $pattern)
+                ->orWhere('orders.walk_in_name', 'like', $pattern)
+                ->orWhere('orders.attn_name', 'like', $pattern)
+                ->orWhere('orders.invoice_number', 'like', $pattern)
+                ->orWhere('orders.area', 'like', $pattern)
+                ->orWhereHas('customer', function ($customerQuery) use ($pattern) {
+                    $customerQuery->where('name', 'like', $pattern)
+                        ->orWhere('attn_name', 'like', $pattern)
+                        ->orWhere('attn_contact', 'like', $pattern);
+                })
+                ->orWhereHas('orderProducts', function ($productQuery) use ($pattern) {
+                    $productQuery->where('product_name', 'like', $pattern)
+                        ->where('status', '!=', OrderProduct::$status['removed']);
+                });
+        });
+    }
+
+    public function scopeFilterByAddressSearch($query, ?string $term)
+    {
+        $pattern = Helper::likePattern($term);
+        if ($pattern === null) {
+            return $query;
+        }
+
+        $addressColumns = [
+            'area',
+            'billing_address',
+            'billing_city',
+            'billing_postcode',
+            'billing_state',
+            'shipping_address',
+            'shipping_city',
+            'shipping_postcode',
+            'shipping_state',
+        ];
+
+        return $query->where(function ($query) use ($pattern, $addressColumns) {
+            foreach ($addressColumns as $column) {
+                $query->orWhere('orders.' . $column, 'like', $pattern);
+            }
+        });
+    }
+
     public static $payment_status = [
         'unpaid' => 'unpaid',
         'pending' => 'pending',
@@ -420,7 +508,7 @@ class Order extends Model
 
     public function requiresExactPayment(): bool
     {
-        return $this->isCodCustomer() || $this->paysInStore();
+        return $this->paysInStore();
     }
 
     public function customerType(): string
@@ -519,6 +607,7 @@ class Order extends Model
 
         if ($this->isCodCustomer()) {
             return in_array($this->status, [
+                self::$status['packing'],
                 self::$status['in_route'],
                 self::$status['delivered'],
             ], true);
@@ -643,6 +732,28 @@ class Order extends Model
         ], true);
     }
 
+    public function canAdminAdjustPricing(): bool
+    {
+        if ($this->status === self::$status['cancelled']) {
+            return false;
+        }
+
+        if ($this->status === self::$status['completed']) {
+            return false;
+        }
+
+        if ($this->isFullyPaid() || $this->payment_status === self::$payment_status['paid']) {
+            return false;
+        }
+
+        return in_array($this->status, [
+            self::$status['pending'],
+            self::$status['packing'],
+            self::$status['in_route'],
+            self::$status['delivered'],
+        ], true);
+    }
+
     public static function canDriverAdjustQuantities(string $status): bool
     {
         return in_array($status, [
@@ -657,6 +768,7 @@ class Order extends Model
             self::$status['pending'],
             self::$status['packing'],
             self::$status['in_route'],
+            self::$status['delivered'],
         ], true);
     }
 

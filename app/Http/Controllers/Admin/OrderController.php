@@ -75,14 +75,6 @@ class OrderController extends Controller
             $orders->where('created_at', '<=', $filter_tdate." 23:59:59");
         }
 
-        if ($filter_price_range = $request->input('price_range')) {
-            $filter_price_range = explode(',', $filter_price_range);
-            $from_price = $filter_price_range[0];
-            $to_price = $filter_price_range[1];
-            $orders->where('total_price', '>=', $from_price);
-            $orders->where('total_price', '<=', $to_price);
-        }
-
         if ($area = Area::orderFilterValue($request->input('area'))) {
             $orders->where('area', $area);
         }
@@ -91,46 +83,18 @@ class OrderController extends Controller
             $orders->where('driver_id', $lorry);
         }
 
-        if ($filter_status = $request->input('status')) {
-            $orders->where('status', $filter_status);
-        }
+        Order::applyListStatusFilter($orders, Order::listStatusFilterKey($request));
 
         if ($filter_payment_status = $request->input('payment_status')) {
             $orders->where('payment_status', $filter_payment_status);
         }
 
         if ($phone = trim((string) $request->input('phone'))) {
-            $contactTerm = '%' . addcslashes($phone, '%_\\') . '%';
-            $orders->where(function ($query) use ($contactTerm) {
-                $query->where('orders.attn_contact', 'like', $contactTerm)
-                    ->orWhere('orders.walk_in_phone', 'like', $contactTerm)
-                    ->orWhere('orders.walk_in_name', 'like', $contactTerm)
-                    ->orWhere('orders.attn_name', 'like', $contactTerm)
-                    ->orWhereHas('customer', function ($customerQuery) use ($contactTerm) {
-                        $customerQuery->where('name', 'like', $contactTerm)
-                            ->orWhere('attn_name', 'like', $contactTerm)
-                            ->orWhere('attn_contact', 'like', $contactTerm);
-                    });
-            });
+            $orders->filterByContactSearch($phone);
         }
 
         if ($address = trim((string) $request->input('address'))) {
-            $addressTerm = '%' . addcslashes($address, '%_\\') . '%';
-            $addressColumns = [
-                'billing_address',
-                'billing_city',
-                'billing_postcode',
-                'billing_state',
-                'shipping_address',
-                'shipping_city',
-                'shipping_postcode',
-                'shipping_state',
-            ];
-            $orders->where(function ($query) use ($addressTerm, $addressColumns) {
-                foreach ($addressColumns as $column) {
-                    $query->orWhere('orders.' . $column, 'like', $addressTerm);
-                }
-            });
+            $orders->filterByAddressSearch($address);
         }
 
         if ($filter_status = $request->input('orderby') === 'asc' || $request->input('orderby') === 'desc') {
@@ -140,8 +104,6 @@ class OrderController extends Controller
         } 
 
         $orders = $orders->orderBy('id', 'desc')->with('customer')->paginate(15);
-        $minPrice = Order::min('total_price');
-        $maxPrice = Order::max('total_price');
 
         $orderIds = $orders->pluck('id');
         $orderProductsByOrder = collect();
@@ -192,12 +154,17 @@ class OrderController extends Controller
         })->toArray();
 
         $drivers_arr = Driver::optionsForOrders($orders->pluck('driver_id')->all());
+        $listStatusFilter = Order::listStatusFilterKey($request);
+        $listQueryParams = array_merge($request->input(), ['status' => $listStatusFilter]);
+
         return view('admin.orders.index', [
                 'orders' => $orders,
                 'statuses' => $statuses,
                 'drivers' => $drivers_arr,
-                'input' => $request->all() + ['min_price' => $minPrice, 'max_price' => $maxPrice, 'from_price' => $from_price ?? $minPrice, 'to_price' => $to_price ?? $maxPrice],
-                'query_params' => Helper::query_params($request->input()),
+                'input' => $request->all() + [
+                    'status' => $listStatusFilter,
+                ],
+                'query_params' => Helper::query_params($listQueryParams),
                 'shipping_state_options' => System::$country_state['MY'],
                 'status_options' => Order::$status,
                 'payment_status_options' => Order::$payment_status,
@@ -677,14 +644,6 @@ class OrderController extends Controller
             $orders->where('created_at', '<=', $filter_tdate." 23:59:59");
         }
 
-        if ($filter_price_range = $request->input('price_range')) {
-            $filter_price_range = explode(',', $filter_price_range);
-            $from_price = $filter_price_range[0];
-            $to_price = $filter_price_range[1];
-            $orders->where('total_price', '>=', $from_price);
-            $orders->where('total_price', '<=', $to_price);
-        }
-
         if ($filter_shipping_state = $request->input('shipping_state')) {
             $orders->where('shipping_state', $filter_shipping_state);
         }
@@ -753,20 +712,21 @@ class OrderController extends Controller
 
     public function download_do_zip(Request $request)
     {
-        $fdate = $request->fdate;
-        $tdate = $request->tdate;
-
-        $today = now()->toDateString();
-        $startDate = $fdate ?: $today;
-        $endDate = $tdate ?: $today;
-        $startDate = min($startDate, $endDate);
-        $endDate = max($fdate ?: $today, $tdate ?: $today);
-
         $orderIds = DB::table('orders')
             ->select('id')
-            ->whereBetween('orders.created_at', [$startDate, $endDate . ' 23:59:59'])
+            ->when($request->fdate || $request->tdate, function ($q) use ($request) {
+                if ($request->fdate) {
+                    $q->where('orders.created_at', '>=', $request->fdate);
+                }
+
+                if ($request->tdate) {
+                    $q->where('orders.created_at', '<=', $request->tdate . ' 23:59:59');
+                }
+            })
             ->when($request->id, fn ($q) => $q->where('orders.id', $request->id))
-            ->when($request->status, fn ($q) => $q->where('orders.status', $request->status))
+            ->tap(function ($q) use ($request) {
+                Order::applyListStatusFilter($q, Order::listStatusFilterKey($request));
+            })
             ->when($request->driver, fn ($q) => $q->where('orders.driver_id', $request->driver))
             ->when($request->customer, fn ($q) => $q->where('orders.user_id', $request->customer))
             ->when($areaFilter = Area::orderFilterValue($request->input('area')), fn ($q) => $q->where('orders.area', $areaFilter))

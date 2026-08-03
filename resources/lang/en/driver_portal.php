@@ -106,6 +106,7 @@ return [
         'invoices_heading' => 'Invoices',
         'due_date' => 'Due Date',
         'cod_full_balance' => 'COD requires the full outstanding balance.',
+        'cod_partial_balance' => 'Enter the amount collected now. Partial payments are allowed until the balance is cleared.',
         'no_invoices' => 'No invoices for this customer.',
     ],
 
@@ -164,5 +165,14 @@ return [
     'errors' => [
         'no_payment_proof' => 'No payment proof uploaded.',
         'file_not_found' => 'File not found.',
+    ],
+
+    'notifications' => [
+        'new_assignment_title' => 'New delivery assigned',
+        'new_assignment_body' => 'Order :label — :status',
+        'view_order' => 'View order',
+        'dismiss' => 'Dismiss',
+        'sound_enabled' => 'Alert sound is on. You will hear a chime when a new order is assigned.',
+        'test_sound' => 'Test alert sound',
     ],
 ];

@@ -21,6 +21,9 @@ return [
     'submit' => 'Submit',
     'close' => 'Close',
     'all' => 'All',
+    'filter' => 'Filters',
+    'show_filters' => 'Show filters',
+    'hide_filters' => 'Hide filters',
     'export_excel' => 'Export to Excel',
     'no_records' => 'No record found.',
 

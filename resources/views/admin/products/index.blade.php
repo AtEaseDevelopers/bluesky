@@ -4,11 +4,14 @@
 @php
     $admin = Auth::guard('web_admin')->user();
 @endphp
-    <div class="row mb-5">
+    <div class="row mb-5 mb-md-5">
         <div class="col-md-12">
-            <div class="card shadow no-border mb-0">
-                <div class="card-body">
-                    <h5 class="mb-4">{{ __('product.filter') }}</h5>
+            @include('admin.includes.collapsible-filter-start', [
+                'panelId' => 'productsFilterPanel',
+                'title' => __('product.filter'),
+                'expanded' => false,
+                'expandWhenFilled' => ['uom_id', 'product_category_id', 'sku', 'name', 'status', 'min_price', 'max_price'],
+            ])
                     <form method="GET" class="form-wrapper">
                         <input type="hidden" name="price_range" id="priceRangeInput">
                         <div class="row">
@@ -103,8 +106,7 @@
                             </div>
                         </div>
                     </form>
-                </div>
-            </div>
+            @include('admin.includes.collapsible-filter-end')
         </div>
     </div>
 

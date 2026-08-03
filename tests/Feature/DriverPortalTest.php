@@ -57,6 +57,7 @@ class DriverPortalTest extends TestCase
             'status' => 'processing',
             'payment_method' => 'cash',
             'driver_id' => $driver->id,
+            'fulfillment_type' => Order::$fulfillment_types['delivery'],
             'billing_address' => '1 Market St',
             'billing_postcode' => '50000',
             'billing_state' => 'WP',
@@ -131,6 +132,19 @@ class DriverPortalTest extends TestCase
             ->assertOk()
             ->assertSee('MINE-CUSTOMER')
             ->assertDontSee('THEIRS-CUSTOMER');
+    }
+
+    /** @test */
+    public function driver_assignment_notifications_returns_active_assigned_orders()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, ['status' => Order::$status['pending']]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->getJson(route('driver.notifications.assignments'))
+            ->assertOk()
+            ->assertJsonPath('orders.0.id', $order->id)
+            ->assertJsonStructure(['orders', 'server_time']);
     }
 
     /** @test */

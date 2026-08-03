@@ -273,6 +273,7 @@ return [
         'driver.customers.show' => 'assigned_customers',
         'driver.customers.record-payment' => 'record_payment',
         'driver.orders.index' => 'delivery_orders',
+        'driver.notifications.assignments' => 'delivery_orders',
         'driver.orders.show' => 'order_detail',
         'driver.orders.update-status' => 'update_status',
         'driver.orders.adjust' => 'adjust_order',

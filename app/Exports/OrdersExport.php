@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Area;
+use App\Order;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -129,8 +130,7 @@ class OrdersExport implements FromCollection, WithHeadings, WithEvents, WithColu
                 'orders.updated_at'
             )
             ->where('order_products.status','!=','removed')
-            ->when(
-                $request->id, function ($q) {
+            ->when($request->id, function ($q) {
                     return $q->where('orders.id', request()->id);
                 }
             )
@@ -144,11 +144,9 @@ class OrdersExport implements FromCollection, WithHeadings, WithEvents, WithColu
                     return $q->whereDate('orders.created_at', '<=', request()->tdate);
                 }
             )
-            ->when(
-                $request->status, function ($q) {
-                    return $q->where('orders.status', request()->status);
-                }
-            )
+            ->tap(function ($q) use ($request) {
+                Order::applyListStatusFilter($q, Order::listStatusFilterKey($request));
+            })
             ->when(
                 $request->driver, function ($q) {
                     return $q->where('orders.driver_id', request()->driver);

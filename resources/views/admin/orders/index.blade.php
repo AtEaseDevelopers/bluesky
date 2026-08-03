@@ -11,13 +11,19 @@
 @section('content')
 @php
     $admin = Auth::guard('web_admin')->user();
+    $ordersFilterExpanded = collect(request()->except(['page', 'status']))
+        ->filter(fn ($value) => $value !== null && $value !== '')
+        ->isNotEmpty()
+        || (request()->filled('status') && request('status') !== \App\Order::LIST_STATUS_PENDING_PACKING);
 @endphp
-    <div class="row mb-5">
+    <div class="row mb-5 mb-md-5">
         <div class="col-md-12">
-            <div class="card shadow no-border mb-0">
-                <div class="card-body">
-                    <h5 class="mb-4">{{ __('orders.filter') }}</h5>
-                    <form method="GET" class="form-wrapper">
+            @include('admin.includes.collapsible-filter-start', [
+                'panelId' => 'ordersFilterPanel',
+                'title' => __('orders.filter'),
+                'expanded' => $ordersFilterExpanded,
+            ])
+                    <form method="GET" class="form-wrapper" accept-charset="UTF-8">
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
@@ -69,9 +75,12 @@
                                 <div class="form-group mb-4">
                                     <label class="mb-2" for="filterStatus">{{ __('orders.status') }}</label>
                                     <select class="form-select" name="status" id="filterStatus">
-                                        <option value="">{{ __('ui.all') }}</option>
+                                        <option value="{{ \App\Order::LIST_STATUS_PENDING_PACKING }}"{{ ($input['status'] ?? \App\Order::LIST_STATUS_PENDING_PACKING) === \App\Order::LIST_STATUS_PENDING_PACKING ? ' selected' : '' }}>
+                                            {{ __('orders.status_pending_packing') }}
+                                        </option>
+                                        <option value="{{ \App\Order::LIST_STATUS_ALL }}"{{ ($input['status'] ?? '') === \App\Order::LIST_STATUS_ALL ? ' selected' : '' }}>{{ __('ui.all') }}</option>
                                         @foreach($status_options as $status)
-                                        <option value="{{ $status }}"{{ ($input['status'] ?? '') == $status? " selected" : "" }}>{{ trans('order.status.'.$status) }}</option>
+                                        <option value="{{ $status }}"{{ ($input['status'] ?? '') === $status ? ' selected' : '' }}>{{ trans('order.status.'.$status) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -125,21 +134,6 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="form-group mb-4">
-                                    <div id="priceRange" class="row col-12">
-                                        <div class="form-group col-md-6">
-                                            <label class="mb-2" for="filterPriceFrom">{{ __('orders.price_from') }}</label>
-                                            <input type="number" class="form-control" name="min_price" id="filterPriceFrom" value="{{ $input['min_price'] }}" step="0.01" placeholder="{{ __('orders.min') }}">
-                                        </div>
-                                        <div class="form-group col-md-6">
-                                            <label class="mb-2" for="filterPriceTo">{{ __('orders.price_to') }}</label>
-                                            <input type="number" class="form-control" name="max_price" id="filterPriceTo" value="{{ $input['max_price'] }}" step="0.01" placeholder="{{ __('orders.max') }}">
-                                        </div>
-                                    </div>
-                                    <input type="hidden" name="price_range" id="priceRangeInput">
-                                </div>
-                            </div>
                         </div>
                         <div class="row">
                             <div class="col-12">
@@ -148,8 +142,7 @@
                             </div>
                         </div>
                     </form>
-                </div>
-            </div>
+            @include('admin.includes.collapsible-filter-end')
         </div>
     </div>
 
@@ -251,7 +244,7 @@
                                                             </form>
                                                         </li>
                                                     @endif
-                                                    @if (Order::canAdjustQuantities($order->status) && $admin->canModule('orders', 'edit'))
+                                                    @if ($order->canAdminAdjustPricing() && $admin->canModule('orders', 'edit'))
                                                         <li>
                                                             <a class="dropdown-item" href="{{ route('admin.orders.review', $order->id) }}">{{ __('orders.adjust_order') }}</a>
                                                         </li>
@@ -596,7 +589,9 @@
 
         $(document).ready(function() {
 
-            $('#filterCustomer').select2();
+            $('#filterCustomer').select2({
+                matcher: adminSelect2UnicodeMatcher,
+            });
 
             $(".view-pdf").click(function(e) {
                 e.preventDefault();
@@ -658,10 +653,6 @@
                 });
 
                 form.submit();
-            });
-
-            $("#filterPriceFrom,#filterPriceTo").change(function(e){
-                $("#priceRangeInput").val($("#filterPriceFrom").val() + "," + $("#filterPriceTo").val());
             });
 
             $("#order_status").change(function(e){

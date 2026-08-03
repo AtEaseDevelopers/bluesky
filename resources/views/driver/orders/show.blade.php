@@ -317,8 +317,10 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label" for="paid_amount">{{ __('driver_portal.deliveries.amount_collected') }}</label>
-                                <input type="number" step="0.01" min="0" class="form-control @error('paid_amount') is-invalid @enderror"
-                                    name="paid_amount" id="paid_amount" value="{{ old('paid_amount', $order->paid_amount ?: number_format($total, 2, '.', '')) }}" {{ $order->isCreditCustomer() ? '' : 'required' }}>
+                                <input type="number" step="0.01" min="0.01" class="form-control @error('paid_amount') is-invalid @enderror"
+                                    name="paid_amount" id="paid_amount"
+                                    max="{{ number_format(max($balance, 0), 2, '.', '') }}"
+                                    value="{{ old('paid_amount', $balance > 0.001 ? number_format($balance, 2, '.', '') : '') }}" {{ $order->isCreditCustomer() ? '' : 'required' }}>
                                 @error('paid_amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="mb-3" id="proof-wrapper">

@@ -248,7 +248,7 @@ class DriverCustomerTest extends TestCase
     }
 
     /** @test */
-    public function cod_customer_payment_must_be_the_exact_balance_due()
+    public function driver_can_record_partial_cod_payment_from_the_customer_page()
     {
         $driver = $this->makeDriver();
         $customer = $this->makeCustomer(['default_driver_id' => $driver->id]);
@@ -263,6 +263,36 @@ class DriverCustomerTest extends TestCase
             ->post(route('driver.customers.record-payment', [$customer->id, $order->id]), [
                 'payment_method' => 'cash',
                 'paid_amount' => 50.00,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $fresh = $order->fresh();
+        $this->assertEquals(50.00, (float) $fresh->paid_amount);
+        $this->assertEquals('partial', $fresh->payment_status);
+        $this->assertDatabaseHas('order_payments', [
+            'order_id' => $order->id,
+            'amount' => 50.00,
+            'status' => 'confirmed',
+        ]);
+    }
+
+    /** @test */
+    public function cod_customer_payment_cannot_exceed_balance_due()
+    {
+        $driver = $this->makeDriver();
+        $customer = $this->makeCustomer(['default_driver_id' => $driver->id]);
+
+        $order = $this->makeOrder($customer, [
+            'total_price' => 150.00,
+            'paid_amount' => 0,
+            'status' => 'in_route',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.customers.record-payment', [$customer->id, $order->id]), [
+                'payment_method' => 'cash',
+                'paid_amount' => 200.00,
             ])
             ->assertRedirect()
             ->assertSessionHas('error');
