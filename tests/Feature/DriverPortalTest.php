@@ -144,7 +144,7 @@ class DriverPortalTest extends TestCase
             ->getJson(route('driver.notifications.assignments'))
             ->assertOk()
             ->assertJsonPath('orders.0.id', $order->id)
-            ->assertJsonStructure(['orders', 'server_time']);
+            ->assertJsonStructure(['orders' => [['id', 'label', 'assigned_at', 'url']], 'server_time']);
     }
 
     /** @test */

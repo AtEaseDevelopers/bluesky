@@ -55,6 +55,7 @@ class Order extends Model
         'delivery_confirmed_at',
         'status',
         'driver_id',
+        'driver_assigned_at',
         'fulfillment_type',
         'delivery_slot_id',
         'delivery_date',
@@ -73,8 +74,24 @@ class Order extends Model
         'completed_at' => 'datetime',
         'pickup_confirmed_at' => 'datetime',
         'courier_confirmed_at' => 'datetime',
+        'driver_assigned_at' => 'datetime',
         'is_estimated' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $order) {
+            if (!$order->isDirty('driver_id')) {
+                return;
+            }
+
+            if ($order->driver_id) {
+                $order->driver_assigned_at = now();
+            } else {
+                $order->driver_assigned_at = null;
+            }
+        });
+    }
 
     public static $path = 'orders';
 

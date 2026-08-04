@@ -81,29 +81,60 @@
 <script>
     (function () {
         var pollUrl = @json(route('driver.notifications.assignments'));
-        var storageKey = 'driverAssignmentKnownIds';
+        var assignmentsKey = 'driverAssignmentKnownMap';
         var baselineKey = 'driverAssignmentBaselineSeeded';
         var audioUnlockedKey = 'driverAssignmentAudioUnlocked';
-        var pollMs = 20000;
+        var pollMs = 3000;
         var recentAssignmentMs = 30 * 60 * 1000;
-        var knownIds = new Set();
+        var knownAssignments = {};
         var baselineSeeded = false;
         var audioUnlocked = false;
+        var pollInFlight = false;
+        var pollTimer = null;
         var labels = @json($assignmentNotificationLabels);
         var audioEl = document.getElementById('driverAssignmentSound');
         var audioCtx = null;
 
         try {
-            knownIds = new Set(JSON.parse(sessionStorage.getItem(storageKey) || '[]'));
+            knownAssignments = JSON.parse(sessionStorage.getItem(assignmentsKey) || '{}');
         } catch (error) {
-            knownIds = new Set();
+            knownAssignments = {};
+        }
+
+        try {
+            var legacyIds = JSON.parse(sessionStorage.getItem('driverAssignmentKnownIds') || '[]');
+            legacyIds.forEach(function (id) {
+                var key = String(id);
+                if (!knownAssignments[key]) {
+                    knownAssignments[key] = 'legacy';
+                }
+            });
+        } catch (error) {
+            // Ignore legacy migration errors.
         }
 
         baselineSeeded = sessionStorage.getItem(baselineKey) === '1';
         audioUnlocked = sessionStorage.getItem(audioUnlockedKey) === '1';
 
-        function saveKnownIds() {
-            sessionStorage.setItem(storageKey, JSON.stringify(Array.from(knownIds)));
+        function saveKnownAssignments() {
+            sessionStorage.setItem(assignmentsKey, JSON.stringify(knownAssignments));
+        }
+
+        function assignmentStamp(order) {
+            return order.assigned_at || order.updated_at || '';
+        }
+
+        function isKnownAssignment(order) {
+            var stored = knownAssignments[String(order.id)];
+            if (!stored) {
+                return false;
+            }
+
+            return stored === assignmentStamp(order);
+        }
+
+        function rememberAssignment(order) {
+            knownAssignments[String(order.id)] = assignmentStamp(order);
         }
 
         function markBaselineSeeded() {
@@ -117,16 +148,17 @@
         }
 
         function isRecentlyAssigned(order) {
-            if (!order.updated_at) {
+            var stamp = assignmentStamp(order);
+            if (!stamp) {
                 return false;
             }
 
-            var updatedAt = Date.parse(order.updated_at);
-            if (Number.isNaN(updatedAt)) {
+            var assignedAt = Date.parse(stamp);
+            if (Number.isNaN(assignedAt)) {
                 return false;
             }
 
-            return (Date.now() - updatedAt) < recentAssignmentMs;
+            return (Date.now() - assignedAt) < recentAssignmentMs;
         }
 
         function getAudioContext() {
@@ -269,9 +301,16 @@
         }
 
         function pollAssignments() {
+            if (pollInFlight || document.visibilityState === 'hidden') {
+                return;
+            }
+
+            pollInFlight = true;
+
             fetch(pollUrl, {
                 headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 credentials: 'same-origin',
+                cache: 'no-store',
             })
                 .then(function (response) {
                     if (!response.ok) {
@@ -284,11 +323,11 @@
                     var newOrders = [];
 
                     orders.forEach(function (order) {
-                        if (!knownIds.has(order.id)) {
+                        if (!isKnownAssignment(order)) {
                             if (baselineSeeded || isRecentlyAssigned(order)) {
                                 newOrders.push(order);
                             }
-                            knownIds.add(order.id);
+                            rememberAssignment(order);
                         }
                     });
 
@@ -301,12 +340,43 @@
                         markBaselineSeeded();
                     }
 
-                    saveKnownIds();
+                    saveKnownAssignments();
                 })
                 .catch(function () {
                     // Silent retry on next interval.
+                })
+                .finally(function () {
+                    pollInFlight = false;
                 });
         }
+
+        function startPolling() {
+            if (pollTimer) {
+                window.clearInterval(pollTimer);
+            }
+
+            pollAssignments();
+            pollTimer = window.setInterval(pollAssignments, pollMs);
+        }
+
+        function stopPolling() {
+            if (pollTimer) {
+                window.clearInterval(pollTimer);
+                pollTimer = null;
+            }
+        }
+
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') {
+                pollAssignments();
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        });
+
+        window.addEventListener('focus', pollAssignments);
+        window.addEventListener('online', pollAssignments);
 
         if (!audioUnlocked) {
             document.addEventListener('click', function onFirstInteraction() {
@@ -345,7 +415,6 @@
             });
         };
 
-        pollAssignments();
-        window.setInterval(pollAssignments, pollMs);
+        startPolling();
     })();
 </script>

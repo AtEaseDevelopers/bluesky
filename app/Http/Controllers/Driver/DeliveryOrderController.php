@@ -105,7 +105,7 @@ class DeliveryOrderController extends Controller
             ->where('fulfillment_type', Order::$fulfillment_types['delivery'])
             ->whereIn('status', self::activeAssignmentStatuses())
             ->orderByDesc('id')
-            ->get(['id', 'do_no', 'status', 'attn_name', 'user_id', 'updated_at']);
+            ->get(['id', 'do_no', 'status', 'attn_name', 'user_id', 'driver_assigned_at', 'updated_at']);
 
         return response()->json([
             'orders' => $orders->map(function (Order $order) {
@@ -118,6 +118,7 @@ class DeliveryOrderController extends Controller
                     'status_label' => __('order.status.' . $order->status),
                     'customer' => $order->attn_name ?: optional($order->customer)->name,
                     'url' => route('driver.orders.show', $order->id),
+                    'assigned_at' => optional($order->driver_assigned_at ?? $order->updated_at)->toIso8601String(),
                     'updated_at' => optional($order->updated_at)->toIso8601String(),
                 ];
             })->values(),
