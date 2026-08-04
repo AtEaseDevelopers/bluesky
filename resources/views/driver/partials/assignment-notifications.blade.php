@@ -82,9 +82,12 @@
     (function () {
         var pollUrl = @json(route('driver.notifications.assignments'));
         var storageKey = 'driverAssignmentKnownIds';
+        var baselineKey = 'driverAssignmentBaselineSeeded';
+        var audioUnlockedKey = 'driverAssignmentAudioUnlocked';
         var pollMs = 20000;
+        var recentAssignmentMs = 30 * 60 * 1000;
         var knownIds = new Set();
-        var initialized = false;
+        var baselineSeeded = false;
         var audioUnlocked = false;
         var labels = @json($assignmentNotificationLabels);
         var audioEl = document.getElementById('driverAssignmentSound');
@@ -96,8 +99,34 @@
             knownIds = new Set();
         }
 
+        baselineSeeded = sessionStorage.getItem(baselineKey) === '1';
+        audioUnlocked = sessionStorage.getItem(audioUnlockedKey) === '1';
+
         function saveKnownIds() {
             sessionStorage.setItem(storageKey, JSON.stringify(Array.from(knownIds)));
+        }
+
+        function markBaselineSeeded() {
+            baselineSeeded = true;
+            sessionStorage.setItem(baselineKey, '1');
+        }
+
+        function setAudioUnlocked() {
+            audioUnlocked = true;
+            sessionStorage.setItem(audioUnlockedKey, '1');
+        }
+
+        function isRecentlyAssigned(order) {
+            if (!order.updated_at) {
+                return false;
+            }
+
+            var updatedAt = Date.parse(order.updated_at);
+            if (Number.isNaN(updatedAt)) {
+                return false;
+            }
+
+            return (Date.now() - updatedAt) < recentAssignmentMs;
         }
 
         function getAudioContext() {
@@ -166,10 +195,14 @@
             });
         }
 
-        function unlockAudio(showReadyMessage) {
-            audioUnlocked = true;
+        function unlockAudio(showReadyMessage, playSound) {
+            setAudioUnlocked();
 
-            return playAssignmentSound().then(function () {
+            return resumeAudioContext().then(function () {
+                if (playSound) {
+                    return playAssignmentSound();
+                }
+            }).then(function () {
                 if (showReadyMessage) {
                     showInfoAlert(labels.sound_enabled);
                 }
@@ -252,7 +285,7 @@
 
                     orders.forEach(function (order) {
                         if (!knownIds.has(order.id)) {
-                            if (initialized) {
+                            if (baselineSeeded || isRecentlyAssigned(order)) {
                                 newOrders.push(order);
                             }
                             knownIds.add(order.id);
@@ -264,7 +297,10 @@
                         newOrders.forEach(showAlert);
                     }
 
-                    initialized = true;
+                    if (!baselineSeeded) {
+                        markBaselineSeeded();
+                    }
+
                     saveKnownIds();
                 })
                 .catch(function () {
@@ -272,24 +308,22 @@
                 });
         }
 
-        document.addEventListener('click', function onFirstInteraction() {
-            if (!audioUnlocked) {
-                unlockAudio(true);
-            }
-            document.removeEventListener('click', onFirstInteraction);
-        }, { once: true });
+        if (!audioUnlocked) {
+            document.addEventListener('click', function onFirstInteraction() {
+                unlockAudio(true, false);
+                document.removeEventListener('click', onFirstInteraction);
+            }, { once: true });
 
-        document.addEventListener('touchstart', function onFirstTouch() {
-            if (!audioUnlocked) {
-                unlockAudio(true);
-            }
-            document.removeEventListener('touchstart', onFirstTouch);
-        }, { once: true });
+            document.addEventListener('touchstart', function onFirstTouch() {
+                unlockAudio(true, false);
+                document.removeEventListener('touchstart', onFirstTouch);
+            }, { once: true });
+        }
 
         var testBtn = document.getElementById('driverTestAssignmentSound');
         if (testBtn) {
             testBtn.addEventListener('click', function () {
-                unlockAudio(false).then(function () {
+                unlockAudio(false, true).then(function () {
                     showAlert({
                         label: '#TEST',
                         status: 'pending',
@@ -301,7 +335,7 @@
         }
 
         window.driverPreviewAssignmentAlert = function () {
-            unlockAudio(false).then(function () {
+            unlockAudio(false, true).then(function () {
                 showAlert({
                     label: '#PREVIEW',
                     status: 'pending',
