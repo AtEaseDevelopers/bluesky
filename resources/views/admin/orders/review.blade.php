@@ -1,5 +1,35 @@
 @extends('layouts.admin')
 @section('title', $order->status === Order::$status['pending'] ? __('orders.review_title_pending', ['id' => $order->id]) : __('orders.review_title_adjust', ['id' => $order->id]))
+@section('css')
+    <style>
+        @media (max-width: 767.98px) {
+            #review-form .admin-order-review-totals .form-control {
+                min-height: 44px;
+                font-size: 1rem;
+            }
+
+            #review-form #review-items-table .line-qty,
+            #review-form #review-items-table .line-weight {
+                min-width: 5.5rem;
+                min-height: 44px;
+            }
+
+            #review-form .admin-order-review-actions {
+                position: sticky;
+                bottom: 0;
+                z-index: 10;
+                background: #fff;
+                border-top: 1px solid rgba(0, 0, 0, 0.08);
+                margin: 0 -1rem -1rem;
+                padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0));
+            }
+
+            #review-form .admin-order-review-actions .btn {
+                min-height: 44px;
+            }
+        }
+    </style>
+@endsection
 @section('content')
 
     <div class="row mb-4">
@@ -77,40 +107,51 @@
                                         </tr>
                                     @endforeach
                                 </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colspan="5" class="text-end"><strong>{{ __('orders.subtotal') }}</strong></td>
-                                        <td class="text-end"><strong id="review-subtotal">0.00</strong></td>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="5" class="text-end">
-                                            <label for="delivery_fee" class="mb-0"><strong>{{ __('orders.delivery_fee_rm') }}</strong> <span class="text-danger">*</span></label>
-                                        </td>
-                                        <td>
-                                            <input type="number" step="0.01" min="0" name="delivery_fee" id="delivery_fee" class="form-control text-end"
-                                                value="{{ old('delivery_fee', number_format($order->delivery_fee, 2, '.', '')) }}" required>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="5" class="text-end"><strong>{{ __('orders.amount_adjustment') }}</strong></td>
-                                        <td>
-                                            @if ($canAdjustAmount)
-                                                <input type="number" step="0.01" name="amount_adjustment" id="amount_adjustment" class="form-control text-end"
-                                                    value="{{ old('amount_adjustment', number_format($order->amount_adjustment, 2, '.', '')) }}">
-                                            @else
-                                                <input type="number" step="0.01" id="amount_adjustment" class="form-control text-end"
-                                                    value="{{ number_format($order->amount_adjustment, 2, '.', '') }}" readonly>
-                                                <input type="hidden" name="amount_adjustment" value="{{ number_format($order->amount_adjustment, 2, '.', '') }}">
-                                            @endif
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="5" class="text-end"><strong>{{ __('orders.grand_total_rm') }}</strong></td>
-                                        <td class="text-end"><strong id="review-grand-total">0.00</strong></td>
-                                    </tr>
-                                </tfoot>
                             </table>
-                            <small class="text-muted">{{ __('orders.delivery_fee_hint') }}</small>
+                        </div>
+
+                        <div class="admin-order-review-totals border rounded p-3 mb-3 bg-light">
+                            <div class="row align-items-center gy-3 mb-3">
+                                <div class="col-6 col-md-8 text-md-end">
+                                    <strong>{{ __('orders.subtotal') }}</strong>
+                                </div>
+                                <div class="col-6 col-md-4 text-end">
+                                    <strong id="review-subtotal" class="fs-5">0.00</strong>
+                                </div>
+                            </div>
+                            <div class="row align-items-center gy-2 mb-3">
+                                <div class="col-12 col-md-8">
+                                    <label for="delivery_fee" class="mb-1 fw-semibold">{{ __('orders.delivery_fee_rm') }} <span class="text-danger">*</span></label>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <input type="number" step="0.01" min="0" name="delivery_fee" id="delivery_fee" class="form-control text-end"
+                                        value="{{ old('delivery_fee', number_format($order->delivery_fee, 2, '.', '')) }}" required>
+                                </div>
+                            </div>
+                            <div class="row align-items-center gy-2 mb-3">
+                                <div class="col-12 col-md-8">
+                                    <label for="amount_adjustment" class="mb-1 fw-semibold">{{ __('orders.amount_adjustment') }}</label>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    @if ($canAdjustAmount)
+                                        <input type="number" step="0.01" name="amount_adjustment" id="amount_adjustment" class="form-control text-end"
+                                            value="{{ old('amount_adjustment', number_format($order->amount_adjustment, 2, '.', '')) }}">
+                                    @else
+                                        <input type="number" step="0.01" id="amount_adjustment" class="form-control text-end"
+                                            value="{{ number_format($order->amount_adjustment, 2, '.', '') }}" readonly>
+                                        <input type="hidden" name="amount_adjustment" value="{{ number_format($order->amount_adjustment, 2, '.', '') }}">
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="row align-items-center gy-3 pt-2 border-top">
+                                <div class="col-6 col-md-8 text-md-end">
+                                    <strong>{{ __('orders.grand_total_rm') }}</strong>
+                                </div>
+                                <div class="col-6 col-md-4 text-end">
+                                    <strong id="review-grand-total" class="fs-5 text-primary">0.00</strong>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-3 mb-0">{{ __('orders.delivery_fee_hint') }}</small>
                         </div>
 
                         <div class="row">
@@ -157,7 +198,7 @@
                             </div>
                         </div>
 
-                        <div class="d-flex justify-content-end gap-2">
+                        <div class="d-flex justify-content-end flex-wrap gap-2 admin-order-review-actions">
                             <button type="submit" name="send_to_customer" value="0" class="btn btn-secondary">{{ __('orders.save_adjustments') }}</button>
                             @if ($order->status === Order::$status['pending'])
                                 <button type="submit" name="send_to_customer" value="1" class="btn btn-primary">{{ __('orders.save_and_move_to_packing') }}</button>
