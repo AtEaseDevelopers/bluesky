@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Member;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Order;
+use App\Product;
 use App\PdfHelper;
 use App\Services\OrderStatusService;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,21 @@ use Illuminate\Support\Facades\Storage;
 
 class FileController extends Controller
 {
+    public function productImage($id, $filename)
+    {
+        if (!preg_match('/^[A-Za-z0-9._-]+$/', (string) $filename)) {
+            abort(404, 'File not found');
+        }
+
+        $path = Product::$path . '/' . $id . '/' . $filename;
+
+        if (!Storage::disk('local')->exists($path)) {
+            abort(404, 'File not found');
+        }
+
+        return $this->fileResponse($path, $filename);
+    }
+
     public function download(Request $request, $folder, $id, $filename)
     {
         $this->guardOrderDocumentAccess($folder, $id, $filename);

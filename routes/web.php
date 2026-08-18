@@ -76,6 +76,10 @@ $adminUrl = config('app.admin_url');
                 Route::get('/terms/{page}', 'PolicyController@show')->name('policies.show')->middleware('member.permission');
             });
 
+            Route::get('products/{id}/{filename}', 'FileController@productImage')
+                ->where('filename', '[^/]+')
+                ->middleware('web');
+
             Route::group(['middleware' => ['web', 'auth_member', 'member.permission'], 'as' => 'member.'], function () {
                     Route::get('/products', 'ProductController@index')->name('products');
                     Route::get('/product/{product}', 'ProductController@view')->name('products.show');
