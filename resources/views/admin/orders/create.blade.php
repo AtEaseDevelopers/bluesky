@@ -271,7 +271,9 @@
         document.getElementById('fulfillment_type').addEventListener('change', toggleCreateDriverField);
         $(document).ready(function() {
             
-            $('#order_customer').select2();
+            $('#order_customer').select2({
+                matcher: adminSelect2UnicodeMatcher,
+            });
             
             $('#payment_method').select2({
                 placeholder: @json(__('orders.select_payment_method_placeholder'))

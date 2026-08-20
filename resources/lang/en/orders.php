@@ -99,7 +99,7 @@ return [
     'add_products_hint' => 'Please add products to this order.',
     'add_product' => 'Add Product',
     'add_product_intro' => 'Please select a product you would like to add into the bag!',
-    'product_search_placeholder' => 'Enter product name or sku',
+    'product_search_placeholder' => 'Enter product name, SKU, or Chinese name',
     'select' => 'Select',
     'sku_label' => 'Sku: :sku',
     'choose_option' => 'Choose :option...',

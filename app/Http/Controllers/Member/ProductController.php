@@ -35,10 +35,7 @@ class ProductController extends Controller
             ->withStorefrontStock()
             ->memberCatalog($user)
             ->when($keyword, function ($q) use ($keyword) {
-                return $q->where(function ($query) use ($keyword) {
-                    $query->where('products.name', 'LIKE', '%' . $keyword . '%')
-                        ->orWhere('products.sku', 'LIKE', $keyword . '%');
-                });
+                return $q->searchTerm($keyword);
             })
             ->orderBy('products.name')
             ->get()

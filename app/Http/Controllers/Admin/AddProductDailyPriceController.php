@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use Illuminate\Http\Request;
+use App\Helper;
 use App\Http\Controllers\Controller;
 use App\Product;
 use App\ProductDailyPrice;
@@ -30,8 +31,14 @@ class AddProductDailyPriceController extends Controller
         $products = Product::where('status', Product::$status['active']);
         
         if ($search_q = $request->input('search_q')) {
-            $products->where('name', "LIKE", "%".$search_q."%");
-            $products->orWhere('sku', "LIKE", "%".$search_q."%");
+            $products->where(function ($query) use ($search_q) {
+                Helper::applyOrLikeSearch($query, [
+                    'name',
+                    'sku',
+                    'description',
+                    'remark',
+                ], $search_q);
+            });
         }
 
         if (isset($request->sort_by)) {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helper;
 use App\Http\Controllers\Controller;
 use App\ProductCategory;
 use Illuminate\Http\Request;
@@ -90,12 +91,15 @@ class ProductCategoriesController extends Controller
                 ->get();
         } else {
             $search = $request->input('search.value');
+            $pattern = Helper::likePattern($search);
             $records = DB::table('product_categories')
                 ->select(
                     'id', 'category_name', 'created_at',
                     DB::raw('(SELECT COUNT(`id`) FROM products WHERE products.product_category_id = product_categories.id) as total_products')
                 )
-                ->where('category_name', 'LIKE', "%{$search}%")
+                ->when($pattern !== null, function ($query) use ($pattern) {
+                    $query->where('category_name', 'LIKE', $pattern);
+                })
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order, $dir)

@@ -116,9 +116,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 productCards.forEach(card => card.classList.remove('d-none'));
             } else {
                 productCards.forEach(card => {
-                    const name = card.getAttribute('data-name') || '';
-                    const sku = card.getAttribute('data-sku') || '';
-                    if (textContainsSearch(name, searchValue) || textContainsSearch(sku, searchValue)) {
+                    const searchText = card.getAttribute('data-search-text')
+                        || [card.getAttribute('data-name'), card.getAttribute('data-sku'), card.getAttribute('data-description')]
+                            .filter(Boolean)
+                            .join(' ');
+                    if (textContainsSearch(searchText, searchValue)) {
                         card.classList.remove('d-none');
                     } else {
                         card.classList.add('d-none');

@@ -3,7 +3,7 @@
         $product_option = $product->product_option;
         $uomLabel = $product->uom->uom_name ?? 'KG';
     @endphp
-    <div class="card products-card mb-3" id="product-card-{{ $product->id }}" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-sku="{{ $product->sku }}" data-sell-in="{{ $product->sell_in }}">
+    <div class="card products-card mb-3" id="product-card-{{ $product->id }}" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-sku="{{ $product->sku }}" data-description="{{ $product->description }}" data-search-text="{{ \App\Product::searchText($product) }}" data-sell-in="{{ $product->sell_in }}">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
                 <div class="d-flex">

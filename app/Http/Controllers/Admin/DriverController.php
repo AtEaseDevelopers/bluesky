@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Driver;
+use App\Helper;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -109,12 +110,7 @@ class DriverController extends Controller
             ->select('id', 'name', 'username', 'phone', 'is_active', 'created_at');
 
         if (!empty($request->input('search.value'))) {
-            $search = $request->input('search.value');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                    ->orWhere('username', 'LIKE', "%{$search}%")
-                    ->orWhere('phone', 'LIKE', "%{$search}%");
-            });
+            Helper::applyOrLikeSearch($query, ['name', 'username', 'phone'], $request->input('search.value'));
             $totalFiltered = (clone $query)->count();
         }
 

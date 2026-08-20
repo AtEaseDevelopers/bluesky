@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helper;
 use App\Http\Controllers\Controller;
 use App\Vehicle;
 use Illuminate\Http\Request;
@@ -94,11 +95,7 @@ class VehicleController extends Controller
             ->select('id', 'vehicle_number', 'description', 'is_active', 'created_at');
 
         if (!empty($request->input('search.value'))) {
-            $search = $request->input('search.value');
-            $query->where(function ($q) use ($search) {
-                $q->where('vehicle_number', 'LIKE', "%{$search}%")
-                    ->orWhere('description', 'LIKE', "%{$search}%");
-            });
+            Helper::applyOrLikeSearch($query, ['vehicle_number', 'description'], $request->input('search.value'));
             $totalFiltered = (clone $query)->count();
         }
 

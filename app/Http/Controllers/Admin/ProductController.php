@@ -56,13 +56,11 @@ class ProductController extends Controller
         }
 
         if (!empty($request['name'])) {
-            $pattern = Helper::likePattern($request['name']);
-            if ($pattern !== null) {
-                $products->where(function ($query) use ($pattern) {
-                    $query->where('products.name', 'LIKE', $pattern)
-                        ->orWhere('products.description', 'LIKE', $pattern);
-                });
-            }
+            Helper::applyOrLikeSearch($products, [
+                'products.name',
+                'products.sku',
+                'products.description',
+            ], $request['name']);
         }
 
         if (!empty($request['status'])) {
@@ -139,11 +137,18 @@ class ProductController extends Controller
         $products = Product::select('id', 'name', 'description', 'price', 'status', 'created_at');
 
         if ($filter_sku = $request->input('sku')) {
-            $products->where('sku', 'LIKE', "%$filter_sku%");
+            $pattern = Helper::likePattern($filter_sku);
+            if ($pattern !== null) {
+                $products->where('sku', 'LIKE', $pattern);
+            }
         }
 
         if ($filter_name = $request->input('name')) {
-            $products->where('name', 'LIKE', "%$filter_name%");
+            Helper::applyOrLikeSearch($products, [
+                'name',
+                'description',
+                'remark',
+            ], $filter_name);
         }
 
         if ($filter_status = $request->input('status')) {

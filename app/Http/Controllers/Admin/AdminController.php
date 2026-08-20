@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Admin;
+use App\Helper;
 use App\Http\Controllers\Controller;
 use App\Services\RolePermissionService;
 use Illuminate\Http\Request;
@@ -141,11 +142,7 @@ class AdminController extends Controller
             ->select('id', 'name', 'username', 'email', 'role', 'status', 'created_at');
 
         if ($search = $request->input('search.value')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                    ->orWhere('username', 'LIKE', "%{$search}%")
-                    ->orWhere('email', 'LIKE', "%{$search}%");
-            });
+            Helper::applyOrLikeSearch($query, ['name', 'username', 'email'], $search);
             $totalFiltered = (clone $query)->count();
         }
 

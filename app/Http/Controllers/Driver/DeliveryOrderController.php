@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Driver;
 
+use App\Helper;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Driver\Concerns\RecordsDriverPayments;
 use App\Order;
@@ -48,20 +49,27 @@ class DeliveryOrderController extends Controller
         }
 
         $search = trim((string) $request->query('q', ''));
-        if ($search !== '') {
-            $query->where(function ($builder) use ($search) {
-                $like = '%' . $search . '%';
-
-                $builder->where('orders.do_no', 'like', $like)
-                    ->orWhere('orders.invoice_number', 'like', $like)
-                    ->orWhere('orders.attn_name', 'like', $like)
-                    ->orWhere('orders.attn_contact', 'like', $like)
-                    ->orWhere('orders.walk_in_phone', 'like', $like)
-                    ->orWhere('orders.shipping_address', 'like', $like)
-                    ->orWhere('orders.billing_address', 'like', $like)
-                    ->orWhereHas('customer', function ($customerQuery) use ($like) {
-                        $customerQuery->where('name', 'like', $like)
-                            ->orWhere('attn_contact', 'like', $like);
+        $pattern = Helper::likePattern($search);
+        if ($pattern !== null) {
+            $query->where(function ($builder) use ($pattern, $search) {
+                $builder->where('orders.do_no', 'like', $pattern)
+                    ->orWhere('orders.invoice_number', 'like', $pattern)
+                    ->orWhere('orders.attn_name', 'like', $pattern)
+                    ->orWhere('orders.attn_contact', 'like', $pattern)
+                    ->orWhere('orders.walk_in_phone', 'like', $pattern)
+                    ->orWhere('orders.walk_in_name', 'like', $pattern)
+                    ->orWhere('orders.shipping_address', 'like', $pattern)
+                    ->orWhere('orders.billing_address', 'like', $pattern)
+                    ->orWhereHas('customer', function ($customerQuery) use ($pattern) {
+                        $customerQuery->where('name', 'like', $pattern)
+                            ->orWhere('attn_name', 'like', $pattern)
+                            ->orWhere('attn_contact', 'like', $pattern)
+                            ->orWhere('billing_address', 'like', $pattern)
+                            ->orWhere('shipping_address', 'like', $pattern);
+                    })
+                    ->orWhereHas('orderProducts', function ($productQuery) use ($pattern) {
+                        $productQuery->where('product_name', 'like', $pattern)
+                            ->where('status', '!=', OrderProduct::$status['removed']);
                     });
 
                 if (ctype_digit($search)) {

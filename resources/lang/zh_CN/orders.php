@@ -99,7 +99,7 @@ return [
     'add_products_hint' => '请为此订单添加商品。',
     'add_product' => '添加商品',
     'add_product_intro' => '请选择要加入订单的商品！',
-    'product_search_placeholder' => '输入商品名称或 SKU',
+    'product_search_placeholder' => '输入商品名称、SKU 或中文名',
     'select' => '选择',
     'sku_label' => 'SKU：:sku',
     'choose_option' => '选择 :option...',

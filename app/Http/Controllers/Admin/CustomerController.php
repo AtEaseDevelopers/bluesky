@@ -111,11 +111,20 @@ class CustomerController extends Controller
         $users = User::select('name', 'email', 'category', 'shipping_address', 'shipping_postcode', 'shipping_state', 'remark', 'status', 'created_at as join_date');
 
         if ($filter_name = $request->input('name')) {
-            $users->where('name', 'LIKE', "%$filter_name%");
+            Helper::applyOrLikeSearch($users, [
+                'name',
+                'attn_name',
+                'attn_contact',
+                'billing_address',
+                'shipping_address',
+            ], $filter_name);
         }
 
         if ($filter_email = $request->input('email')) {
-            $users->where('email', 'LIKE', "%$filter_email%");
+            $pattern = Helper::likePattern($filter_email);
+            if ($pattern !== null) {
+                $users->where('email', 'LIKE', $pattern);
+            }
         }
 
         if ($filter_category = $request->input('category')) {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Area;
+use App\Helper;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -90,12 +91,15 @@ class AreasController extends Controller
                 ->get();
         } else {
             $search = $request->input('search.value');
+            $pattern = Helper::likePattern($search);
             $records = DB::table('areas')
                 ->select(
                     'id', 'area_name', 'created_at',
                     DB::raw('(SELECT COUNT(`id`) FROM users WHERE areas.id = users.area) as total_customers')
                 )
-                ->where('area_name', 'LIKE', "%{$search}%")
+                ->when($pattern !== null, function ($query) use ($pattern) {
+                    $query->where('area_name', 'LIKE', $pattern);
+                })
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order, $dir)

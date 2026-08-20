@@ -392,6 +392,27 @@ class Product extends Model
         return $query->storefrontCatalog()->visibleToCustomer($user);
     }
 
+    public function scopeSearchTerm(Builder $query, ?string $term): Builder
+    {
+        return Helper::applyOrLikeSearch($query, [
+            'products.name',
+            'products.sku',
+            'products.description',
+            'products.remark',
+        ], $term);
+    }
+
+    /** Combined text used by client-side product filters. */
+    public static function searchText(self $product): string
+    {
+        return trim(implode(' ', array_filter([
+            $product->name,
+            $product->sku,
+            $product->description,
+            self::bilingualDisplayName($product->name, $product->description),
+        ])));
+    }
+
     /** In-stock products only (e.g. POS counter sales). */
     public function scopeStorefrontAvailable(Builder $query): Builder
     {

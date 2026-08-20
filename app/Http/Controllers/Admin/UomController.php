@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helper;
 use App\Http\Controllers\Controller;
 use App\Uom;
 use Illuminate\Http\Request;
@@ -90,12 +91,15 @@ class UomController extends Controller
                 ->get();
         } else {
             $search = $request->input('search.value');
+            $pattern = Helper::likePattern($search);
             $records = DB::table('uoms')
                 ->select(
                     'id', 'uom_name', 'created_at',
                     DB::raw('(SELECT COUNT(`id`) FROM products WHERE products.uom_id = uoms.id) as total_products')
                 )
-                ->where('uom_name', 'LIKE', "%{$search}%")
+                ->when($pattern !== null, function ($query) use ($pattern) {
+                    $query->where('uom_name', 'LIKE', $pattern);
+                })
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order, $dir)

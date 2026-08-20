@@ -38,7 +38,7 @@ class PosOrderController extends Controller
             ->withStorefrontStock()
             ->storefrontCatalog()
             ->when($keyword, function ($q) use ($keyword) {
-                $q->where('products.name', 'LIKE', '%' . $keyword . '%');
+                $q->searchTerm($keyword);
             })
             ->orderBy('products.nos')
             ->get()

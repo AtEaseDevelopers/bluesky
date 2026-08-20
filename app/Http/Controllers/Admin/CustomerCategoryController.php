@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\CustomerCategory;
 use App\CustomerCategoryProduct;
+use App\Helper;
 use App\Http\Controllers\Controller;
 use App\Product;
 use App\ProductType;
@@ -153,13 +154,16 @@ class CustomerCategoryController extends Controller
                 ->get();
         } else {
             $search = $request->input('search.value');
+            $pattern = Helper::likePattern($search);
             $records = DB::table('customer_categories')
                 ->select(
                     'id',
                     'category',
                     'created_at',
                 )
-                ->where('category', 'LIKE', "%{$search}%")
+                ->when($pattern !== null, function ($query) use ($pattern) {
+                    $query->where('category', 'LIKE', $pattern);
+                })
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order, $dir)

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helper;
 use App\Http\Controllers\Controller;
 use App\Product;
 use App\Services\StockService;
@@ -120,10 +121,12 @@ class InventoryController extends Controller
         $search = $request->input('search.value');
 
         if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('products.name', 'LIKE', "%{$search}%")
-                    ->orWhere('products.sku', 'LIKE', "%{$search}%");
-            });
+            Helper::applyOrLikeSearch($query, [
+                'products.name',
+                'products.sku',
+                'products.description',
+                'products.remark',
+            ], $search);
         }
 
         $totalFiltered = (clone $query)->count();

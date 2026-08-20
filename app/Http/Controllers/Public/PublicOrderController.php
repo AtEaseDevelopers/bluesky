@@ -40,7 +40,7 @@ class PublicOrderController extends Controller
             ->withStorefrontStock()
             ->storefrontCatalog()
             ->when($request->keyword, function ($q) use ($request) {
-                $q->where('products.name', 'LIKE', '%' . $request->keyword . '%');
+                $q->searchTerm($request->keyword);
             })
             ->orderBy('products.nos')
             ->get()
