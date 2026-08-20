@@ -13,7 +13,7 @@
         <div class="col-md-8">
             <div class="card no-border shadow">
                 <div class="card-body">
-                    <h4 class="mb-4">{{ $product->name }} {{ $product->sku? "($product->sku) " : "" }}</h2>
+                    <h4 class="mb-4">{{ $product->display_name }} {{ $product->sku? "($product->sku) " : "" }}</h2>
                     @if ($product->description)
                         <div class="product-info mb-4">
                             <h6>Description:</h6>

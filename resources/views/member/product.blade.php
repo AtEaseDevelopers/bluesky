@@ -20,7 +20,7 @@
                         <a href="{{ ($portal['product_show_name'] ? route($portal['product_show_name'], encrypt($product->id)) : 'javascript:void(0)') }}">
                             <img src="{{ $product->image_url }}" onError="this.onerror=null;this.src='{{ asset('assets/images/product-default.jpg') }}';" class="card-img-top" alt="{{ $product->name }}">
                         </a>
-                        <h5 class="card-title my-4">{{ $product->name }}</h5>
+                        <h5 class="card-title my-4">{{ $product->display_name }}</h5>
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 full-width-on-mobile">
                             <div>
                                 @if ($user->price_permission)
@@ -59,7 +59,7 @@
                     <div class="card no-border shadow {{ $product->added_to_cart ? 'added-in-cart' : '' }}">
                         <div class="card-body">
                             <img src="{{ $product->image_url }}" onError="this.onerror=null;this.src='{{ asset('assets/images/product-default.jpg') }}';" class="card-img-top" alt="{{ $product->name }}">
-                            <h5 class="card-title my-4">{{ $product->name }}</h5>
+                            <h5 class="card-title my-4">{{ $product->display_name }}</h5>
                             <p class="alert alert-info text-center py-2 mb-4 text-muted">{{ __('ui.storefront.ordered_before', ['count' => $product->sold_count]) }}</p>
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 full-width-on-mobile">
                                 <div>

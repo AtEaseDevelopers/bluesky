@@ -2,14 +2,15 @@
     @php
         $product_option = $product->product_option;
         $uomLabel = $product->uom->uom_name ?? 'KG';
+        $displayName = $product->display_name;
     @endphp
     <div class="card products-card mb-3" id="product-card-{{ $product->id }}" data-id="{{ $product->id }}" data-name="{{ $product->name }}" data-sku="{{ $product->sku }}" data-description="{{ $product->description }}" data-search-text="{{ \App\Product::searchText($product) }}" data-sell-in="{{ $product->sell_in }}">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
                 <div class="d-flex">
-                    <img src="{{ $product->image_url }}" alt="{{ $product->name }}" onError="this.onerror=null;this.src='{{ asset('assets/images/product-default.jpg') }}';" class="me-3" width="120">
+                    <img src="{{ $product->image_url }}" alt="{{ $displayName }}" onError="this.onerror=null;this.src='{{ asset('assets/images/product-default.jpg') }}';" class="me-3" width="120">
                     <div>
-                        <h5>{{ $product->name }}</h5>
+                        <h5>{{ $displayName }}</h5>
                         <p>{{ __('orders.sku_label', ['sku' => $product->sku]) }}</p>
                         @if ($product->price < $product->original_price)
                             <p>RM {{ $product->original_price }} -> RM {{ $product->price }}</p>
@@ -27,7 +28,7 @@
             </div>
             <div class="product-option-section {{ in_array($product->id, $selected_ids) ? '' : 'd-none' }}" id="product-option-{{ $product->id }}">
                 <input type="hidden" name="product_id" value="{{ $product->id }}" />
-                <input type="hidden" name="product_name" value="{{ $product->name }}" />
+                <input type="hidden" name="product_name" value="{{ $displayName }}" />
                 <input type="hidden" name="price" value="{{ $product->price }}" />
                 @if ($product_option)
                     @php

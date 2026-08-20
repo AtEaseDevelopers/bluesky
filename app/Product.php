@@ -135,6 +135,11 @@ class Product extends Model
         return self::bilingualDisplayName($product->name, $product->description);
     }
 
+    public function getDisplayNameAttribute(): string
+    {
+        return self::bilingualDisplayName($this->name, $this->description);
+    }
+
     /**
      * Price shown to public / General Customer (no account, no category).
      * Uses today's "all categories" daily price, else the product default price.

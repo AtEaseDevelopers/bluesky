@@ -28,7 +28,7 @@
                 <div class="card no-border shadow {{ $product->added_to_cart ? 'added-in-cart' : '' }}">
                     <div class="card-body">
                         <img src="{{ $product->image_url }}" onError="this.onerror=null;this.src='{{ asset('assets/images/product-default.jpg') }}';" class="card-img-top" alt="{{ $product->name }}">
-                        <h5 class="card-title my-4">{{ $product->name }}</h5>
+                        <h5 class="card-title my-4">{{ $product->display_name }}</h5>
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 full-width-on-mobile">
                             <div>
                                 @if ($user->price_permission)
