@@ -59,6 +59,77 @@ class BlueskyDebtorsImportService
      * @param  array{name:string,address_lines:list<string>,phones:list<string>}  $row
      * @return array<string, mixed>
      */
+    public function mapToCustomerUpdates(array $row, array $options): array
+    {
+        $mapped = $this->mapToCustomer($row, $options);
+
+        return [
+            'category' => $mapped['category'],
+            'customer_type' => $mapped['customer_type'],
+            'payment_term_days' => $mapped['payment_term_days'],
+            'attn_contact' => $mapped['attn_contact'],
+            'billing_address' => $mapped['billing_address'],
+            'billing_city' => $mapped['billing_city'],
+            'billing_postcode' => $mapped['billing_postcode'],
+            'billing_state' => $mapped['billing_state'],
+            'shipping_address' => $mapped['shipping_address'],
+            'shipping_city' => $mapped['shipping_city'],
+            'shipping_postcode' => $mapped['shipping_postcode'],
+            'shipping_state' => $mapped['shipping_state'],
+            'payment_method' => $mapped['payment_method'],
+            'remark' => $mapped['remark'],
+            'autocount_sync_status' => 'pending_sync',
+            'autocount_synced_at' => null,
+        ];
+    }
+
+    public static function normalizeMatchName(string $name): string
+    {
+        $name = preg_replace('/\s+/u', ' ', trim($name));
+        $name = preg_replace('/\s+\(\d+\)$/', '', $name);
+
+        return mb_strtolower($name);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, User>  $customersByName
+     */
+    public function findExistingCustomer(string $name, $customersByName): ?\App\User
+    {
+        $keys = array_unique(array_filter([
+            self::normalizeMatchName($name),
+        ]));
+
+        foreach ($keys as $key) {
+            if ($customersByName->has($key)) {
+                return $customersByName->get($key);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<string, \App\User>
+     */
+    public function indexCustomersByName(): \Illuminate\Support\Collection
+    {
+        $indexed = collect();
+
+        foreach (\App\User::query()->get(['id', 'name', 'sql_customer_code']) as $user) {
+            $key = self::normalizeMatchName($user->name);
+            if (!$indexed->has($key)) {
+                $indexed->put($key, $user);
+            }
+        }
+
+        return $indexed;
+    }
+
+    /**
+     * @param  array{name:string,address_lines:list<string>,phones:list<string>}  $row
+     * @return array<string, mixed>
+     */
     public function mapToCustomer(array $row, array $options): array
     {
         $address = $this->parseAddress($row['address_lines']);
