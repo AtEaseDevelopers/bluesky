@@ -10,7 +10,7 @@
                 'panelId' => 'customersFilterPanel',
                 'title' => __('customers.filter'),
                 'expanded' => false,
-                'expandWhenFilled' => ['name', 'email', 'category', 'shipping_state', 'status', 'customer_type', 'area'],
+                'expandWhenFilled' => ['name', 'email', 'category', 'status', 'customer_type'],
             ])
                     <form method="GET" class="form-wrapper">
                         <div class="row">
@@ -43,19 +43,6 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
-                                    <label class="mb-2" for="customerState">{{ __('customers.shipping_state') }}</label>
-                                    <select id="customerState" class="form-select" name="shipping_state">
-                                        <option value="">{{ __('ui.all') }}</option>
-                                        @foreach ($shipping_state_options as $state)
-                                            <option value="{{ $state }}"{{ ($input['shipping_state'] ?? '') == $state ? ' selected' : '' }}>
-                                                {{ $state }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group mb-4">
                                     <label class="mb-2" for="filterStatus">{{ __('customers.status') }}</label>
                                     <select class="form-select" name="status" id="filterStatusStatus">
                                         <option value="">{{ __('ui.all') }}</option>
@@ -71,19 +58,6 @@
                                         <option value="">{{ __('ui.all') }}</option>
                                         <option value="cod"{{ ($input['customer_type'] ?? '') === 'cod' ? ' selected' : '' }}>{{ __('customers.customer_type_cod') }}</option>
                                         <option value="credit"{{ ($input['customer_type'] ?? '') === 'credit' ? ' selected' : '' }}>{{ __('customers.customer_type_credit') }}</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group mb-4">
-                                    <label class="mb-2" for="area">{{ __('customers.select_area') }}</label>
-                                    <select class="form-select @error('area') is-invalid @enderror" id="area" name="area">
-                                        <option value="">{{ __('ui.all') }}</option>
-                                        @foreach ($areas as $area)
-                                            <option value="{{ $area->id }}" {{ ($input['shipping_state'] ?? '') == $area->id ? 'selected' : '' }}>
-                                                {{ $area->area_name }}
-                                            </option>
-                                        @endforeach
                                     </select>
                                 </div>
                             </div>

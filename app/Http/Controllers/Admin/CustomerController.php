@@ -12,7 +12,6 @@ use Carbon\Carbon;
 use App\Helper;
 use App\Imports\CustomersImport;
 use App\ProductVisibility;
-use App\System;
 use App\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -30,8 +29,6 @@ class CustomerController extends Controller
         $name = $request['name'];
         $email = $request['email'];
         $category = $request['category'];
-        $area = $request['area'];
-        $shipping_state = $request['shipping_state'];
         $status = $request['status'];
         $customer_type = $request['customer_type'];
 
@@ -66,12 +63,6 @@ class CustomerController extends Controller
             ->when(($category != null), function ($q) use ($category) {
                 return $q->where('users.category', $category);
             })
-            ->when(($area != null), function ($q) use ($area) {
-                return $q->where('users.area', $area);
-            })
-            ->when(($shipping_state != null), function ($q) use ($shipping_state) {
-                return $q->where('users.shipping_state', $shipping_state);
-            })
             ->when($status === User::$user_status['active'], function ($q) {
                 return $q->where('users.status', User::$user_status['active']);
             })
@@ -88,7 +79,6 @@ class CustomerController extends Controller
             })
             ->paginate(15);
 
-        $areas = DB::table('areas')->select('id', 'area_name')->get()->toArray();
         // $category_list = User::select('category')
         //     ->groupBy('category')
         //     ->pluck('category')
@@ -98,10 +88,8 @@ class CustomerController extends Controller
         return view('admin.customers.index', [
                 'category_list' => $category_list,
                 'users' => $users,
-                'areas' => $areas,
                 'input' => $request->all(),
                 'query_params' => Helper::query_params($request->input()),
-                'shipping_state_options' => System::$country_state['MY'],
             ]
         );
     }
@@ -129,10 +117,6 @@ class CustomerController extends Controller
 
         if ($filter_category = $request->input('category')) {
             $users->where('category', $filter_category);
-        }
-
-        if ($filter_shipping_state = $request->input('shipping_state')) {
-            $users->where('shipping_state', $filter_shipping_state);
         }
 
         $filter_status = $request->input('status');
