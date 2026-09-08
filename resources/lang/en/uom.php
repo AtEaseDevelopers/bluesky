@@ -21,5 +21,6 @@ return [
 
     'added_success' => 'UOM has been added successfully.',
     'updated_success' => 'UOM has been updated successfully.',
+    'delete_blocked' => 'This UOM is used by :count product(s). Reassign or remove those products before deleting.',
     'deleted_success' => 'UOM has been deleted successfully.',
 ];

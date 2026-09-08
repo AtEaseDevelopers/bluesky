@@ -85,6 +85,8 @@ return [
         'total_products' => 'Total Products',
         'delete' => 'Delete Category',
         'delete_confirm' => 'Are you sure to delete this category?',
+        'delete_blocked' => 'This category is used by :count product(s). Reassign or remove those products before deleting.',
+        'deleted_success' => 'Product category has been deleted successfully.',
         'placeholder' => [
             'category_name' => 'Enter category name',
         ],

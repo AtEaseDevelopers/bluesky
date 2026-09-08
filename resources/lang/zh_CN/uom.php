@@ -21,5 +21,6 @@ return [
 
     'added_success' => '计量单位已成功添加。',
     'updated_success' => '计量单位已成功更新。',
+    'delete_blocked' => '此计量单位仍有 :count 个商品在使用。请先更改或移除这些商品后再删除。',
     'deleted_success' => '计量单位已成功删除。',
 ];

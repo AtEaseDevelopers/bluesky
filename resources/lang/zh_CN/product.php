@@ -85,6 +85,8 @@ return [
         'total_products' => '商品总数',
         'delete' => '删除分类',
         'delete_confirm' => '确定要删除此分类吗？',
+        'delete_blocked' => '此分类仍有 :count 个商品在使用。请先更改或移除这些商品后再删除。',
+        'deleted_success' => '商品分类已删除。',
         'placeholder' => [
             'category_name' => '请输入分类名称',
         ],

@@ -62,7 +62,20 @@ class ProductCategoriesController extends Controller
 
     public function destroy($id)
     {
-        return redirect(route('admin.product-categories.index'))->with('success', "Product category has been deleted successfully.");
+        $category = ProductCategory::findOrFail(decrypt($id));
+        $productCount = DB::table('products')
+            ->where('product_category_id', $category->id)
+            ->where('status', '!=', 'removed')
+            ->count();
+
+        if ($productCount > 0) {
+            return redirect(route('admin.product-categories.index'))
+                ->with('error', __('product.categories.delete_blocked', ['count' => $productCount]));
+        }
+
+        $category->delete();
+
+        return redirect(route('admin.product-categories.index'))->with('success', __('product.categories.deleted_success'));
     }
 
     public function fetch_categories(Request $request)

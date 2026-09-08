@@ -21,5 +21,6 @@ return [
 
     'added_success' => 'Area has been added successfully.',
     'updated_success' => 'Area has been updated successfully.',
+    'delete_blocked' => 'This area is assigned to :count customer(s). Reassign them before deleting.',
     'deleted_success' => 'Area has been deleted successfully.',
 ];

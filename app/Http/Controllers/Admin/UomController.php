@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helper;
 use App\Http\Controllers\Controller;
+use App\Product;
 use App\Uom;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -62,6 +63,19 @@ class UomController extends Controller
 
     public function destroy($id)
     {
+        $uom = Uom::findOrFail(decrypt($id));
+        $productCount = DB::table('products')
+            ->where('uom_id', $uom->id)
+            ->where('status', '!=', Product::$status['removed'])
+            ->count();
+
+        if ($productCount > 0) {
+            return redirect(route('admin.uom.index'))
+                ->with('error', __('uom.delete_blocked', ['count' => $productCount]));
+        }
+
+        $uom->delete();
+
         return redirect(route('admin.uom.index'))->with('success', __('uom.deleted_success'));
     }
 

@@ -21,5 +21,6 @@ return [
 
     'added_success' => '区域已成功添加。',
     'updated_success' => '区域已成功更新。',
+    'delete_blocked' => '此区域仍有 :count 位客户在使用。请先更改客户区域后再删除。',
     'deleted_success' => '区域已成功删除。',
 ];

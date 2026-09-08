@@ -62,6 +62,16 @@ class AreasController extends Controller
 
     public function destroy($id)
     {
+        $area = Area::findOrFail(decrypt($id));
+        $customerCount = DB::table('users')->where('area', $area->id)->count();
+
+        if ($customerCount > 0) {
+            return redirect(route('admin.areas.index'))
+                ->with('error', __('areas.delete_blocked', ['count' => $customerCount]));
+        }
+
+        $area->delete();
+
         return redirect(route('admin.areas.index'))->with('success', __('areas.deleted_success'));
     }
 
