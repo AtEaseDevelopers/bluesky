@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Helper;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\ProductVisibility;
 use App\Services\CreditService;
+use App\Services\CustomerProductVisibilityService;
 use App\System;
 use App\User;
 use Illuminate\Support\Facades\DB;
@@ -71,6 +71,9 @@ class EditCustomerController extends Controller
         }
 
         $previousPaymentTermDays = $customer->payment_term_days;
+        $previousCategory = trim((string) $customer->category);
+        $newCategory = trim((string) ($data['category'] ?? ''));
+        $categoryChanged = strcasecmp($previousCategory, $newCategory) !== 0;
 
         $customer->fill(
             [
@@ -119,13 +122,13 @@ class EditCustomerController extends Controller
             );
         }
 
-        if ($request['product_id']) {
-            foreach ($request['product_id'] as $pid) {
-                ProductVisibility::updateOrCreate([
-                    'user_id' => $customer->id,
-                    'product_id' => $pid,
-                ]);
-            }
+        if ($categoryChanged) {
+            app(CustomerProductVisibilityService::class)->replaceFromCategory($customer, $newCategory);
+        } else {
+            app(CustomerProductVisibilityService::class)->replaceFromProductIds(
+                $customer,
+                $request->input('product_id', [])
+            );
         }
 
         return redirect(route('admin.customers.edit', encrypt($customer->id)))->with('success', "$customer->name has been updated successfully.");

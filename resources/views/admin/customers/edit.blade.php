@@ -604,45 +604,45 @@
             });
 
             $('#customerCategory').on('change', function() {
-                const category = $(this).val().trim();
-                if (category) {
-                    fetch(appUrl + '/admin/get-products-for-category', {
-                        method: 'POST',
-                        body: JSON.stringify({category: category}),
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken,
-                        },
-                        credentials: 'same-origin'
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Response data:', data);
-                        if (data.success) {
-                            data.products.forEach(product => {
-                                // Check if product already added
-                                const exists = selected_products.some(p => p.product_id == product.id);
-                                if (!exists) {
-                                    selected_products.push({
-                                        product_id: product.id,
-                                        product_name: product.name,
-                                        price: product.price,
-                                        quantity: '',
-                                        weight: '',
-                                        remark: '',
-                                        total_price: 0
-                                    });
-                                }
-                            });
-                            display_selected_products();
-                        } else {
-                            console.log('No products found for category:', category, 'Message:', data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
+                const category = ($(this).val() || '').trim();
+
+                if (!category) {
+                    selected_products = [];
+                    display_selected_products();
+                    return;
                 }
+
+                fetch(appUrl + '/admin/get-products-for-category', {
+                    method: 'POST',
+                    body: JSON.stringify({category: category}),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        selected_products = data.products.map(function(product) {
+                            return {
+                                product_id: product.id,
+                                product_name: product.name,
+                                price: product.price,
+                                quantity: '',
+                                weight: '',
+                                remark: '',
+                                total_price: 0
+                            };
+                        });
+                    } else {
+                        selected_products = [];
+                    }
+                    display_selected_products();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
             });
         });
 
