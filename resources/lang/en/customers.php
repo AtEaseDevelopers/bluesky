@@ -131,6 +131,7 @@ return [
     'customer_type_cod' => 'COD',
     'customer_type_credit' => 'Credit',
     'enter_category_optional' => 'Enter customer category (optional)',
+    'select_category' => 'Select customer category (optional)',
     'category_delete_blocked' => 'This category is assigned to :count customer(s). Remove or reassign them before deleting the category.',
     'customer_code' => 'Customer Code',
     'customer_code_tooltip' => 'Assigned by AutoCount when the customer is synced.',
@@ -238,6 +239,8 @@ return [
         'add' => 'Add New Category',
         'category_name' => 'Category Name',
         'visible_products' => 'Visible Products',
+        'select_all' => 'Select All',
+        'deselect_all' => 'Deselect All',
         'delete' => 'Delete Category',
         'delete_confirm' => 'Are you sure to delete this category?',
         'placeholder' => [

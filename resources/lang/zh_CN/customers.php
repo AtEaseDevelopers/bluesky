@@ -131,6 +131,7 @@ return [
     'customer_type_cod' => '货到付款',
     'customer_type_credit' => '账期客户',
     'enter_category_optional' => '输入客户类别（可选）',
+    'select_category' => '选择客户类别（可选）',
     'customer_code' => '客户编号',
     'customer_code_tooltip' => '客户同步至 AutoCount 后由系统自动分配。',
     'customer_code_autocount_pending' => '待分配 — 同步至 AutoCount 后自动编号',
@@ -237,6 +238,8 @@ return [
         'add' => '新增分类',
         'category_name' => '分类名称',
         'visible_products' => '可见商品',
+        'select_all' => '全选',
+        'deselect_all' => '取消全选',
         'delete' => '删除分类',
         'delete_confirm' => '确定要删除此分类吗？',
         'placeholder' => [

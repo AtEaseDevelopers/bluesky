@@ -38,6 +38,14 @@
                                             </span>
                                         @enderror
                                     </div>
+                                    <div class="d-flex flex-wrap gap-2 mb-3">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="select-all-visible-products">
+                                            {{ __('customers.categories.select_all') }}
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="deselect-all-visible-products">
+                                            {{ __('customers.categories.deselect_all') }}
+                                        </button>
+                                    </div>
                                     <div class="row">
                                         @foreach ($products_by_type as $product)
                                             <div class="col-md-3 col-sm-6">
@@ -72,10 +80,16 @@
 @endsection
 @section('script')
     <script>
-        $('.select-all-type').on('change', function() {
-            var isChecked = $(this).is(':checked');
-            var typeId = $(this).data('type-id');
-            $('input[name="visible_products[]"][data-type-id="' + typeId + '"]').prop('checked', isChecked);
+        document.getElementById('select-all-visible-products')?.addEventListener('click', function () {
+            document.querySelectorAll('input[name="visible_products[]"]').forEach(function (el) {
+                el.checked = true;
+            });
+        });
+
+        document.getElementById('deselect-all-visible-products')?.addEventListener('click', function () {
+            document.querySelectorAll('input[name="visible_products[]"]').forEach(function (el) {
+                el.checked = false;
+            });
         });
     </script>
 @endsection
