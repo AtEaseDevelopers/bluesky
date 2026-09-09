@@ -587,6 +587,333 @@ class BlueskyDebtorsImportService
     }
 
     /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     * @return list<array<string, string>>
+     */
+    public function buildReconciliationChecklist(array $parsed, array $options): array
+    {
+        $customersByName = $this->indexCustomersByName();
+        $keepKeys = $this->buildExcelKeepKeys($parsed);
+        $staleUsers = collect($this->findStaleCustomers($parsed, $options, $customersByName))
+            ->keyBy(fn (User $user) => $user->id);
+        $orderUserIds = Order::query()->distinct()->pluck('user_id')->flip();
+        $prefix = trim((string) $options['remark_prefix']);
+        $rows = [];
+
+        foreach (User::query()->orderBy('name')->get() as $user) {
+            $key = self::normalizeMatchName($user->name);
+            $inExcel = isset($keepKeys[$key]);
+            $isStale = $staleUsers->has($user->id);
+            $hasAccNo = trim((string) $user->sql_customer_code) !== '';
+            $isImport = $prefix !== '' && str_starts_with((string) $user->remark, $prefix);
+
+            if (!$hasAccNo && !$inExcel && !$isStale && !$isImport) {
+                continue;
+            }
+
+            [$action, $reason] = $this->reconciliationRecommendation(
+                $user,
+                $inExcel,
+                $isStale,
+                $hasAccNo,
+                $parsed,
+                $options,
+                $customersByName
+            );
+
+            $rows[] = $this->formatReconciliationRow(
+                $user,
+                $inExcel,
+                $hasAccNo,
+                $orderUserIds->has($user->id),
+                $action,
+                $reason
+            );
+        }
+
+        foreach ($parsed as $row) {
+            if ($this->findExistingCustomer($row['name'], $customersByName)) {
+                continue;
+            }
+
+            $rows[] = [
+                'acc_no' => '',
+                'oms_name' => $row['name'],
+                'phone' => $this->normalizePhone($row['phones'][0] ?? ''),
+                'in_excel' => 'Yes',
+                'oms_status' => '',
+                'sync_status' => '',
+                'has_orders' => 'No',
+                'recommended_action' => 'Create in OMS',
+                'reason' => 'On Excel list but not found in OMS yet',
+                'done_in_autocount' => '',
+                'notes' => '',
+            ];
+        }
+
+        usort($rows, function (array $a, array $b): int {
+            $actionOrder = [
+                'Deactivate in AutoCount' => 1,
+                'Review' => 2,
+                'Keep Active' => 3,
+                'Create in OMS' => 4,
+                'Leave alone' => 5,
+            ];
+
+            $actionCompare = ($actionOrder[$a['recommended_action']] ?? 99)
+                <=> ($actionOrder[$b['recommended_action']] ?? 99);
+            if ($actionCompare !== 0) {
+                return $actionCompare;
+            }
+
+            return strcasecmp($a['oms_name'], $b['oms_name']);
+        });
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<array<string, string>>  $checklist
+     */
+    public function summarizeReconciliationChecklist(array $checklist): array
+    {
+        $counts = [];
+
+        foreach ($checklist as $row) {
+            $action = $row['recommended_action'];
+            $counts[$action] = ($counts[$action] ?? 0) + 1;
+        }
+
+        ksort($counts);
+
+        return $counts;
+    }
+
+    /**
+     * @param  list<array<string, string>>  $checklist
+     */
+    public function writeReconciliationChecklistXlsx(array $checklist, string $path): void
+    {
+        $headers = [
+            'AccNo',
+            'OMS Name',
+            'Phone',
+            'In Excel',
+            'OMS Status',
+            'Sync Status',
+            'Has Orders',
+            'Recommended Action',
+            'Reason',
+            'Done in AutoCount',
+            'Notes',
+        ];
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $summarySheet = $spreadsheet->getActiveSheet();
+        $summarySheet->setTitle('Summary');
+        $summarySheet->fromArray([
+            ['Recommended Action', 'Count'],
+        ]);
+
+        $summaryRow = 2;
+        foreach ($this->summarizeReconciliationChecklist($checklist) as $action => $count) {
+            $summarySheet->fromArray([[$action, $count]], null, 'A' . $summaryRow);
+            $summaryRow++;
+        }
+
+        $summarySheet->fromArray([
+            ['', ''],
+            ['Total rows', count($checklist)],
+            ['', ''],
+            ['How to use', 'Work through "Deactivate" and "Review" sheets in AutoCount Debtor Maintenance.'],
+            ['', 'Set unwanted debtors to Inactive (do not delete if they have invoices/orders).'],
+            ['', 'Tick "Done in AutoCount" when finished.'],
+        ], null, 'A' . ($summaryRow + 1));
+
+        foreach (range('A', 'B') as $column) {
+            $summarySheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $this->appendReconciliationSheet($spreadsheet, 'Checklist', $headers, $checklist);
+        $this->appendReconciliationSheet(
+            $spreadsheet,
+            'Deactivate',
+            $headers,
+            array_values(array_filter(
+                $checklist,
+                fn (array $row) => $row['recommended_action'] === 'Deactivate in AutoCount'
+            ))
+        );
+        $this->appendReconciliationSheet(
+            $spreadsheet,
+            'Keep Active',
+            $headers,
+            array_values(array_filter(
+                $checklist,
+                fn (array $row) => $row['recommended_action'] === 'Keep Active'
+            ))
+        );
+        $this->appendReconciliationSheet(
+            $spreadsheet,
+            'Review',
+            $headers,
+            array_values(array_filter(
+                $checklist,
+                fn (array $row) => $row['recommended_action'] === 'Review'
+            ))
+        );
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save($path);
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     * @return array<string, true>
+     */
+    protected function buildExcelKeepKeys(array $parsed): array
+    {
+        $keepKeys = [];
+
+        foreach ($parsed as $row) {
+            $keepKeys[self::normalizeMatchName($row['name'])] = true;
+        }
+
+        return $keepKeys;
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     * @return array{0:string,1:string}
+     */
+    protected function reconciliationRecommendation(
+        User $user,
+        bool $inExcel,
+        bool $isStale,
+        bool $hasAccNo,
+        array $parsed,
+        array $options,
+        $customersByName
+    ): array {
+        if ($inExcel) {
+            return [
+                'Keep Active',
+                $hasAccNo
+                    ? 'On Bluesky Excel list — keep active in AutoCount'
+                    : 'On Bluesky Excel list — sync/create in AutoCount when ready',
+            ];
+        }
+
+        if ($isStale) {
+            return [
+                'Deactivate in AutoCount',
+                $this->staleCustomerReason($user, $parsed, $options),
+            ];
+        }
+
+        if ($hasAccNo) {
+            return [
+                'Review',
+                'Has AutoCount AccNo but not on Excel list — pre-existing or manual customer',
+            ];
+        }
+
+        return [
+            'Leave alone',
+            'Bluesky import account not on Excel — no AccNo yet; confirm before changing',
+        ];
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     */
+    protected function staleCustomerReason(User $user, array $parsed, array $options): string
+    {
+        $key = self::normalizeMatchName($user->name);
+
+        foreach ($parsed as $row) {
+            if (!empty($row['legal_name']) && self::normalizeMatchName($row['legal_name']) === $key) {
+                return 'Company header row merged into outlet account — deactivate duplicate company debtor';
+            }
+
+            foreach ($row['extra_aliases'] ?? [] as $alias) {
+                if (self::normalizeMatchName($alias) === $key) {
+                    return 'Old outlet name merged into another account — deactivate duplicate debtor';
+                }
+            }
+        }
+
+        $prefix = trim((string) $options['remark_prefix']);
+        if ($prefix !== '' && str_starts_with((string) $user->remark, $prefix)) {
+            return 'Bluesky import duplicate not on Excel list — deactivate in AutoCount';
+        }
+
+        return 'Not on Excel list — deactivate duplicate debtor';
+    }
+
+    protected function formatReconciliationRow(
+        User $user,
+        bool $inExcel,
+        bool $hasAccNo,
+        bool $hasOrders,
+        string $action,
+        string $reason
+    ): array {
+        return [
+            'acc_no' => $hasAccNo ? trim((string) $user->sql_customer_code) : '',
+            'oms_name' => $user->name,
+            'phone' => trim((string) $user->attn_contact),
+            'in_excel' => $inExcel ? 'Yes' : 'No',
+            'oms_status' => (string) $user->status,
+            'sync_status' => (string) ($user->autocount_sync_status ?: 'pending'),
+            'has_orders' => $hasOrders ? 'Yes' : 'No',
+            'recommended_action' => $action,
+            'reason' => $reason,
+            'done_in_autocount' => '',
+            'notes' => '',
+        ];
+    }
+
+    /**
+     * @param  list<string>  $headers
+     * @param  list<array<string, string>>  $rows
+     */
+    protected function appendReconciliationSheet(
+        \PhpOffice\PhpSpreadsheet\Spreadsheet $spreadsheet,
+        string $title,
+        array $headers,
+        array $rows
+    ): void {
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle($title);
+        $sheet->fromArray([$headers]);
+
+        $rowIndex = 2;
+        foreach ($rows as $row) {
+            $sheet->fromArray([[
+                $row['acc_no'],
+                $row['oms_name'],
+                $row['phone'],
+                $row['in_excel'],
+                $row['oms_status'],
+                $row['sync_status'],
+                $row['has_orders'],
+                $row['recommended_action'],
+                $row['reason'],
+                $row['done_in_autocount'],
+                $row['notes'],
+            ]], null, 'A' . $rowIndex);
+            $rowIndex++;
+        }
+
+        foreach (range('A', 'K') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $sheet->freezePane('A2');
+    }
+
+    /**
      * @param  array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}  $row
      */
     public function displayCompanyName(array $row): string

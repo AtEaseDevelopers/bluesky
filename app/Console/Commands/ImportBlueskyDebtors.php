@@ -13,6 +13,8 @@ class ImportBlueskyDebtors extends Command
                             {file : Path to BLUESKY DEBTORS LIST xlsx}
                             {--dry-run : Parse and preview without writing}
                             {--list : Export parsed preview spreadsheet without importing}
+                            {--checklist : Export AutoCount cleanup checklist (OMS vs Excel) without importing}
+                            {--checklist-output= : Output path for --checklist (default: storage/app/bluesky-autocount-checklist.xlsx)}
                             {--list-output= : Output path for --list (default: storage/app/bluesky-debtors-preview.xlsx)}
                             {--list-csv : With --list, write CSV instead of XLSX}
                             {--multi-only : With --list, only rows where the same company has multiple accounts}
@@ -84,6 +86,10 @@ class ImportBlueskyDebtors extends Command
 
         if ($this->option('list')) {
             return $this->writePreviewList($importService, $parsed, $options);
+        }
+
+        if ($this->option('checklist')) {
+            return $this->writeReconciliationChecklist($importService, $parsed, $options);
         }
 
         $updateMode = (bool) $this->option('update');
@@ -288,6 +294,38 @@ class ImportBlueskyDebtors extends Command
         } else {
             $this->comment('Open sheet "Parsed Customers" and filter Multiple Accounts = Yes to review split companies.');
         }
+
+        return 0;
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     */
+    protected function writeReconciliationChecklist(BlueskyDebtorsImportService $importService, array $parsed, array $options): int
+    {
+        $checklist = $importService->buildReconciliationChecklist($parsed, $options);
+
+        $outputPath = trim((string) $this->option('checklist-output'));
+        if ($outputPath === '') {
+            $outputPath = storage_path('app/bluesky-autocount-checklist.xlsx');
+        }
+
+        $importService->writeReconciliationChecklistXlsx($checklist, $outputPath);
+
+        $this->info('AutoCount cleanup checklist written to: ' . $outputPath);
+        $this->line('Total rows: ' . count($checklist));
+
+        $summary = $importService->summarizeReconciliationChecklist($checklist);
+        if ($summary !== []) {
+            $this->newLine();
+            $this->table(['Recommended Action', 'Count'], collect($summary)->map(
+                fn (int $count, string $action) => [$action, $count]
+            )->values()->all());
+        }
+
+        $this->newLine();
+        $this->comment('Open the "Deactivate" sheet first — work through AutoCount Debtor Maintenance row by row.');
+        $this->comment('Use "Done in AutoCount" and "Notes" columns to track progress.');
 
         return 0;
     }
