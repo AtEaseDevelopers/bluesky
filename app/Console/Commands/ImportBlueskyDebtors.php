@@ -20,7 +20,7 @@ class ImportBlueskyDebtors extends Command
                             {--multi-only : With --list, only rows where the same company has multiple accounts}
                             {--update : Update existing customers matched by name; create rows not found; remove stale import duplicates}
                             {--no-prune : With --update, keep old import customers that are not in the revised list}
-                            {--skip-existing : Skip customers whose name already exists (create-only)}
+                            {--skip-existing : Skip rows that already exist in OMS (e.g. synced from AutoCount) matched by name, company-outlet, or phone}
                             {--category=restaurant : Customer category slug from customer_categories}
                             {--customer-type=credit : cod or credit}
                             {--payment-term-days=30 : Credit payment term in days}
@@ -109,6 +109,9 @@ class ImportBlueskyDebtors extends Command
                 ));
             } else {
                 $this->line("Would create: {$preview['created']}, skip existing: {$preview['skipped']}");
+                if ($skipExisting) {
+                    $this->comment('Skipped rows match existing OMS customers by outlet name, company-outlet name, or phone (AutoCount sync).');
+                }
             }
 
             if (($preview['deactivated'] ?? []) !== []) {
@@ -184,6 +187,9 @@ class ImportBlueskyDebtors extends Command
             ));
         } else {
             $this->info("Import complete. Created: {$result['created']}, skipped: {$result['skipped']}.");
+            if ($skipExisting && $result['skipped'] > 0) {
+                $this->comment('Skipped rows already exist in OMS (likely synced from AutoCount).');
+            }
         }
 
         if (($result['deactivated'] ?? []) !== []) {

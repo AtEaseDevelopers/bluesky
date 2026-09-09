@@ -179,21 +179,26 @@ class BlueskyDebtorsImportService
 
     /**
      * @param  array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}|string  $rowOrName
-     * @param  \Illuminate\Support\Collection<int, User>  $customersByName
+     * @param  \Illuminate\Support\Collection<string, \App\User>  $customersByName
      */
     public function findExistingCustomer(array|string $rowOrName, $customersByName): ?\App\User
     {
-        $keys = is_array($rowOrName)
-            ? $this->customerMatchKeys($rowOrName)
-            : [self::normalizeMatchName($rowOrName)];
+        if (is_string($rowOrName)) {
+            $key = self::normalizeMatchName($rowOrName);
+            if ($customersByName->has($key)) {
+                return $customersByName->get($key);
+            }
 
-        foreach ($keys as $key) {
+            return null;
+        }
+
+        foreach ($this->customerMatchKeys($rowOrName) as $key) {
             if ($customersByName->has($key)) {
                 return $customersByName->get($key);
             }
         }
 
-        return null;
+        return $this->findExistingCustomerByPhone($rowOrName);
     }
 
     /**
@@ -202,10 +207,21 @@ class BlueskyDebtorsImportService
      */
     public function customerMatchKeys(array $row): array
     {
-        return array_values(array_unique(array_filter([
-            self::normalizeMatchName($this->formatCustomerName($row)),
-            self::normalizeMatchName($row['name']),
-        ])));
+        $outletKey = self::normalizeMatchName($row['name']);
+        $formattedKey = self::normalizeMatchName($this->formatCustomerName($row));
+        $keys = [];
+
+        if (!empty($row['legal_name'])) {
+            $legalKey = self::normalizeMatchName($row['legal_name']);
+            if ($legalKey !== $outletKey) {
+                $keys[] = $legalKey . '|' . $outletKey;
+            }
+        }
+
+        $keys[] = $formattedKey;
+        $keys[] = $outletKey;
+
+        return array_values(array_unique(array_filter($keys)));
     }
 
     /**
@@ -230,14 +246,78 @@ class BlueskyDebtorsImportService
     {
         $indexed = collect();
 
-        foreach (\App\User::query()->get(['id', 'name', 'sql_customer_code']) as $user) {
-            $key = self::normalizeMatchName($user->name);
+        foreach (User::query()->get(['id', 'name', 'sql_customer_code', 'attn_contact']) as $user) {
+            $this->indexCustomerByName($indexed, $user);
+        }
+
+        return $indexed;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<string, \App\User>  $indexed
+     */
+    protected function indexCustomerByName(\Illuminate\Support\Collection $indexed, User $user): void
+    {
+        $keys = [self::normalizeMatchName($user->name)];
+
+        if (str_contains($user->name, ' - ')) {
+            [$company, $outlet] = array_map('trim', explode(' - ', $user->name, 2));
+            if ($outlet !== '') {
+                $keys[] = self::normalizeMatchName($outlet);
+            }
+            if ($company !== '' && $outlet !== '') {
+                $keys[] = self::normalizeMatchName($company) . '|' . self::normalizeMatchName($outlet);
+            }
+        }
+
+        foreach (array_unique(array_filter($keys)) as $key) {
             if (!$indexed->has($key)) {
                 $indexed->put($key, $user);
             }
         }
+    }
 
-        return $indexed;
+    /**
+     * @param  array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}  $row
+     */
+    protected function findExistingCustomerByPhone(array $row): ?User
+    {
+        $phoneKeys = array_values(array_unique(array_filter(array_map(
+            [$this, 'normalizePhoneDigits'],
+            $row['phones'] ?? []
+        ))));
+
+        if ($phoneKeys === []) {
+            return null;
+        }
+
+        $users = User::query()
+            ->whereNotNull('sql_customer_code')
+            ->where('sql_customer_code', '!=', '')
+            ->get(['id', 'name', 'sql_customer_code', 'attn_contact']);
+
+        foreach ($users as $user) {
+            $userPhoneKey = $this->normalizePhoneDigits((string) $user->attn_contact);
+            if ($userPhoneKey !== '' && in_array($userPhoneKey, $phoneKeys, true)) {
+                return $user;
+            }
+        }
+
+        return null;
+    }
+
+    protected function normalizePhoneDigits(string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', trim($phone));
+        if ($digits === '') {
+            return '';
+        }
+
+        if (str_starts_with($digits, '60') && strlen($digits) > 9) {
+            $digits = substr($digits, 2);
+        }
+
+        return ltrim($digits, '0');
     }
 
     /**
@@ -991,7 +1071,7 @@ class BlueskyDebtorsImportService
                     if ($updateMode) {
                         $existing->update($this->mapToCustomerUpdates($row, $options));
                         $existing->refresh();
-                        $customersByName->put(self::normalizeMatchName($existing->name), $existing);
+                        $this->indexCustomerByName($customersByName, $existing);
                         $updated++;
                         continue;
                     }
@@ -1011,7 +1091,7 @@ class BlueskyDebtorsImportService
                     'login_code' => User::generateLoginCode(),
                     'sql_customer_code' => null,
                 ]));
-                $customersByName->put(self::normalizeMatchName($user->name), $user);
+                $this->indexCustomerByName($customersByName, $user);
                 $created++;
             }
 
@@ -1096,27 +1176,21 @@ class BlueskyDebtorsImportService
         $created = 0;
 
         DB::transaction(function () use ($parsed, $options, $password, &$created) {
-            foreach ($parsed as $row) {
-                $matchKeys = $this->customerMatchKeys($row);
-                $existing = User::query()
-                    ->where(function ($query) use ($matchKeys) {
-                        foreach ($matchKeys as $key) {
-                            $query->orWhereRaw('LOWER(name) = ?', [$key]);
-                        }
-                    })
-                    ->exists();
+            $customersByName = $this->indexCustomersByName();
 
-                if ($existing) {
-                    throw new \RuntimeException('Customer already exists: ' . $row['name'] . '. Re-run with --update to refresh from Excel.');
+            foreach ($parsed as $row) {
+                if ($this->findExistingCustomer($row, $customersByName)) {
+                    throw new \RuntimeException('Customer already exists: ' . $this->formatCustomerName($row) . '. Re-run with --update to refresh from Excel.');
                 }
 
                 $mapped = $this->mapToCustomer($row, $options);
-                User::create(array_merge($mapped, [
+                $user = User::create(array_merge($mapped, [
                     'email' => null,
                     'password' => \Illuminate\Support\Facades\Hash::make($password),
                     'login_code' => User::generateLoginCode(),
                     'sql_customer_code' => null,
                 ]));
+                $this->indexCustomerByName($customersByName, $user);
                 $created++;
             }
         });
