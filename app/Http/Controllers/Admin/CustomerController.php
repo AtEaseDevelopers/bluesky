@@ -96,7 +96,7 @@ class CustomerController extends Controller
 
     public function export(Request $request)
     {
-        $users = User::select('name', 'email', 'category', 'shipping_address', 'shipping_postcode', 'shipping_state', 'remark', 'status', 'created_at as join_date');
+        $users = User::query()->orderBy('name');
 
         if ($filter_name = $request->input('name')) {
             Helper::applyOrLikeSearch($users, [
@@ -139,8 +139,10 @@ class CustomerController extends Controller
             }
         }
 
-        $header = ['No', 'Name', 'Email', 'Category', 'Shipping Address', 'Shipping Postcode', 'Shipping State', 'remark', 'Status', 'Created At']; // Adjust the header based on your data model
-        return Excel::download(new AdminCustomerExport($users->get(), $header), Carbon::now()->format('YmdHis').'-Customer-List.xlsx');
+        return Excel::download(
+            new AdminCustomerExport($users->get()),
+            Carbon::now()->format('YmdHis') . '-Customer-List.xlsx'
+        );
     }
 
     public function syncAutoCount(Request $request)

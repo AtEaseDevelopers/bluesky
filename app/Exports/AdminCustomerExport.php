@@ -2,47 +2,49 @@
 
 namespace App\Exports;
 
-use Carbon\Carbon;
+use App\User;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 
 class AdminCustomerExport implements FromCollection, WithHeadings
 {
-    protected $data;
-    protected $header;
-
-    public function __construct(Collection $data, array $header)
+    public function __construct(protected Collection $users)
     {
-        $this->data = $data;
-        $this->header = $header;
     }
 
     public function collection()
     {
-        return $this->data->values()->map(function ($user, $index) {
-            $createdAt = $user->join_date ?? $user->created_at ?? null;
-            if ($createdAt instanceof Carbon) {
-                $createdAt = $createdAt->format('Y-m-d H:i:s');
-            }
-
+        return $this->users->values()->map(function ($user, $index) {
+            /** @var User $user */
             return [
                 $index + 1,
                 $user->name,
-                $user->email,
+                $user->isCreditCustomer()
+                    ? __('customers.customer_type_credit')
+                    : __('customers.customer_type_cod'),
+                $user->isCreditCustomer()
+                    ? $user->paymentTermLabel()
+                    : __('customers.payment_term_not_applicable'),
                 $user->category,
+                $user->billing_address,
                 $user->shipping_address,
-                $user->shipping_postcode,
-                $user->shipping_state,
-                $user->remark,
-                $user->status,
-                $createdAt,
+                $user->attn_contact,
             ];
         });
     }
 
     public function headings(): array
     {
-        return $this->header;
+        return [
+            'No',
+            __('customers.name'),
+            __('customers.customer_type'),
+            __('customers.payment_term'),
+            __('customers.category'),
+            __('customers.billing_address'),
+            __('customers.shipping_address'),
+            __('customers.attn_contact'),
+        ];
     }
 }
