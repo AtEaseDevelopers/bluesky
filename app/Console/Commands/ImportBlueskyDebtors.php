@@ -3,10 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Services\BlueskyDebtorsImportService;
-use App\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ImportBlueskyDebtors extends Command
@@ -14,7 +12,12 @@ class ImportBlueskyDebtors extends Command
     protected $signature = 'customers:import-bluesky-debtors
                             {file : Path to BLUESKY DEBTORS LIST xlsx}
                             {--dry-run : Parse and preview without writing}
-                            {--update : Update existing customers matched by name; create rows not found}
+                            {--list : Export parsed preview spreadsheet without importing}
+                            {--list-output= : Output path for --list (default: storage/app/bluesky-debtors-preview.xlsx)}
+                            {--list-csv : With --list, write CSV instead of XLSX}
+                            {--multi-only : With --list, only rows where the same company has multiple accounts}
+                            {--update : Update existing customers matched by name; create rows not found; remove stale import duplicates}
+                            {--no-prune : With --update, keep old import customers that are not in the revised list}
                             {--skip-existing : Skip customers whose name already exists (create-only)}
                             {--category=restaurant : Customer category slug from customer_categories}
                             {--customer-type=credit : cod or credit}
@@ -79,63 +82,40 @@ class ImportBlueskyDebtors extends Command
             'remark_prefix' => trim((string) $this->option('remark-prefix')),
         ];
 
-        $updateMode = (bool) $this->option('update');
-        $customersByName = $updateMode || $this->option('dry-run')
-            ? $importService->indexCustomersByName()
-            : collect();
-
-        $wouldUpdate = 0;
-        $wouldCreate = 0;
-        $wouldSkip = 0;
-        $previewRows = [];
-
-        foreach ($parsed as $row) {
-            $existing = $importService->findExistingCustomer($row['name'], $customersByName);
-            $mapped = $importService->mapToCustomer($row, $options);
-
-            if ($existing) {
-                if ($updateMode || ($this->option('dry-run') && !$this->option('skip-existing'))) {
-                    $wouldUpdate++;
-                    if (count($previewRows) < 20) {
-                        $previewRows[] = [
-                            'update',
-                            $row['name'],
-                            $existing->sql_customer_code ?: '-',
-                            $mapped['attn_contact'],
-                            $mapped['billing_address'],
-                        ];
-                    }
-                    continue;
-                }
-
-                $wouldSkip++;
-                continue;
-            }
-
-            $wouldCreate++;
-            if (count($previewRows) < 20 && !$this->option('skip-existing')) {
-                $previewRows[] = [
-                    'create',
-                    $row['name'],
-                    '-',
-                    $mapped['attn_contact'],
-                    $mapped['billing_address'],
-                ];
-            }
+        if ($this->option('list')) {
+            return $this->writePreviewList($importService, $parsed, $options);
         }
 
+        $updateMode = (bool) $this->option('update');
+        $skipExisting = (bool) $this->option('skip-existing');
+        $pruneStale = $updateMode && !$this->option('no-prune');
+
         if ($this->option('dry-run')) {
-            if ($previewRows !== []) {
-                $this->table(
-                    ['Action', 'Name', 'AccNo', 'Phone', 'Address'],
-                    $previewRows
-                );
-            }
+            $preview = $importService->previewSync($parsed, $options, $updateMode, $skipExisting, $pruneStale);
 
             if ($updateMode) {
-                $this->line("Would update: {$wouldUpdate}, create: {$wouldCreate}");
+                $this->line("Would update: {$preview['updated']}, create: {$preview['created']}, remove: " . count($preview['removed']));
             } else {
-                $this->line("Would create: {$wouldCreate}, skip existing: {$wouldSkip}");
+                $this->line("Would create: {$preview['created']}, skip existing: {$preview['skipped']}");
+            }
+
+            if ($preview['removed'] !== []) {
+                $this->newLine();
+                $this->comment('Would remove stale customer account(s):');
+                foreach (array_slice($preview['removed'], 0, 30) as $name) {
+                    $this->line('  - ' . $name);
+                }
+                if (count($preview['removed']) > 30) {
+                    $this->line('  ... and ' . (count($preview['removed']) - 30) . ' more');
+                }
+            }
+
+            if ($preview['skipped_delete'] !== []) {
+                $this->newLine();
+                $this->warn('Could not remove (protected by existing orders):');
+                foreach ($preview['skipped_delete'] as $message) {
+                    $this->line('  - ' . $message);
+                }
             }
 
             $missingPhone = 0;
@@ -158,54 +138,115 @@ class ImportBlueskyDebtors extends Command
         }
 
         $password = (string) $this->option('password');
-        $skipExisting = (bool) $this->option('skip-existing');
-        $created = 0;
-        $updated = 0;
-        $skipped = 0;
-
-        DB::transaction(function () use ($importService, $parsed, $options, $password, $skipExisting, $updateMode, $customersByName, &$created, &$updated, &$skipped) {
-            foreach ($parsed as $row) {
-                $existing = $importService->findExistingCustomer($row['name'], $customersByName);
-
-                if ($existing) {
-                    if ($updateMode) {
-                        $existing->update($importService->mapToCustomerUpdates($row, $options));
-                        $updated++;
-                        continue;
-                    }
-
-                    if ($skipExisting) {
-                        $skipped++;
-                        continue;
-                    }
-
-                    throw new \RuntimeException('Customer already exists: ' . $row['name'] . '. Re-run with --update to refresh from Excel.');
-                }
-
-                $mapped = $importService->mapToCustomer($row, $options);
-                User::create(array_merge($mapped, [
-                    'email' => null,
-                    'password' => Hash::make($password),
-                    'login_code' => User::generateLoginCode(),
-                    'sql_customer_code' => null,
-                ]));
-                $created++;
-            }
-        });
+        $result = $importService->syncCustomers(
+            $parsed,
+            $options,
+            $password,
+            $updateMode,
+            $skipExisting,
+            $pruneStale
+        );
 
         if ($updateMode) {
-            $this->info("Import complete. Updated: {$updated}, created: {$created}.");
+            $this->info(sprintf(
+                'Import complete. Updated: %d, created: %d, removed: %d.',
+                $result['updated'],
+                $result['created'],
+                count($result['removed'])
+            ));
         } else {
-            $this->info("Import complete. Created: {$created}, skipped: {$skipped}.");
+            $this->info("Import complete. Created: {$result['created']}, skipped: {$result['skipped']}.");
         }
 
-        if ($updated > 0) {
-            $this->line('Updated customers are queued as pending_sync for AutoCount.');
+        if ($result['removed'] !== []) {
+            $this->newLine();
+            $this->comment('Removed stale customer account(s):');
+            foreach (array_slice($result['removed'], 0, 30) as $name) {
+                $this->line('  - ' . $name);
+            }
+            if (count($result['removed']) > 30) {
+                $this->line('  ... and ' . (count($result['removed']) - 30) . ' more');
+            }
+        }
+
+        if ($result['skipped_delete'] !== []) {
+            $this->newLine();
+            $this->warn('Could not remove (protected by existing orders):');
+            foreach ($result['skipped_delete'] as $message) {
+                $this->line('  - ' . $message);
+            }
+        }
+
+        if ($result['updated'] > 0 || $result['created'] > 0) {
+            $this->line('Updated/new customers are queued as pending_sync for AutoCount.');
             $this->line('In Admin → Customers, select them and click Sync to AutoCount, or let the AutoCount plugin pull them.');
         }
 
-        if ($created > 0) {
+        if ($result['created'] > 0) {
             $this->line("Default login password for new customers: {$password}");
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     */
+    protected function writePreviewList(BlueskyDebtorsImportService $importService, array $parsed, array $options): int
+    {
+        $report = $importService->buildPreviewReport($parsed, $options);
+
+        if ($this->option('multi-only')) {
+            $report = array_values(array_filter(
+                $report,
+                fn (array $row) => (int) $row['accounts_for_company'] > 1
+            ));
+        }
+
+        $outputPath = trim((string) $this->option('list-output'));
+        if ($outputPath === '') {
+            $outputPath = storage_path(
+                $this->option('list-csv')
+                    ? 'app/bluesky-debtors-preview.csv'
+                    : 'app/bluesky-debtors-preview.xlsx'
+            );
+        }
+
+        $fullReport = $importService->buildPreviewReport($parsed, $options);
+        $multiAccountSummary = $importService->summarizeMultiAccountCompanies($fullReport);
+
+        if (str_ends_with(strtolower($outputPath), '.csv') || $this->option('list-csv')) {
+            $importService->writePreviewCsv($report, $outputPath);
+        } else {
+            $importService->writePreviewXlsx($report, $multiAccountSummary, $outputPath);
+        }
+
+        $this->info('Preview file written to: ' . $outputPath);
+        $this->line('Rows in file: ' . count($report));
+        $this->line('Companies with multiple accounts: ' . count($multiAccountSummary));
+
+        if ($multiAccountSummary !== []) {
+            $this->newLine();
+            $this->comment('Companies split into multiple customer accounts:');
+            $this->table(
+                ['Company', 'Accounts', 'Customer Names'],
+                array_map(
+                    fn (array $group) => [$group['company_name'], $group['accounts'], $group['customer_names']],
+                    array_slice($multiAccountSummary, 0, 40)
+                )
+            );
+
+            if (count($multiAccountSummary) > 40) {
+                $this->line('... and ' . (count($multiAccountSummary) - 40) . ' more company group(s) in the CSV.');
+            }
+        } else {
+            $this->info('No companies were split into multiple accounts.');
+        }
+
+        if ($this->option('multi-only')) {
+            $this->comment('File contains only rows flagged with Multiple Accounts = Yes.');
+        } else {
+            $this->comment('Open sheet "Parsed Customers" and filter Multiple Accounts = Yes to review split companies.');
         }
 
         return 0;

@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
+use App\Order;
+use App\ProductVisibility;
 use App\System;
+use App\User;
+use Illuminate\Support\Facades\DB;
 
 class BlueskyDebtorsImportService
 {
     /**
-     * @return list<array{name:string,address_lines:list<string>,phones:list<string>}>
+     * @return list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>
      */
     public function parseSheetRows(array $rows): array
     {
@@ -23,16 +27,21 @@ class BlueskyDebtorsImportService
                 continue;
             }
 
-            if ($name !== '') {
+            if ($this->isBlankRow($name, $address, $phone)) {
                 if ($current !== null) {
-                    $customers[] = $current;
+                    $customers[] = $this->finalizeCustomerBlock($current);
+                    $current = null;
                 }
 
-                $current = [
-                    'name' => $name,
-                    'address_lines' => [],
-                    'phones' => [],
-                ];
+                continue;
+            }
+
+            if ($name !== '') {
+                if ($current === null) {
+                    $current = $this->newCustomerBlock($name);
+                } else {
+                    $current['alias_names'][] = $name;
+                }
             }
 
             if ($current === null) {
@@ -49,10 +58,85 @@ class BlueskyDebtorsImportService
         }
 
         if ($current !== null) {
-            $customers[] = $current;
+            $customers[] = $this->finalizeCustomerBlock($current);
         }
 
         return $this->dedupeNames($customers);
+    }
+
+    /**
+     * @return array{name:string,alias_names:list<string>,address_lines:list<string>,phones:list<string>}
+     */
+    private function newCustomerBlock(string $name): array
+    {
+        return [
+            'name' => $name,
+            'alias_names' => [],
+            'address_lines' => [],
+            'phones' => [],
+        ];
+    }
+
+    /**
+     * @param  array{name:string,alias_names:list<string>,address_lines:list<string>,phones:list<string>}  $current
+     * @return array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}
+     */
+    private function finalizeCustomerBlock(array $current): array
+    {
+        $name = $current['name'];
+        $aliases = array_values(array_filter($current['alias_names']));
+        $legalName = null;
+        $extraAliases = [];
+
+        if (count($aliases) === 1 && $this->shouldPreferAliasAsCustomerName($name, $aliases[0])) {
+            $legalName = $name;
+            $name = $aliases[0];
+        } elseif ($aliases !== []) {
+            $extraAliases = $aliases;
+        }
+
+        $customer = [
+            'name' => $name,
+            'address_lines' => $current['address_lines'],
+            'phones' => $current['phones'],
+        ];
+
+        if ($legalName !== null) {
+            $customer['legal_name'] = $legalName;
+        }
+
+        if ($extraAliases !== []) {
+            $customer['extra_aliases'] = $extraAliases;
+        }
+
+        return $customer;
+    }
+
+    private function shouldPreferAliasAsCustomerName(string $legalName, string $alias): bool
+    {
+        if (!$this->looksLikeLegalEntity($legalName)) {
+            return false;
+        }
+
+        $alias = trim($alias);
+        if ($alias === '') {
+            return false;
+        }
+
+        if (preg_match('/\b(restaurant|restoran|cafe|coffee|steamboat|seafood|kitchen|dining|bistro|bar|hotel|enterprise|sdn|bhd)\b/i', $alias)) {
+            return true;
+        }
+
+        if (preg_match('/[\x{4e00}-\x{9fff}]/u', $alias) && mb_strlen($alias) <= 4) {
+            return false;
+        }
+
+        return mb_strlen($alias) >= 8;
+    }
+
+    private function looksLikeLegalEntity(string $name): bool
+    {
+        return (bool) preg_match('/\b(SDN\.?\s*BHD|BHD|ENTERPRISE|\(M\))\b/i', $name);
     }
 
     /**
@@ -78,8 +162,6 @@ class BlueskyDebtorsImportService
             'shipping_state' => $mapped['shipping_state'],
             'payment_method' => $mapped['payment_method'],
             'remark' => $mapped['remark'],
-            'autocount_sync_status' => 'pending_sync',
-            'autocount_synced_at' => null,
         ];
     }
 
@@ -137,6 +219,12 @@ class BlueskyDebtorsImportService
         $primaryPhone = $phones[0] ?? '';
 
         $remarkParts = [];
+        if (!empty($row['legal_name'])) {
+            $remarkParts[] = 'Company: ' . $row['legal_name'];
+        }
+        if (!empty($row['extra_aliases'])) {
+            $remarkParts[] = 'Also known as: ' . implode(', ', $row['extra_aliases']);
+        }
         if ($address['full'] !== '' && mb_strlen($address['full']) > 100) {
             $remarkParts[] = 'Full address: ' . $address['full'];
         }
@@ -286,6 +374,15 @@ class BlueskyDebtorsImportService
         return $phone ?? '';
     }
 
+    private function isBlankRow(string $name, string $address, string $phone): bool
+    {
+        if ($name !== '' || $phone !== '') {
+            return false;
+        }
+
+        return $address === '' || $address === '·';
+    }
+
     private function isHeaderRow(string $name, string $address, string $phone, int $index): bool
     {
         if ($index === 0 && stripos($name, 'DEBTORS') !== false) {
@@ -319,6 +416,532 @@ class BlueskyDebtorsImportService
         unset($customer);
 
         return $customers;
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     * @return list<array<string, string|int>>
+     */
+    public function buildPreviewReport(array $parsed, array $options): array
+    {
+        $companyCounts = [];
+        foreach ($parsed as $row) {
+            $key = $this->companyKey($row);
+            $companyCounts[$key] = ($companyCounts[$key] ?? 0) + 1;
+        }
+
+        $report = [];
+        foreach ($parsed as $index => $row) {
+            $mapped = $this->mapToCustomer($row, $options);
+            $companyKey = $this->companyKey($row);
+            $accountsForCompany = $companyCounts[$companyKey];
+
+            $report[] = [
+                'no' => $index + 1,
+                'customer_name' => $row['name'],
+                'company_name' => $this->displayCompanyName($row),
+                'company_key' => $companyKey,
+                'accounts_for_company' => $accountsForCompany,
+                'multiple_accounts' => $accountsForCompany > 1 ? 'Yes' : 'No',
+                'phone' => $mapped['attn_contact'],
+                'address' => $mapped['billing_address'],
+                'aliases' => !empty($row['extra_aliases']) ? implode('; ', $row['extra_aliases']) : '',
+            ];
+        }
+
+        return $report;
+    }
+
+    /**
+     * @param  list<array<string, string|int>>  $report
+     * @return list<array{company_name:string,accounts:int,customer_names:string}>
+     */
+    public function summarizeMultiAccountCompanies(array $report): array
+    {
+        $groups = [];
+
+        foreach ($report as $row) {
+            if ((int) $row['accounts_for_company'] <= 1) {
+                continue;
+            }
+
+            $key = (string) $row['company_key'];
+            if (!isset($groups[$key])) {
+                $groups[$key] = [
+                    'company_name' => (string) $row['company_name'],
+                    'accounts' => (int) $row['accounts_for_company'],
+                    'customer_names' => [],
+                ];
+            }
+
+            $groups[$key]['customer_names'][] = (string) $row['customer_name'];
+        }
+
+        usort($groups, fn ($a, $b) => $b['accounts'] <=> $a['accounts'] ?: strcmp($a['company_name'], $b['company_name']));
+
+        foreach ($groups as &$group) {
+            $group['customer_names'] = implode(' | ', array_unique($group['customer_names']));
+        }
+        unset($group);
+
+        return array_values($groups);
+    }
+
+    /**
+     * @param  list<array<string, string|int>>  $report
+     * @param  list<array{company_name:string,accounts:int,customer_names:string}>  $multiAccountSummary
+     */
+    public function writePreviewXlsx(array $report, array $multiAccountSummary, string $path): void
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+
+        $customersSheet = $spreadsheet->getActiveSheet();
+        $customersSheet->setTitle('Parsed Customers');
+        $customersSheet->fromArray([
+            ['No', 'Customer Name', 'Company Name', 'Accounts For Company', 'Multiple Accounts', 'Phone', 'Address', 'Other Names'],
+        ]);
+
+        $rowIndex = 2;
+        foreach ($report as $row) {
+            $customersSheet->fromArray([[
+                $row['no'],
+                $row['customer_name'],
+                $row['company_name'],
+                $row['accounts_for_company'],
+                $row['multiple_accounts'],
+                $row['phone'],
+                $row['address'],
+                $row['aliases'],
+            ]], null, 'A' . $rowIndex);
+            $rowIndex++;
+        }
+
+        foreach (range('A', 'H') as $column) {
+            $customersSheet->getColumnDimension($column)->setAutoSize(true);
+        }
+        $customersSheet->freezePane('A2');
+
+        $summarySheet = $spreadsheet->createSheet();
+        $summarySheet->setTitle('Multi-Account Companies');
+        $summarySheet->fromArray([
+            ['Company Name', 'Accounts', 'Customer Names'],
+        ]);
+
+        $summaryRow = 2;
+        foreach ($multiAccountSummary as $group) {
+            $summarySheet->fromArray([[
+                $group['company_name'],
+                $group['accounts'],
+                $group['customer_names'],
+            ]], null, 'A' . $summaryRow);
+            $summaryRow++;
+        }
+
+        foreach (range('A', 'C') as $column) {
+            $summarySheet->getColumnDimension($column)->setAutoSize(true);
+        }
+        $summarySheet->freezePane('A2');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save($path);
+    }
+
+    /**
+     * @param  list<array<string, string|int>>  $report
+     */
+    public function writePreviewCsv(array $report, string $path): void
+    {
+        $handle = fopen($path, 'w');
+        if ($handle === false) {
+            throw new \RuntimeException('Unable to write preview CSV: ' . $path);
+        }
+
+        fputcsv($handle, [
+            'No',
+            'Customer Name',
+            'Company Name',
+            'Accounts For Company',
+            'Multiple Accounts',
+            'Phone',
+            'Address',
+            'Other Names',
+        ]);
+
+        foreach ($report as $row) {
+            fputcsv($handle, [
+                $row['no'],
+                $row['customer_name'],
+                $row['company_name'],
+                $row['accounts_for_company'],
+                $row['multiple_accounts'],
+                $row['phone'],
+                $row['address'],
+                $row['aliases'],
+            ]);
+        }
+
+        fclose($handle);
+    }
+
+    /**
+     * @param  array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}  $row
+     */
+    public function displayCompanyName(array $row): string
+    {
+        if (!empty($row['legal_name'])) {
+            return $row['legal_name'];
+        }
+
+        return preg_replace('/\s+\(\d+\)$/', '', trim($row['name']));
+    }
+
+    /**
+     * @param  array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}  $row
+     */
+    public function companyKey(array $row): string
+    {
+        $name = $row['legal_name'] ?? $row['name'];
+        $name = preg_replace('/\s+\(\d+\)$/', '', trim($name));
+
+        return self::normalizeMatchName($name);
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     * @return array{created:int,updated:int,removed:list<string>,skipped:list<string>}
+     */
+    public function syncCustomers(
+        array $parsed,
+        array $options,
+        string $password,
+        bool $updateMode,
+        bool $skipExisting,
+        bool $pruneStale
+    ): array {
+        if (!$updateMode && !$skipExisting) {
+            return $this->createCustomers($parsed, $options, $password);
+        }
+
+        $customersByName = $this->indexCustomersByName();
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+        $reconcile = ['removed' => [], 'skipped' => []];
+
+        DB::transaction(function () use (
+            $parsed,
+            $options,
+            $password,
+            $updateMode,
+            $skipExisting,
+            $pruneStale,
+            &$customersByName,
+            &$created,
+            &$updated,
+            &$skipped,
+            &$reconcile
+        ) {
+            foreach ($parsed as $row) {
+                $existing = $this->findExistingCustomer($row['name'], $customersByName);
+
+                if ($existing) {
+                    if ($updateMode) {
+                        $existing->update($this->mapToCustomerUpdates($row, $options));
+                        $updated++;
+                        continue;
+                    }
+
+                    if ($skipExisting) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    throw new \RuntimeException('Customer already exists: ' . $row['name'] . '. Re-run with --update to refresh from Excel.');
+                }
+
+                $mapped = $this->mapToCustomer($row, $options);
+                $user = User::create(array_merge($mapped, [
+                    'email' => null,
+                    'password' => \Illuminate\Support\Facades\Hash::make($password),
+                    'login_code' => User::generateLoginCode(),
+                    'sql_customer_code' => null,
+                ]));
+                $customersByName->put(self::normalizeMatchName($user->name), $user);
+                $created++;
+            }
+
+            if ($updateMode && $pruneStale) {
+                $reconcile = $this->reconcileStaleCustomers($parsed, $options, $customersByName);
+            }
+        });
+
+        return [
+            'created' => $created,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'removed' => $reconcile['removed'],
+            'skipped_delete' => $reconcile['skipped'],
+        ];
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     * @return array{created:int,updated:int,removed:list<string>,skipped:list<string>,skipped_delete:list<string>}
+     */
+    public function previewSync(
+        array $parsed,
+        array $options,
+        bool $updateMode,
+        bool $skipExisting,
+        bool $pruneStale
+    ): array {
+        $customersByName = $this->indexCustomersByName();
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+
+        foreach ($parsed as $row) {
+            $existing = $this->findExistingCustomer($row['name'], $customersByName);
+
+            if ($existing) {
+                if ($updateMode) {
+                    $updated++;
+                    continue;
+                }
+
+                $skipped++;
+                continue;
+            }
+
+            $created++;
+        }
+
+        $removed = [];
+        $skippedDelete = [];
+        if ($updateMode && $pruneStale) {
+            foreach ($this->findStaleCustomers($parsed, $options, $customersByName) as $user) {
+                if (!$this->canDeleteCustomer($user)) {
+                    $skippedDelete[] = $user->name . ' (has orders)';
+                    continue;
+                }
+
+                $removed[] = $user->name;
+            }
+        }
+
+        return compact('created', 'updated', 'skipped') + [
+            'removed' => $removed,
+            'skipped_delete' => $skippedDelete,
+        ];
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     * @return array{created:int,removed:list<string>,skipped:list<string>}
+     */
+    protected function createCustomers(array $parsed, array $options, string $password): array
+    {
+        $created = 0;
+
+        DB::transaction(function () use ($parsed, $options, $password, &$created) {
+            foreach ($parsed as $row) {
+                $existing = User::query()
+                    ->whereRaw('LOWER(name) = ?', [self::normalizeMatchName($row['name'])])
+                    ->exists();
+
+                if ($existing) {
+                    throw new \RuntimeException('Customer already exists: ' . $row['name'] . '. Re-run with --update to refresh from Excel.');
+                }
+
+                $mapped = $this->mapToCustomer($row, $options);
+                User::create(array_merge($mapped, [
+                    'email' => null,
+                    'password' => \Illuminate\Support\Facades\Hash::make($password),
+                    'login_code' => User::generateLoginCode(),
+                    'sql_customer_code' => null,
+                ]));
+                $created++;
+            }
+        });
+
+        return [
+            'created' => $created,
+            'updated' => 0,
+            'skipped' => 0,
+            'removed' => [],
+            'skipped_delete' => [],
+        ];
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     * @return array{removed:list<string>,skipped:list<string>}
+     */
+    protected function reconcileStaleCustomers(array $parsed, array $options, $customersByName): array
+    {
+        $removed = [];
+        $skipped = [];
+
+        foreach ($this->findStaleCustomers($parsed, $options, $customersByName) as $user) {
+            $this->migrateCustomerCodeBeforeDelete($user, $parsed, $customersByName);
+
+            if (!$this->canDeleteCustomer($user)) {
+                $skipped[] = $user->name . ' (has orders)';
+                continue;
+            }
+
+            $this->deleteCustomer($user);
+            $customersByName->forget(self::normalizeMatchName($user->name));
+            $removed[] = $user->name;
+        }
+
+        return compact('removed', 'skipped');
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     * @return list<User>
+     */
+    protected function findStaleCustomers(array $parsed, array $options, $customersByName): array
+    {
+        $keepKeys = [];
+        $legalStubKeys = [];
+        $mergedAliasKeys = [];
+
+        foreach ($parsed as $row) {
+            $keepKeys[self::normalizeMatchName($row['name'])] = true;
+
+            if (!empty($row['legal_name'])) {
+                $legalKey = self::normalizeMatchName($row['legal_name']);
+                $customerKey = self::normalizeMatchName($row['name']);
+                if ($legalKey !== $customerKey) {
+                    $legalStubKeys[$legalKey] = true;
+                }
+            }
+
+            foreach ($row['extra_aliases'] ?? [] as $alias) {
+                $aliasKey = self::normalizeMatchName($alias);
+                if (!isset($keepKeys[$aliasKey])) {
+                    $mergedAliasKeys[$aliasKey] = true;
+                }
+            }
+        }
+
+        $prefix = trim((string) $options['remark_prefix']);
+        $stale = [];
+
+        foreach (User::query()->get() as $user) {
+            $key = self::normalizeMatchName($user->name);
+            if (isset($keepKeys[$key])) {
+                continue;
+            }
+
+            $isLegalStub = isset($legalStubKeys[$key]);
+            $isMergedAlias = isset($mergedAliasKeys[$key]);
+            $isStaleImport = $prefix !== ''
+                && str_starts_with((string) $user->remark, $prefix);
+
+            if ($isLegalStub || $isMergedAlias || $isStaleImport) {
+                $stale[] = $user;
+            }
+        }
+
+        return $stale;
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     */
+    protected function migrateCustomerCodeBeforeDelete(User $user, array $parsed, $customersByName): void
+    {
+        $accNo = trim((string) $user->sql_customer_code);
+        if ($accNo === '') {
+            return;
+        }
+
+        $recipient = $this->findAccNoMigrationTarget($user, $parsed, $customersByName);
+        if (!$recipient || trim((string) $recipient->sql_customer_code) !== '') {
+            return;
+        }
+
+        $recipient->update(['sql_customer_code' => $accNo]);
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     */
+    protected function findAccNoMigrationTarget(User $user, array $parsed, $customersByName): ?User
+    {
+        $userKey = self::normalizeMatchName($user->name);
+        $userPhone = self::normalizeMatchName(trim((string) $user->attn_contact));
+
+        if ($userPhone !== '') {
+            foreach ($parsed as $row) {
+                $target = $this->findExistingCustomer($row['name'], $customersByName);
+                if (!$target || trim((string) $target->sql_customer_code) !== '') {
+                    continue;
+                }
+
+                $phones = array_values(array_filter(array_map([$this, 'normalizePhone'], $row['phones'])));
+                foreach ($phones as $phone) {
+                    if (self::normalizeMatchName($phone) === $userPhone) {
+                        return $target;
+                    }
+                }
+            }
+        }
+
+        foreach ($parsed as $row) {
+            $keepKey = self::normalizeMatchName($row['name']);
+            if ($keepKey === $userKey) {
+                continue;
+            }
+
+            $aliasKeys = array_map(
+                [self::class, 'normalizeMatchName'],
+                array_merge([$row['name']], $row['extra_aliases'] ?? [])
+            );
+
+            if (!in_array($userKey, $aliasKeys, true)) {
+                continue;
+            }
+
+            $target = $this->findExistingCustomer($row['name'], $customersByName);
+            if ($target && trim((string) $target->sql_customer_code) === '') {
+                return $target;
+            }
+        }
+
+        foreach ($parsed as $row) {
+            if (empty($row['legal_name'])) {
+                continue;
+            }
+
+            if (self::normalizeMatchName($row['legal_name']) !== $userKey) {
+                continue;
+            }
+
+            $outlet = $this->findExistingCustomer($row['name'], $customersByName);
+            if ($outlet && trim((string) $outlet->sql_customer_code) === '') {
+                return $outlet;
+            }
+        }
+
+        return null;
+    }
+
+    protected function canDeleteCustomer(User $user): bool
+    {
+        return !Order::query()->where('user_id', $user->id)->exists();
+    }
+
+    protected function deleteCustomer(User $user): void
+    {
+        ProductVisibility::query()->where('user_id', $user->id)->delete();
+        DB::table('customer_drivers')->where('user_id', $user->id)->delete();
+        DB::table('carts')->where('user_id', $user->id)->delete();
+        DB::table('customer_credit_logs')->where('user_id', $user->id)->delete();
+        $user->delete();
     }
 
     private function cell(array $row, int $index): string
