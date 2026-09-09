@@ -221,7 +221,41 @@ class BlueskyDebtorsImportService
         $keys[] = $formattedKey;
         $keys[] = $outletKey;
 
+        foreach ($this->displayAliases($row) as $alias) {
+            $keys[] = self::normalizeMatchName($alias);
+        }
+
         return array_values(array_unique(array_filter($keys)));
+    }
+
+    /**
+     * @param  array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}  $row
+     * @return list<string>
+     */
+    public function displayAliases(array $row): array
+    {
+        $seen = [
+            self::normalizeMatchName($row['name']),
+            self::normalizeMatchName($row['legal_name'] ?? ''),
+        ];
+        $aliases = [];
+
+        foreach ($row['extra_aliases'] ?? [] as $alias) {
+            $alias = preg_replace('/\s+/u', ' ', trim((string) $alias));
+            if ($alias === '') {
+                continue;
+            }
+
+            $key = self::normalizeMatchName($alias);
+            if (in_array($key, $seen, true)) {
+                continue;
+            }
+
+            $seen[] = $key;
+            $aliases[] = $alias;
+        }
+
+        return $aliases;
     }
 
     /**
@@ -231,12 +265,20 @@ class BlueskyDebtorsImportService
     {
         $outlet = preg_replace('/\s+/u', ' ', trim($row['name']));
         $legal = preg_replace('/\s+/u', ' ', trim($row['legal_name'] ?? ''));
+        $parts = [];
 
         if ($legal !== '' && self::normalizeMatchName($legal) !== self::normalizeMatchName($outlet)) {
-            return mb_substr($legal . ' - ' . $outlet, 0, 100);
+            $parts[] = $legal;
+            $parts[] = $outlet;
+        } else {
+            $parts[] = $outlet;
         }
 
-        return mb_substr($outlet, 0, 100);
+        foreach ($this->displayAliases($row) as $alias) {
+            $parts[] = $alias;
+        }
+
+        return mb_substr(implode(' - ', $parts), 0, 100);
     }
 
     /**
@@ -261,12 +303,12 @@ class BlueskyDebtorsImportService
         $keys = [self::normalizeMatchName($user->name)];
 
         if (str_contains($user->name, ' - ')) {
-            [$company, $outlet] = array_map('trim', explode(' - ', $user->name, 2));
-            if ($outlet !== '') {
-                $keys[] = self::normalizeMatchName($outlet);
+            $segments = array_values(array_filter(array_map('trim', explode(' - ', $user->name))));
+            foreach ($segments as $segment) {
+                $keys[] = self::normalizeMatchName($segment);
             }
-            if ($company !== '' && $outlet !== '') {
-                $keys[] = self::normalizeMatchName($company) . '|' . self::normalizeMatchName($outlet);
+            if (count($segments) >= 2) {
+                $keys[] = self::normalizeMatchName($segments[0]) . '|' . self::normalizeMatchName($segments[1]);
             }
         }
 
