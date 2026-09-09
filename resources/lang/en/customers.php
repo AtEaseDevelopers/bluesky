@@ -152,6 +152,7 @@ return [
     'customer_code_autocount_readonly' => 'Assigned by AutoCount. Edit the debtor in AutoCount if the code must change.',
     'customer_code_assigned_after_autocount_sync' => 'Customer code will be assigned from AutoCount after the plugin syncs this customer.',
     'enter_customer_code' => 'Enter customer code',
+    'customer_code_edit_help' => 'AutoCount AccNo (e.g. 300-E002). Leave blank if not assigned yet. Must match the debtor code in AutoCount.',
     'ssm' => 'SSM',
     'enter_ssm' => 'Enter SSM (optional)',
     'tin_no' => 'TIN No.',

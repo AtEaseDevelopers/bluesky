@@ -13,6 +13,7 @@ use App\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class EditCustomerController extends Controller
@@ -111,6 +112,7 @@ class EditCustomerController extends Controller
                 'ssm' => $request['ssm'] ?? null,
                 'tin_no' => $request['tin_no'] ?? null,
                 "fax_no" => $data['fax_no'] ?? null,
+                'sql_customer_code' => $data['sql_customer_code'] ?? null,
                 ],
                 $statusUpdates
             )
@@ -206,6 +208,12 @@ class EditCustomerController extends Controller
             'ssm' => array_merge(User::$attribute_rules['ssm'], []),
             'tin_no' => array_merge(User::$attribute_rules['tin_no'], []),
             'customer_status' => ['required', 'in:active,inactive'],
+            'sql_customer_code' => [
+                'nullable',
+                'string',
+                'max:30',
+                Rule::unique('users', 'sql_customer_code')->ignore($customer->id),
+            ],
         ];
 
         try {
@@ -216,6 +224,9 @@ class EditCustomerController extends Controller
                 'field_err' => $err->validator->errors()->getMessages(),
             ];
         }
+
+        $accNo = trim((string) ($data['sql_customer_code'] ?? ''));
+        $data['sql_customer_code'] = $accNo === '' ? null : $accNo;
 
         return $data;
     }

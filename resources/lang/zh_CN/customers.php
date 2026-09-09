@@ -151,6 +151,7 @@ return [
     'customer_code_autocount_readonly' => '由 AutoCount 分配。如需更改编号，请在 AutoCount 中修改。',
     'customer_code_assigned_after_autocount_sync' => '客户编号将在 AutoCount 插件同步该客户后自动写入。',
     'enter_customer_code' => '输入客户编号',
+    'customer_code_edit_help' => 'AutoCount 客户编号（如 300-E002）。尚未分配可留空。须与 AutoCount 中的编号一致。',
     'ssm' => 'SSM',
     'enter_ssm' => '输入 SSM（可选）',
     'tin_no' => '税务识别号',

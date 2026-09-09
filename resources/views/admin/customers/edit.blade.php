@@ -179,13 +179,19 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
-                                    <label class="mb-2">{{ __('customers.customer_code') }}</label>
-                                    @if ($customer->sql_customer_code)
-                                        <input type="text" class="form-control" value="{{ $customer->sql_customer_code }}" readonly>
-                                        <small class="text-muted">{{ __('customers.customer_code_autocount_readonly') }}</small>
-                                    @else
-                                        <p class="form-control-plaintext text-muted mb-0">{{ __('customers.customer_code_autocount_pending') }}</p>
-                                    @endif
+                                    <label class="mb-2" for="sql_customer_code">{{ __('customers.customer_code') }}</label>
+                                    <input type="text"
+                                        class="form-control @error('sql_customer_code') is-invalid @enderror"
+                                        name="sql_customer_code"
+                                        id="sql_customer_code"
+                                        value="{{ old('sql_customer_code', $customer->sql_customer_code) }}"
+                                        placeholder="{{ __('customers.enter_customer_code') }}">
+                                    <small class="text-muted">{{ __('customers.customer_code_edit_help') }}</small>
+                                    @error('sql_customer_code')
+                                        <span class="text-danger" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
