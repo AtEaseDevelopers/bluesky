@@ -39,18 +39,16 @@ class CustomerController extends Controller
                 DB::raw('areas.area_name as area'),
             )
             ->when(($name != null), function ($q) use ($name) {
-                $pattern = Helper::likePattern($name);
-                if ($pattern === null) {
-                    return $q;
-                }
-
-                return $q->where(function ($q) use ($pattern) {
-                    $q->where('users.name', 'LIKE', $pattern)
-                        ->orWhere('users.attn_name', 'LIKE', $pattern)
-                        ->orWhere('users.attn_contact', 'LIKE', $pattern)
-                        ->orWhere('users.billing_address', 'LIKE', $pattern)
-                        ->orWhere('users.shipping_address', 'LIKE', $pattern);
-                });
+                Helper::applyOrLikeSearch($q, [
+                    'users.name',
+                    'users.attn_name',
+                    'users.attn_contact',
+                    'users.billing_address',
+                    'users.shipping_address',
+                    'users.remark',
+                    'users.sql_customer_code',
+                    'users.category',
+                ], $name);
             })
             ->when(($email != null), function ($q) use ($email) {
                 $pattern = Helper::likePattern($email);
@@ -105,6 +103,9 @@ class CustomerController extends Controller
                 'attn_contact',
                 'billing_address',
                 'shipping_address',
+                'remark',
+                'sql_customer_code',
+                'category',
             ], $filter_name);
         }
 
