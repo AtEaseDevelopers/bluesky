@@ -214,6 +214,7 @@
                                                     $syncStatusClass = match ($syncStatusKey) {
                                                         'synced', 'synced_successfully' => 'bg-success',
                                                         'pending_sync' => 'bg-warning text-dark',
+                                                        'pending_inactive' => 'bg-danger',
                                                         'sync_error' => 'bg-danger',
                                                         'skipped' => 'bg-secondary',
                                                         default => 'bg-light text-dark',

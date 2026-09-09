@@ -20,7 +20,9 @@ Route::prefix('order')->group(function () {
 
 Route::prefix('customers')->group(function () {
     Route::get('/', [AutoCountController::class, 'customers']);
+    Route::get('/inactive-pending', [AutoCountController::class, 'customersInactivePending']);
     Route::post('/update', [AutoCountController::class, 'customersUpdate']);
+    Route::post('/inactive-update', [AutoCountController::class, 'customersInactiveUpdate']);
     Route::post('/import', [AutoCountController::class, 'customersImport']);
 });
 

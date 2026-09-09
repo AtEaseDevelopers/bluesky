@@ -162,6 +162,9 @@ class BlueskyDebtorsImportService
             'shipping_state' => $mapped['shipping_state'],
             'payment_method' => $mapped['payment_method'],
             'remark' => $mapped['remark'],
+            'status' => User::$user_status['active'],
+            'autocount_sync_status' => 'pending_sync',
+            'autocount_synced_at' => null,
         ];
     }
 
@@ -626,7 +629,7 @@ class BlueskyDebtorsImportService
         $created = 0;
         $updated = 0;
         $skipped = 0;
-        $reconcile = ['removed' => [], 'skipped' => []];
+        $reconcile = ['removed' => [], 'deactivated' => [], 'skipped' => []];
 
         DB::transaction(function () use (
             $parsed,
@@ -673,6 +676,10 @@ class BlueskyDebtorsImportService
             if ($updateMode && $pruneStale) {
                 $reconcile = $this->reconcileStaleCustomers($parsed, $options, $customersByName);
             }
+
+            if ($updateMode) {
+                $this->queueActiveAutoCountSyncForParsed($parsed, $customersByName);
+            }
         });
 
         return [
@@ -680,7 +687,8 @@ class BlueskyDebtorsImportService
             'updated' => $updated,
             'skipped' => $skipped,
             'removed' => $reconcile['removed'],
-            'skipped_delete' => $reconcile['skipped'],
+            'deactivated' => $reconcile['deactivated'] ?? [],
+            'skipped_delete' => $reconcile['skipped'] ?? [],
         ];
     }
 
@@ -717,11 +725,12 @@ class BlueskyDebtorsImportService
         }
 
         $removed = [];
+        $deactivated = [];
         $skippedDelete = [];
         if ($updateMode && $pruneStale) {
             foreach ($this->findStaleCustomers($parsed, $options, $customersByName) as $user) {
-                if (!$this->canDeleteCustomer($user)) {
-                    $skippedDelete[] = $user->name . ' (has orders)';
+                if (!$this->canDeleteCustomer($user) || trim((string) $user->sql_customer_code) !== '') {
+                    $deactivated[] = $user->name;
                     continue;
                 }
 
@@ -731,6 +740,7 @@ class BlueskyDebtorsImportService
 
         return compact('created', 'updated', 'skipped') + [
             'removed' => $removed,
+            'deactivated' => $deactivated,
             'skipped_delete' => $skippedDelete,
         ];
     }
@@ -775,18 +785,21 @@ class BlueskyDebtorsImportService
 
     /**
      * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
-     * @return array{removed:list<string>,skipped:list<string>}
+     * @return array{removed:list<string>,deactivated:list<string>,skipped:list<string>}
      */
     protected function reconcileStaleCustomers(array $parsed, array $options, $customersByName): array
     {
         $removed = [];
+        $deactivated = [];
         $skipped = [];
 
         foreach ($this->findStaleCustomers($parsed, $options, $customersByName) as $user) {
             $this->migrateCustomerCodeBeforeDelete($user, $parsed, $customersByName);
 
-            if (!$this->canDeleteCustomer($user)) {
-                $skipped[] = $user->name . ' (has orders)';
+            if (!$this->canDeleteCustomer($user) || trim((string) $user->sql_customer_code) !== '') {
+                $this->markCustomerInactiveForAutoCount($user);
+                $customersByName->forget(self::normalizeMatchName($user->name));
+                $deactivated[] = $user->name;
                 continue;
             }
 
@@ -795,7 +808,40 @@ class BlueskyDebtorsImportService
             $removed[] = $user->name;
         }
 
-        return compact('removed', 'skipped');
+        return compact('removed', 'deactivated', 'skipped');
+    }
+
+    /**
+     * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
+     */
+    protected function queueActiveAutoCountSyncForParsed(array $parsed, $customersByName): void
+    {
+        foreach ($parsed as $row) {
+            $user = $this->findExistingCustomer($row['name'], $customersByName);
+            if (!$user) {
+                continue;
+            }
+
+            $user->update([
+                'status' => User::$user_status['active'],
+                'autocount_sync_status' => 'pending_sync',
+                'autocount_synced_at' => null,
+            ]);
+        }
+    }
+
+    protected function markCustomerInactiveForAutoCount(User $user): void
+    {
+        $updates = [
+            'status' => User::$user_status['inactive'],
+        ];
+
+        if (trim((string) $user->sql_customer_code) !== '') {
+            $updates['autocount_sync_status'] = 'pending_inactive';
+            $updates['autocount_synced_at'] = null;
+        }
+
+        $user->update($updates);
     }
 
     /**

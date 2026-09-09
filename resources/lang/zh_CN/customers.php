@@ -16,6 +16,7 @@ return [
     'autocount_sync_status' => [
         'pending' => '待处理',
         'pending_sync' => '待同步',
+        'pending_inactive' => '待在 AutoCount 停用',
         'synced' => '已同步',
         'synced_successfully' => '同步成功',
         'sync_error' => '同步错误',

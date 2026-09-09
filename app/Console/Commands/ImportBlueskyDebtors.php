@@ -94,9 +94,26 @@ class ImportBlueskyDebtors extends Command
             $preview = $importService->previewSync($parsed, $options, $updateMode, $skipExisting, $pruneStale);
 
             if ($updateMode) {
-                $this->line("Would update: {$preview['updated']}, create: {$preview['created']}, remove: " . count($preview['removed']));
+                $this->line(sprintf(
+                    'Would update: %d, create: %d, deactivate: %d, remove: %d',
+                    $preview['updated'],
+                    $preview['created'],
+                    count($preview['deactivated'] ?? []),
+                    count($preview['removed'])
+                ));
             } else {
                 $this->line("Would create: {$preview['created']}, skip existing: {$preview['skipped']}");
+            }
+
+            if (($preview['deactivated'] ?? []) !== []) {
+                $this->newLine();
+                $this->comment('Would mark inactive in OMS and queue inactive in AutoCount:');
+                foreach (array_slice($preview['deactivated'], 0, 30) as $name) {
+                    $this->line('  - ' . $name);
+                }
+                if (count($preview['deactivated']) > 30) {
+                    $this->line('  ... and ' . (count($preview['deactivated']) - 30) . ' more');
+                }
             }
 
             if ($preview['removed'] !== []) {
@@ -112,10 +129,14 @@ class ImportBlueskyDebtors extends Command
 
             if ($preview['skipped_delete'] !== []) {
                 $this->newLine();
-                $this->warn('Could not remove (protected by existing orders):');
+                $this->warn('Skipped actions:');
                 foreach ($preview['skipped_delete'] as $message) {
                     $this->line('  - ' . $message);
                 }
+            }
+
+            if ($updateMode) {
+                $this->line('Active customers in Excel will be queued as pending_sync for AutoCount.');
             }
 
             $missingPhone = 0;
@@ -149,13 +170,25 @@ class ImportBlueskyDebtors extends Command
 
         if ($updateMode) {
             $this->info(sprintf(
-                'Import complete. Updated: %d, created: %d, removed: %d.',
+                'Import complete. Updated: %d, created: %d, deactivated: %d, removed: %d.',
                 $result['updated'],
                 $result['created'],
+                count($result['deactivated'] ?? []),
                 count($result['removed'])
             ));
         } else {
             $this->info("Import complete. Created: {$result['created']}, skipped: {$result['skipped']}.");
+        }
+
+        if (($result['deactivated'] ?? []) !== []) {
+            $this->newLine();
+            $this->comment('Marked inactive and queued for AutoCount deactivation:');
+            foreach (array_slice($result['deactivated'], 0, 30) as $name) {
+                $this->line('  - ' . $name);
+            }
+            if (count($result['deactivated']) > 30) {
+                $this->line('  ... and ' . (count($result['deactivated']) - 30) . ' more');
+            }
         }
 
         if ($result['removed'] !== []) {
@@ -178,8 +211,15 @@ class ImportBlueskyDebtors extends Command
         }
 
         if ($result['updated'] > 0 || $result['created'] > 0) {
-            $this->line('Updated/new customers are queued as pending_sync for AutoCount.');
-            $this->line('In Admin → Customers, select them and click Sync to AutoCount, or let the AutoCount plugin pull them.');
+            $this->line('Active customers in Excel are queued as pending_sync for AutoCount (active).');
+        }
+
+        if (($result['deactivated'] ?? []) !== []) {
+            $this->line('Inactive customers are queued as pending_inactive — AutoCount plugin should call GET /api/customers/inactive-pending.');
+        }
+
+        if ($result['updated'] > 0 || $result['created'] > 0 || ($result['deactivated'] ?? []) !== []) {
+            $this->line('Let the AutoCount plugin pull pending create/update/inactive queues.');
         }
 
         if ($result['created'] > 0) {

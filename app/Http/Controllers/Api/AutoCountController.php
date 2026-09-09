@@ -118,6 +118,28 @@ class AutoCountController extends Controller
         return response('OK');
     }
 
+    public function customersInactivePending(Request $request)
+    {
+        if (!$this->authorized($request)) {
+            return response('Unauthorized', 401);
+        }
+
+        return response(json_encode($this->service->pendingInactiveCustomers()), 200, [
+            'Content-Type' => 'application/json',
+        ]);
+    }
+
+    public function customersInactiveUpdate(Request $request)
+    {
+        if (!$this->authorized($request)) {
+            return response('Unauthorized', 401);
+        }
+
+        $this->service->applyCustomerInactiveUpdate($request->all());
+
+        return response('OK');
+    }
+
     public function customersImport(Request $request)
     {
         if (!$this->authorized($request)) {

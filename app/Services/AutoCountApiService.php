@@ -142,6 +142,39 @@ class AutoCountApiService
             ->all();
     }
 
+    public function pendingInactiveCustomers(): array
+    {
+        return User::query()
+            ->where('autocount_sync_status', 'pending_inactive')
+            ->whereNotNull('sql_customer_code')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (User $user) => $this->toInactiveCustomerPayload($user))
+            ->values()
+            ->all();
+    }
+
+    public function applyCustomerInactiveUpdate(array $payload): void
+    {
+        $customerId = (int) ($payload['id'] ?? 0);
+        $accNo = trim((string) ($payload['AccNo'] ?? $payload['acc_no'] ?? ''));
+
+        $user = $customerId ? User::find($customerId) : null;
+        if (!$user && $accNo !== '') {
+            $user = User::query()->where('sql_customer_code', $accNo)->first();
+        }
+
+        if (!$user) {
+            throw new \InvalidArgumentException('Customer not found for inactive update.');
+        }
+
+        $user->update([
+            'status' => User::$user_status['inactive'],
+            'autocount_sync_status' => 'synced',
+            'autocount_synced_at' => now(),
+        ]);
+    }
+
     public function applyCustomerUpdate(array $payload): void
     {
         $customerId = (int) ($payload['id'] ?? 0);
@@ -623,8 +656,21 @@ class AutoCountApiService
             'payment_method' => $user->customer_type,
             'email' => $user->email,
             'status' => $user->status,
+            'is_active' => $user->isActiveCustomer(),
             'created_at' => $user->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $user->updated_at->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    protected function toInactiveCustomerPayload(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'AccNo' => $this->normalizeCustomerCode($user->sql_customer_code),
+            'acc_no' => $this->normalizeCustomerCode($user->sql_customer_code),
+            'name' => $user->name,
+            'is_active' => false,
+            'status' => User::$user_status['inactive'],
         ];
     }
 

@@ -16,6 +16,7 @@ return [
     'autocount_sync_status' => [
         'pending' => 'Pending',
         'pending_sync' => 'Pending Sync',
+        'pending_inactive' => 'Pending Inactive in AutoCount',
         'synced' => 'Synced',
         'synced_successfully' => 'Synced Successfully',
         'sync_error' => 'Sync Error',
