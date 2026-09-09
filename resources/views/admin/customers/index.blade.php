@@ -195,7 +195,16 @@
                                                 <a href="{{ route('admin.customers.generate-registration-link', $user->id) }}" class="btn btn-sm btn-outline-primary">{{ __('customers.generate_link') }}</a>
                                             @endif
                                         </td>
-                                        <td>{{ $user->hasCompletedRegistration() ? $user->name : __('customers.pending_registration') }}</td>
+                                        <td>
+                                            @if ($user->hasCompletedRegistration())
+                                                @if ($user->sql_customer_code)
+                                                    <span class="badge bg-light text-dark border me-1">{{ $user->sql_customer_code }}</span>
+                                                @endif
+                                                {{ $user->name }}
+                                            @else
+                                                {{ __('customers.pending_registration') }}
+                                            @endif
+                                        </td>
                                         <td>{{ $user->email ?: '--' }}</td>
                                         <td>
                                             @if ($user->isCreditCustomer())
