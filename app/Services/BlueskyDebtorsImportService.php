@@ -148,6 +148,7 @@ class BlueskyDebtorsImportService
         $mapped = $this->mapToCustomer($row, $options);
 
         return [
+            'name' => $mapped['name'],
             'category' => $mapped['category'],
             'customer_type' => $mapped['customer_type'],
             'payment_term_days' => $mapped['payment_term_days'],
@@ -177,13 +178,14 @@ class BlueskyDebtorsImportService
     }
 
     /**
+     * @param  array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}|string  $rowOrName
      * @param  \Illuminate\Support\Collection<int, User>  $customersByName
      */
-    public function findExistingCustomer(string $name, $customersByName): ?\App\User
+    public function findExistingCustomer(array|string $rowOrName, $customersByName): ?\App\User
     {
-        $keys = array_unique(array_filter([
-            self::normalizeMatchName($name),
-        ]));
+        $keys = is_array($rowOrName)
+            ? $this->customerMatchKeys($rowOrName)
+            : [self::normalizeMatchName($rowOrName)];
 
         foreach ($keys as $key) {
             if ($customersByName->has($key)) {
@@ -192,6 +194,33 @@ class BlueskyDebtorsImportService
         }
 
         return null;
+    }
+
+    /**
+     * @param  array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}  $row
+     * @return list<string>
+     */
+    public function customerMatchKeys(array $row): array
+    {
+        return array_values(array_unique(array_filter([
+            self::normalizeMatchName($this->formatCustomerName($row)),
+            self::normalizeMatchName($row['name']),
+        ])));
+    }
+
+    /**
+     * @param  array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}  $row
+     */
+    public function formatCustomerName(array $row): string
+    {
+        $outlet = preg_replace('/\s+/u', ' ', trim($row['name']));
+        $legal = preg_replace('/\s+/u', ' ', trim($row['legal_name'] ?? ''));
+
+        if ($legal !== '' && self::normalizeMatchName($legal) !== self::normalizeMatchName($outlet)) {
+            return mb_substr($legal . ' - ' . $outlet, 0, 100);
+        }
+
+        return mb_substr($outlet, 0, 100);
     }
 
     /**
@@ -221,30 +250,13 @@ class BlueskyDebtorsImportService
         $phones = array_values(array_filter(array_map([$this, 'normalizePhone'], $row['phones'])));
         $primaryPhone = $phones[0] ?? '';
 
-        $remarkParts = [];
-        if (!empty($row['legal_name'])) {
-            $remarkParts[] = 'Company: ' . $row['legal_name'];
-        }
-        if (!empty($row['extra_aliases'])) {
-            $remarkParts[] = 'Also known as: ' . implode(', ', $row['extra_aliases']);
-        }
-        if ($address['full'] !== '' && mb_strlen($address['full']) > 100) {
-            $remarkParts[] = 'Full address: ' . $address['full'];
-        }
-        if (count($phones) > 1) {
-            $remarkParts[] = 'Other phones: ' . implode(', ', array_slice($phones, 1));
-        }
-        if ($options['remark_prefix'] !== '') {
-            array_unshift($remarkParts, trim($options['remark_prefix']));
-        }
-
         $customerType = $options['customer_type'];
         $paymentMethods = $customerType === 'credit'
             ? [\App\User::$payment_method['term']]
             : [\App\User::$payment_method['cod']];
 
         return [
-            'name' => mb_substr($row['name'], 0, 100),
+            'name' => $this->formatCustomerName($row),
             'category' => $options['category'],
             'customer_type' => $customerType,
             'payment_term_days' => $customerType === 'credit' ? (int) $options['payment_term_days'] : null,
@@ -259,7 +271,7 @@ class BlueskyDebtorsImportService
             'shipping_postcode' => mb_substr($address['postcode'] ?: '00000', 0, 5),
             'shipping_state' => mb_substr($address['state'] ?: 'Kuala Lumpur', 0, 30),
             'payment_method' => json_encode($paymentMethods),
-            'remark' => mb_substr(implode(' | ', array_filter($remarkParts)), 0, 500),
+            'remark' => '',
             'price_permission' => 1,
             'invoice_visibility' => 1,
             'invoice_price_permission' => 1,
@@ -441,7 +453,7 @@ class BlueskyDebtorsImportService
 
             $report[] = [
                 'no' => $index + 1,
-                'customer_name' => $row['name'],
+                'customer_name' => $this->formatCustomerName($row),
                 'company_name' => $this->displayCompanyName($row),
                 'company_key' => $companyKey,
                 'accounts_for_company' => $accountsForCompany,
@@ -632,7 +644,7 @@ class BlueskyDebtorsImportService
         }
 
         foreach ($parsed as $row) {
-            if ($this->findExistingCustomer($row['name'], $customersByName)) {
+            if ($this->findExistingCustomer($row, $customersByName)) {
                 continue;
             }
 
@@ -776,6 +788,7 @@ class BlueskyDebtorsImportService
         $keepKeys = [];
 
         foreach ($parsed as $row) {
+            $keepKeys[self::normalizeMatchName($this->formatCustomerName($row))] = true;
             $keepKeys[self::normalizeMatchName($row['name'])] = true;
         }
 
@@ -972,11 +985,13 @@ class BlueskyDebtorsImportService
             &$reconcile
         ) {
             foreach ($parsed as $row) {
-                $existing = $this->findExistingCustomer($row['name'], $customersByName);
+                $existing = $this->findExistingCustomer($row, $customersByName);
 
                 if ($existing) {
                     if ($updateMode) {
                         $existing->update($this->mapToCustomerUpdates($row, $options));
+                        $existing->refresh();
+                        $customersByName->put(self::normalizeMatchName($existing->name), $existing);
                         $updated++;
                         continue;
                     }
@@ -1036,7 +1051,7 @@ class BlueskyDebtorsImportService
         $skipped = 0;
 
         foreach ($parsed as $row) {
-            $existing = $this->findExistingCustomer($row['name'], $customersByName);
+            $existing = $this->findExistingCustomer($row, $customersByName);
 
             if ($existing) {
                 if ($updateMode) {
@@ -1082,8 +1097,13 @@ class BlueskyDebtorsImportService
 
         DB::transaction(function () use ($parsed, $options, $password, &$created) {
             foreach ($parsed as $row) {
+                $matchKeys = $this->customerMatchKeys($row);
                 $existing = User::query()
-                    ->whereRaw('LOWER(name) = ?', [self::normalizeMatchName($row['name'])])
+                    ->where(function ($query) use ($matchKeys) {
+                        foreach ($matchKeys as $key) {
+                            $query->orWhereRaw('LOWER(name) = ?', [$key]);
+                        }
+                    })
                     ->exists();
 
                 if ($existing) {
@@ -1144,7 +1164,7 @@ class BlueskyDebtorsImportService
     protected function queueActiveAutoCountSyncForParsed(array $parsed, $customersByName): void
     {
         foreach ($parsed as $row) {
-            $user = $this->findExistingCustomer($row['name'], $customersByName);
+            $user = $this->findExistingCustomer($row, $customersByName);
             if (!$user) {
                 continue;
             }
@@ -1182,6 +1202,7 @@ class BlueskyDebtorsImportService
         $mergedAliasKeys = [];
 
         foreach ($parsed as $row) {
+            $keepKeys[self::normalizeMatchName($this->formatCustomerName($row))] = true;
             $keepKeys[self::normalizeMatchName($row['name'])] = true;
 
             if (!empty($row['legal_name'])) {
@@ -1250,7 +1271,7 @@ class BlueskyDebtorsImportService
 
         if ($userPhone !== '') {
             foreach ($parsed as $row) {
-                $target = $this->findExistingCustomer($row['name'], $customersByName);
+                $target = $this->findExistingCustomer($row, $customersByName);
                 if (!$target || trim((string) $target->sql_customer_code) !== '') {
                     continue;
                 }
@@ -1279,7 +1300,7 @@ class BlueskyDebtorsImportService
                 continue;
             }
 
-            $target = $this->findExistingCustomer($row['name'], $customersByName);
+            $target = $this->findExistingCustomer($row, $customersByName);
             if ($target && trim((string) $target->sql_customer_code) === '') {
                 return $target;
             }
@@ -1294,7 +1315,7 @@ class BlueskyDebtorsImportService
                 continue;
             }
 
-            $outlet = $this->findExistingCustomer($row['name'], $customersByName);
+            $outlet = $this->findExistingCustomer($row, $customersByName);
             if ($outlet && trim((string) $outlet->sql_customer_code) === '') {
                 return $outlet;
             }
