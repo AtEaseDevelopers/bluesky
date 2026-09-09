@@ -120,6 +120,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/customers', 'CustomerController@index')->name('customers');
                 Route::get('/customers/export', 'CustomerController@export')->name('customers.export');
                 Route::post('/customers/sync-autocount', 'CustomerController@syncAutoCount')->name('customers.sync-autocount');
+                Route::post('/customer/{customer}/update-code', 'CustomerController@updateCustomerCode')->name('customers.update-code');
                 Route::controller(PosController::class)->prefix('pos')->name('pos.')->group(function () {
                     Route::post('/session', 'setSession')->name('session');
                     Route::post('/reset', 'resetSession')->name('reset');

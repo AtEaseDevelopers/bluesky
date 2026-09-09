@@ -116,6 +116,7 @@
                                     <th>{{ __('customers.login_link') }}</th>
                                     <th>{{ __('customers.registration') }}</th>
                                     <th>{{ __('customers.name') }}</th>
+                                    <th>{{ __('customers.customer_code') }}</th>
                                     <th>{{ __('customers.email') }}</th>
                                     <th>{{ __('customers.customer_type') }}</th>
                                     <th>{{ __('customers.credit_balance') }}</th>
@@ -197,12 +198,21 @@
                                         </td>
                                         <td>
                                             @if ($user->hasCompletedRegistration())
-                                                @if ($user->sql_customer_code)
-                                                    <span class="badge bg-light text-dark border me-1">{{ $user->sql_customer_code }}</span>
-                                                @endif
                                                 {{ $user->name }}
                                             @else
                                                 {{ __('customers.pending_registration') }}
+                                            @endif
+                                        </td>
+                                        <td class="customer-code-col" style="min-width: 110px;">
+                                            @if ($admin->canModule('customers', 'edit'))
+                                                <span class="customer-code-display d-inline-block w-100 {{ $user->sql_customer_code ? '' : 'text-muted' }}"
+                                                    data-customer-id="{{ encrypt($user->id) }}"
+                                                    data-update-url="{{ route('admin.customers.update-code', encrypt($user->id)) }}"
+                                                    title="{{ __('customers.customer_code_dblclick_edit') }}">
+                                                    {{ $user->sql_customer_code ?: '--' }}
+                                                </span>
+                                            @else
+                                                {{ $user->sql_customer_code ?: '--' }}
                                             @endif
                                         </td>
                                         <td>{{ $user->email ?: '--' }}</td>
@@ -261,7 +271,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="16">
+                                    <td colspan="17">
                                         {{ $users->appends(request()->query())->links('pagination::bootstrap-4') }}
                                     </td>
                                 </tr>
@@ -328,6 +338,8 @@
         $(document).ready(function() {
             const customersJs = {
                 select_customer: @json(__('customers.js.select_customer')),
+                customer_code_saved: @json(__('customers.js.customer_code_saved')),
+                customer_code_save_failed: @json(__('customers.js.customer_code_save_failed')),
             };
 
             $("#customer_checkall").on('change', function() {
@@ -393,6 +405,110 @@
                     document.getElementById('deactivateCustomerForm').setAttribute('action', deactivateBtn.getAttribute('data-action'));
                     document.getElementById('deactivateCustomerName').textContent = deactivateBtn.getAttribute('data-name');
                 }
+            });
+
+            let activeCustomerCodeEditor = null;
+
+            function finishCustomerCodeEdit(save) {
+                if (!activeCustomerCodeEditor) {
+                    return;
+                }
+
+                const wrap = activeCustomerCodeEditor.wrap;
+                const display = activeCustomerCodeEditor.display;
+                const input = activeCustomerCodeEditor.input;
+                const original = activeCustomerCodeEditor.original;
+                const updateUrl = display.getAttribute('data-update-url');
+
+                activeCustomerCodeEditor = null;
+
+                if (!save) {
+                    display.textContent = original || '--';
+                    display.classList.toggle('text-muted', !original);
+                    wrap.replaceChild(display, input);
+                    return;
+                }
+
+                const value = input.value.trim();
+
+                fetch(updateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ sql_customer_code: value }),
+                })
+                .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok || !data.success) {
+                        const message = (data && data.message) ? data.message : customersJs.customer_code_save_failed;
+                        if (data && data.errors && data.errors.sql_customer_code) {
+                            alert(data.errors.sql_customer_code[0]);
+                        } else {
+                            alert(message);
+                        }
+                        display.textContent = original || '--';
+                        display.classList.toggle('text-muted', !original);
+                        wrap.replaceChild(display, input);
+                        return;
+                    }
+
+                    const saved = (data.sql_customer_code || '').trim();
+                    display.textContent = saved || '--';
+                    display.classList.toggle('text-muted', !saved);
+                    wrap.replaceChild(display, input);
+                })
+                .catch(() => {
+                    alert(customersJs.customer_code_save_failed);
+                    display.textContent = original || '--';
+                    display.classList.toggle('text-muted', !original);
+                    wrap.replaceChild(display, input);
+                });
+            }
+
+            document.querySelectorAll('.customer-code-display').forEach(function (display) {
+                display.style.cursor = 'pointer';
+
+                display.addEventListener('dblclick', function () {
+                    if (activeCustomerCodeEditor) {
+                        finishCustomerCodeEdit(false);
+                    }
+
+                    const wrap = display.parentElement;
+                    const original = display.textContent.trim() === '--' ? '' : display.textContent.trim();
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'form-control form-control-sm';
+                    input.value = original;
+                    input.maxLength = 30;
+
+                    wrap.replaceChild(input, display);
+                    input.focus();
+                    input.select();
+
+                    activeCustomerCodeEditor = { wrap, display, input, original };
+
+                    input.addEventListener('keydown', function (event) {
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
+                            finishCustomerCodeEdit(true);
+                        } else if (event.key === 'Escape') {
+                            event.preventDefault();
+                            finishCustomerCodeEdit(false);
+                        }
+                    });
+
+                    input.addEventListener('blur', function () {
+                        setTimeout(function () {
+                            if (activeCustomerCodeEditor && activeCustomerCodeEditor.input === input) {
+                                finishCustomerCodeEdit(true);
+                            }
+                        }, 0);
+                    });
+                });
             });
         });
     </script>

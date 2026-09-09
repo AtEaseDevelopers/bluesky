@@ -114,6 +114,8 @@ return [
         'sync_autocount_success' => '已将 :count 位客户加入 AutoCount 同步队列。',
         'sync_autocount_skipped' => ':count 位客户无法同步。',
         'sync_autocount_none' => '没有客户被加入 AutoCount 同步队列。',
+        'customer_code_saved' => '客户编号已更新。',
+        'customer_code_save_failed' => '无法更新客户编号。',
     ],
 
     'delete' => '删除客户',
@@ -152,6 +154,7 @@ return [
     'customer_code_assigned_after_autocount_sync' => '客户编号将在 AutoCount 插件同步该客户后自动写入。',
     'enter_customer_code' => '输入客户编号',
     'customer_code_edit_help' => 'AutoCount 客户编号（如 300-E002）。尚未分配可留空。须与 AutoCount 中的编号一致。',
+    'customer_code_dblclick_edit' => '双击编辑客户编号',
     'ssm' => 'SSM',
     'enter_ssm' => '输入 SSM（可选）',
     'tin_no' => '税务识别号',

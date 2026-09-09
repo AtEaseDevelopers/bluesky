@@ -16,6 +16,7 @@ use App\User;
 use App\Services\CustomerLifecycleService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
@@ -203,6 +204,35 @@ class CustomerController extends Controller
         }
 
         return back()->with('success', __('customers.deactivate_success', ['name' => $user->name]));
+    }
+
+    public function updateCustomerCode(Request $request, string $customer)
+    {
+        $admin = Auth::guard('web_admin')->user();
+        if (!$admin || !$admin->canModule('customers', 'edit')) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $user = User::findOrFail(decrypt($customer));
+
+        $validated = $request->validate([
+            'sql_customer_code' => [
+                'nullable',
+                'string',
+                'max:30',
+                Rule::unique('users', 'sql_customer_code')->ignore($user->id),
+            ],
+        ]);
+
+        $accNo = trim((string) ($validated['sql_customer_code'] ?? ''));
+        $user->update([
+            'sql_customer_code' => $accNo === '' ? null : $accNo,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'sql_customer_code' => $user->fresh()->sql_customer_code,
+        ]);
     }
 
     public function import_customers()

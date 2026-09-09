@@ -114,6 +114,8 @@ return [
         'sync_autocount_success' => ':count customer(s) queued for AutoCount sync.',
         'sync_autocount_skipped' => ':count customer(s) could not be synced.',
         'sync_autocount_none' => 'No customers were queued for AutoCount sync.',
+        'customer_code_saved' => 'Customer code updated.',
+        'customer_code_save_failed' => 'Unable to update customer code.',
     ],
 
     'delete' => 'Delete Customer',
@@ -153,6 +155,7 @@ return [
     'customer_code_assigned_after_autocount_sync' => 'Customer code will be assigned from AutoCount after the plugin syncs this customer.',
     'enter_customer_code' => 'Enter customer code',
     'customer_code_edit_help' => 'AutoCount AccNo (e.g. 300-E002). Leave blank if not assigned yet. Must match the debtor code in AutoCount.',
+    'customer_code_dblclick_edit' => 'Double-click to edit customer code',
     'ssm' => 'SSM',
     'enter_ssm' => 'Enter SSM (optional)',
     'tin_no' => 'TIN No.',
