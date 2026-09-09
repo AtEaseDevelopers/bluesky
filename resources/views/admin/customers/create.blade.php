@@ -190,16 +190,27 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-4">
+                                    @php
+                                        $selectedCategory = old('category');
+                                        $categoryNames = collect($category_list)->pluck('category')->filter()->values()->all();
+                                        $hasLegacyCategory = $selectedCategory && !in_array($selectedCategory, $categoryNames, true);
+                                    @endphp
                                     <label class="mb-2" for="customerCategory">{{ __('customers.category') }}</label>
-                                    <input list="categoryOptions"
-                                        class="form-control @error('category') is-invalid @enderror" name="category"
-                                        id="customerCategory" value="{{ old('category') }}"
-                                        placeholder="{{ __('customers.enter_category_optional') }}">
-                                    <datalist id="categoryOptions">
+                                    <select name="category" id="customerCategory"
+                                        class="form-select @error('category') is-invalid @enderror">
+                                        <option value=""></option>
+                                        @if ($hasLegacyCategory)
+                                            <option value="{{ $selectedCategory }}" selected>{{ $selectedCategory }}</option>
+                                        @endif
                                         @foreach ($category_list as $category)
-                                            <option value="{{ $category->category }}"></option>
+                                            @if (data_get($category, 'category'))
+                                                <option value="{{ data_get($category, 'category') }}"
+                                                    {{ $selectedCategory === data_get($category, 'category') ? 'selected' : '' }}>
+                                                    {{ data_get($category, 'category') }}
+                                                </option>
+                                            @endif
                                         @endforeach
-                                    </datalist>
+                                    </select>
                                     @error('category')
                                         <span class="text-danger" role="alert">
                                             <strong>{{ $message }}</strong>
@@ -482,10 +493,19 @@
                 placeholder: 'Select an area'
             });
 
-            $('#customerCategory').on('change blur', function() {
-                const category = $(this).val().trim();
-                if (category) {
-                    fetch(appUrl + '/admin/get-products-for-category', {
+            $('#customerCategory').select2({
+                placeholder: @json(__('customers.select_category')),
+                allowClear: true,
+                width: '100%'
+            });
+
+            $('#customerCategory').on('change', function() {
+                const category = ($(this).val() || '').trim();
+                if (!category) {
+                    return;
+                }
+
+                fetch(appUrl + '/admin/get-products-for-category', {
                         method: 'POST',
                         body: JSON.stringify({category: category}),
                         headers: {
@@ -521,7 +541,6 @@
                     .catch(error => {
                         console.error('Error:', error);
                     });
-                }
             });
 
             // Toggle chevron icons for collapsible sections

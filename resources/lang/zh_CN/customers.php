@@ -116,6 +116,18 @@ return [
         'sync_autocount_none' => '没有客户被加入 AutoCount 同步队列。',
     ],
 
+    'delete' => '删除客户',
+    'delete_confirm' => '确定要永久删除此客户吗？此操作无法撤销。',
+    'delete_success' => '已删除 :name。',
+    'delete_blocked_has_orders' => '该客户已有订单，无法删除。请改为设为停用。',
+    'deactivate' => '停用',
+    'deactivate_confirm' => '确定停用此客户吗？停用后将无法登录或下单，订单记录会保留。',
+    'deactivate_success' => '已停用 :name。',
+    'deactivate_use_delete' => '该客户没有订单，请直接删除而非停用。',
+    'customer_status' => '账户状态',
+    'customer_status_help_has_orders' => '已有订单的客户无法删除。设为停用可禁止登录和新订单。',
+    'customer_status_help_no_orders' => '可将客户设为停用，或使用下方操作永久删除。',
+
     'general_info' => '基本信息',
     'advanced_info' => '高级信息',
     'visibility_permissions' => '可见性与权限',

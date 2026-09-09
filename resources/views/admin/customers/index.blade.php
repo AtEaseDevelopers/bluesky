@@ -143,6 +143,27 @@
                                                 <a href="{{ route('admin.customers.edit', encrypt($user->id)) }}" class="btn btn-sm btn-primary" title="{{ __('customers.edit_customer') }}">
                                                     <i class="fa fa-edit"></i>
                                                 </a>
+                                                @if (($user->orders_count ?? 0) === 0)
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-danger btn-delete-customer"
+                                                        title="{{ __('customers.delete') }}"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#deleteCustomerModal"
+                                                        data-action="{{ route('admin.customers.destroy', encrypt($user->id)) }}"
+                                                        data-name="{{ $user->name }}">
+                                                        <i class="fa fa-trash"></i>
+                                                    </button>
+                                                @elseif ($user->isActiveCustomer())
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-warning btn-deactivate-customer"
+                                                        title="{{ __('customers.deactivate') }}"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#deactivateCustomerModal"
+                                                        data-action="{{ route('admin.customers.deactivate', encrypt($user->id)) }}"
+                                                        data-name="{{ $user->name }}">
+                                                        <i class="fa fa-ban"></i>
+                                                    </button>
+                                                @endif
                                             @endif
                                         </td>
                                         <td>
@@ -204,7 +225,7 @@
                                         <td>{{ $user->area ?? '-' }}</td>
                                         <td>{{ $user->billing_address }}</td>
                                         <td>{{ $user->shipping_address }}</td>
-                                        <td>{{ __('user.status.' . $user->status) }}</td>
+                                        <td>{{ $user->statusLabel() }}</td>
                                         <td class="text-center">
                                             @if (!$user->hasCompletedRegistration())
                                                 <span class="badge bg-secondary">{{ __('customers.autocount_sync_status.not_applicable') }}</span>
@@ -246,6 +267,50 @@
     <form id="syncAutoCountForm" action="{{ route('admin.customers.sync-autocount') }}" method="POST" class="d-none">
         @csrf
     </form>
+
+    <div class="modal" id="deleteCustomerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ __('customers.delete') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ __('customers.delete_confirm') }}</p>
+                    <p class="mb-0 fw-semibold" id="deleteCustomerName"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('ui.close') }}</button>
+                    <form action="" method="POST" id="deleteCustomerForm" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-danger">{{ __('ui.delete') }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="deactivateCustomerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ __('customers.deactivate') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ __('customers.deactivate_confirm') }}</p>
+                    <p class="mb-0 fw-semibold" id="deactivateCustomerName"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('ui.close') }}</button>
+                    <form action="" method="POST" id="deactivateCustomerForm" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-warning">{{ __('customers.deactivate') }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
 @endsection
 @section('script')
@@ -305,6 +370,20 @@
                 document.execCommand('copy');
                 temp.remove();
                 alert(@json(__('customers.js.guest_link_copied')));
+            });
+
+            document.addEventListener('click', function (event) {
+                const deleteBtn = event.target.closest('.btn-delete-customer');
+                if (deleteBtn) {
+                    document.getElementById('deleteCustomerForm').setAttribute('action', deleteBtn.getAttribute('data-action'));
+                    document.getElementById('deleteCustomerName').textContent = deleteBtn.getAttribute('data-name');
+                }
+
+                const deactivateBtn = event.target.closest('.btn-deactivate-customer');
+                if (deactivateBtn) {
+                    document.getElementById('deactivateCustomerForm').setAttribute('action', deactivateBtn.getAttribute('data-action'));
+                    document.getElementById('deactivateCustomerName').textContent = deactivateBtn.getAttribute('data-name');
+                }
             });
         });
     </script>

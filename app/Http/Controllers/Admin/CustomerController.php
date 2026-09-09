@@ -13,6 +13,7 @@ use App\Helper;
 use App\Imports\CustomersImport;
 use App\ProductVisibility;
 use App\User;
+use App\Services\CustomerLifecycleService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -33,6 +34,7 @@ class CustomerController extends Controller
         $customer_type = $request['customer_type'];
 
         $users = User::query()
+            ->withCount('orders')
             ->leftJoin('areas', 'areas.id', '=', 'users.area')
             ->select(
                 'users.*',
@@ -172,6 +174,33 @@ class CustomerController extends Controller
     {
         ProductVisibility::where('id', $request['id'])->delete();
         return response()->json([]);
+    }
+
+    public function destroy(string $customer, CustomerLifecycleService $lifecycleService)
+    {
+        $user = User::findOrFail(decrypt($customer));
+
+        try {
+            $name = $user->name;
+            $lifecycleService->delete($user);
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect(route('admin.customers'))->with('success', __('customers.delete_success', ['name' => $name]));
+    }
+
+    public function deactivate(string $customer, CustomerLifecycleService $lifecycleService)
+    {
+        $user = User::findOrFail(decrypt($customer));
+
+        try {
+            $lifecycleService->deactivate($user);
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', __('customers.deactivate_success', ['name' => $user->name]));
     }
 
     public function import_customers()

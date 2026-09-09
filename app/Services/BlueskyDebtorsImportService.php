@@ -173,6 +173,9 @@ class BlueskyDebtorsImportService
     {
         $name = preg_replace('/\s+/u', ' ', trim($name));
         $name = preg_replace('/\s+\(\d+\)$/', '', $name);
+        // OMS uses "COMPANY - OUTLET - 中文"; Excel list often omits dashes — treat as equivalent.
+        $name = preg_replace('/\s*-\s*/u', ' ', $name);
+        $name = preg_replace('/\s+/u', ' ', trim($name));
 
         return mb_strtolower($name);
     }
@@ -1293,20 +1296,6 @@ class BlueskyDebtorsImportService
         }
     }
 
-    protected function markCustomerInactiveForAutoCount(User $user): void
-    {
-        $updates = [
-            'status' => User::$user_status['inactive'],
-        ];
-
-        if (trim((string) $user->sql_customer_code) !== '') {
-            $updates['autocount_sync_status'] = 'pending_inactive';
-            $updates['autocount_synced_at'] = null;
-        }
-
-        $user->update($updates);
-    }
-
     /**
      * @param  list<array{name:string,address_lines:list<string>,phones:list<string>,legal_name?:string,extra_aliases?:list<string>}>  $parsed
      * @return list<User>
@@ -1442,16 +1431,17 @@ class BlueskyDebtorsImportService
 
     protected function canDeleteCustomer(User $user): bool
     {
-        return !Order::query()->where('user_id', $user->id)->exists();
+        return app(CustomerLifecycleService::class)->canDelete($user);
     }
 
     protected function deleteCustomer(User $user): void
     {
-        ProductVisibility::query()->where('user_id', $user->id)->delete();
-        DB::table('customer_drivers')->where('user_id', $user->id)->delete();
-        DB::table('carts')->where('user_id', $user->id)->delete();
-        DB::table('customer_credit_logs')->where('user_id', $user->id)->delete();
-        $user->delete();
+        app(CustomerLifecycleService::class)->delete($user);
+    }
+
+    protected function markCustomerInactiveForAutoCount(User $user): void
+    {
+        $user->update(app(CustomerLifecycleService::class)->buildStatusUpdates($user, 'inactive'));
     }
 
     private function cell(array $row, int $index): string

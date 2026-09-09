@@ -144,6 +144,8 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/customer/invite/success/{customer}', 'CustomerInviteController@success')->name('customers.invite.success');
                 Route::get('/customer/edit/{customer}', 'EditCustomerController@showForm')->name('customers.edit');
                 Route::post('/customer/edit/{customer}', 'EditCustomerController@editCustomer')->name('customers.update');
+                Route::post('/customer/delete/{customer}', 'CustomerController@destroy')->name('customers.destroy');
+                Route::post('/customer/deactivate/{customer}', 'CustomerController@deactivate')->name('customers.deactivate');
                 Route::post('/customer/update-password', 'EditCustomerController@updatePassword')->name('customer.update-password');
                 Route::get('/customer/generate-new-login-link/{customer}', 'EditCustomerController@generateNewLoginLink')->name('customers.generate-new-login-link');
                 Route::get('/customer/generate-registration-link/{customer}', 'EditCustomerController@generateRegistrationLink')->name('customers.generate-registration-link');

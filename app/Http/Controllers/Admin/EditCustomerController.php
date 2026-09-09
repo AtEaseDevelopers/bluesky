@@ -6,6 +6,7 @@ use App\Helper;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Services\CreditService;
+use App\Services\CustomerLifecycleService;
 use App\Services\CustomerProductVisibilityService;
 use App\System;
 use App\User;
@@ -48,6 +49,8 @@ class EditCustomerController extends Controller
             'admin.customers.edit',
             [
                 'customer' => $customer,
+                'hasOrders' => app(CustomerLifecycleService::class)->hasOrders($customer),
+                'canDeleteCustomer' => app(CustomerLifecycleService::class)->canDelete($customer),
                 'areas' => $areas,
                 'products' => $products,
                 'product_visibilities' => $product_visibilities,
@@ -74,9 +77,14 @@ class EditCustomerController extends Controller
         $previousCategory = trim((string) $customer->category);
         $newCategory = trim((string) ($data['category'] ?? ''));
         $categoryChanged = strcasecmp($previousCategory, $newCategory) !== 0;
+        $statusUpdates = app(CustomerLifecycleService::class)->buildStatusUpdates(
+            $customer,
+            $request->input('customer_status', $customer->adminStatusFormValue())
+        );
 
         $customer->fill(
-            [
+            array_merge(
+                [
                 "name" => $data['name'],
                 "email" => $data['email'] ?? null,
                 "category" => $data['category'],
@@ -96,7 +104,6 @@ class EditCustomerController extends Controller
                 "shipping_address" => $data['shipping_address'] ?? "",
                 "shipping_postcode" => $data['shipping_postcode'] ?? "",
                 "shipping_state" => $data['shipping_state'] ?? "",
-                "status" => User::$user_status['active'],
                 "remark" => $data['remark'],
                 "price_permission" => $request['price_permission'] ?? 0,
                 "invoice_visibility" => $request['invoice_visibility'] ?? 0,
@@ -104,8 +111,9 @@ class EditCustomerController extends Controller
                 'ssm' => $request['ssm'] ?? null,
                 'tin_no' => $request['tin_no'] ?? null,
                 "fax_no" => $data['fax_no'] ?? null,
-
-            ]
+                ],
+                $statusUpdates
+            )
         )->save();
 
         $customer = $customer->fresh();
@@ -197,6 +205,7 @@ class EditCustomerController extends Controller
             "fax_no" => array_merge(User::$attribute_rules['fax_no'], []),
             'ssm' => array_merge(User::$attribute_rules['ssm'], []),
             'tin_no' => array_merge(User::$attribute_rules['tin_no'], []),
+            'customer_status' => ['required', 'in:active,inactive'],
         ];
 
         try {

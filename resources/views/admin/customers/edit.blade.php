@@ -155,6 +155,23 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
+                                <div class="mb-4">
+                                    <label class="mb-2" for="customer_status">{{ __('customers.customer_status') }}</label>
+                                    <select name="customer_status" id="customer_status" class="form-select @error('customer_status') is-invalid @enderror">
+                                        <option value="active" {{ old('customer_status', $customer->adminStatusFormValue()) === 'active' ? 'selected' : '' }}>{{ __('customers.filter_status.active') }}</option>
+                                        <option value="inactive" {{ old('customer_status', $customer->adminStatusFormValue()) === 'inactive' ? 'selected' : '' }}>{{ __('customers.filter_status.inactive') }}</option>
+                                    </select>
+                                    <small class="text-muted d-block mt-1">
+                                        {{ $hasOrders ? __('customers.customer_status_help_has_orders') : __('customers.customer_status_help_no_orders') }}
+                                    </small>
+                                    @error('customer_status')
+                                        <span class="text-danger" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
                                 @include('admin.customers.partials.payment-term-field', [
                                     'customerType' => old('customer_type', $customer->customer_type ?? 'cod'),
                                     'selectedPaymentTermDays' => old('payment_term_days', $customer->payment_term_days ?? 30),
@@ -418,9 +435,86 @@
                         </div>
                     </div>
                 </div>
+                @if ($canDeleteCustomer)
+                <div class="card shadow no-border mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title text-danger">{{ __('customers.delete') }}</h5>
+                        <hr>
+                        <p class="text-muted mb-3">{{ __('customers.delete_confirm') }}</p>
+                        <button type="button"
+                            class="btn btn-danger btn-delete-customer"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteCustomerModal"
+                            data-action="{{ route('admin.customers.destroy', encrypt($customer->id)) }}"
+                            data-name="{{ $customer->name }}">
+                            <i class="fa fa-trash me-1"></i> {{ __('customers.delete') }}
+                        </button>
+                    </div>
+                </div>
+                @elseif ($hasOrders && $customer->isActiveCustomer())
+                <div class="card shadow no-border mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ __('customers.deactivate') }}</h5>
+                        <hr>
+                        <p class="text-muted mb-3">{{ __('customers.deactivate_confirm') }}</p>
+                        <button type="button"
+                            class="btn btn-warning btn-deactivate-customer"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deactivateCustomerModal"
+                            data-action="{{ route('admin.customers.deactivate', encrypt($customer->id)) }}"
+                            data-name="{{ $customer->name }}">
+                            <i class="fa fa-ban me-1"></i> {{ __('customers.deactivate') }}
+                        </button>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
     </form>
+
+    <div class="modal" id="deleteCustomerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ __('customers.delete') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ __('customers.delete_confirm') }}</p>
+                    <p class="mb-0 fw-semibold" id="deleteCustomerName"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('ui.close') }}</button>
+                    <form action="" method="POST" id="deleteCustomerForm" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-danger">{{ __('ui.delete') }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="deactivateCustomerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ __('customers.deactivate') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ __('customers.deactivate_confirm') }}</p>
+                    <p class="mb-0 fw-semibold" id="deactivateCustomerName"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('ui.close') }}</button>
+                    <form action="" method="POST" id="deactivateCustomerForm" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-warning">{{ __('customers.deactivate') }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="row">
         <div class="col-md-8">
@@ -650,6 +744,20 @@
             display_selected_products();
              const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]')
             tooltips.forEach(el => new bootstrap.Tooltip(el))
+
+            document.addEventListener('click', function (event) {
+                const deleteBtn = event.target.closest('.btn-delete-customer');
+                if (deleteBtn) {
+                    document.getElementById('deleteCustomerForm').setAttribute('action', deleteBtn.getAttribute('data-action'));
+                    document.getElementById('deleteCustomerName').textContent = deleteBtn.getAttribute('data-name');
+                }
+
+                const deactivateBtn = event.target.closest('.btn-deactivate-customer');
+                if (deactivateBtn) {
+                    document.getElementById('deactivateCustomerForm').setAttribute('action', deactivateBtn.getAttribute('data-action'));
+                    document.getElementById('deactivateCustomerName').textContent = deactivateBtn.getAttribute('data-name');
+                }
+            });
 
             // Toggle chevron icons for collapsible sections
             const advancedInfoBtn = document.querySelector('[data-bs-target="#advancedInfoCollapse"]');

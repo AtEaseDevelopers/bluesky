@@ -116,6 +116,18 @@ return [
         'sync_autocount_none' => 'No customers were queued for AutoCount sync.',
     ],
 
+    'delete' => 'Delete Customer',
+    'delete_confirm' => 'Are you sure you want to permanently delete this customer? This cannot be undone.',
+    'delete_success' => ':name has been deleted.',
+    'delete_blocked_has_orders' => 'This customer has orders and cannot be deleted. Set status to inactive instead.',
+    'deactivate' => 'Deactivate',
+    'deactivate_confirm' => 'Deactivate this customer? They will no longer be able to log in or place orders. Order history will be kept.',
+    'deactivate_success' => ':name has been deactivated.',
+    'deactivate_use_delete' => 'This customer has no orders. Delete the customer instead of deactivating.',
+    'customer_status' => 'Account Status',
+    'customer_status_help_has_orders' => 'Customers with orders cannot be deleted. Set inactive to disable login and new orders.',
+    'customer_status_help_no_orders' => 'You can set inactive or delete this customer from the actions below.',
+
     'general_info' => 'General Info',
     'advanced_info' => 'Advanced Info',
     'visibility_permissions' => 'Visibility & Permissions',
