@@ -206,6 +206,32 @@
                             </div>
                         </div>
                     </div>
+
+                    @if ($admin->canModule('orders', 'edit'))
+                        <div class="card shadow no-border mb-4">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                    <h5 class="card-title mb-0">{{ __('orders.add_products_to_order') }}</h5>
+                                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                        <i class="fa fa-plus" aria-hidden="true"></i> {{ __('orders.add_products') }}
+                                    </button>
+                                </div>
+                                <p class="text-muted small">{{ __('orders.add_products_to_order_hint') }}</p>
+                                <hr>
+                                <form method="POST" action="{{ route('admin.orders.products.add', $order->id) }}" id="add-products-form">
+                                    @csrf
+                                    <input type="hidden" id="order_customer" value="{{ $order->user_id }}">
+                                    <div id="product_bag-item">
+                                        <p class="text-muted small mb-0 admin-order-products-empty">{{ __('orders.order_products_empty') }}</p>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+                                        <span class="text-muted">{{ __('orders.add_products') }}: RM <strong id="total-price">0.00</strong></span>
+                                        <button type="submit" class="btn btn-primary" id="add-products-submit">{{ __('orders.add_products_to_order') }}</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="col-lg-4">
@@ -551,6 +577,10 @@
 
     @include('admin.orders.partials.pdf-modal')
 
+    @if ($admin->canModule('orders', 'edit'))
+        @include('admin.includes.add_products_modal')
+    @endif
+
 @endsection
 @section('script')
     @php
@@ -568,6 +598,21 @@
     <script>
         var ordersJs = @json(__('orders.js'));
         var ordersI18n = @json($ordersI18n);
+
+        // Add-extra-products flow (reuses the shared product-picker modal in script.js).
+        var selected_products = [];
+        window.orderProductsEmptyText = @json(__('orders.order_products_empty'));
+
+        document.getElementById('add-products-form')?.addEventListener('submit', function (e) {
+            if (!selected_products.length) {
+                e.preventDefault();
+                Swal.fire(
+                    ordersJs.warning || 'Warning',
+                    @json(__('orders.js.add_product_to_checkout')),
+                    'warning'
+                );
+            }
+        });
 
         function postStatusChange(status, driverId) {
             var payload = {

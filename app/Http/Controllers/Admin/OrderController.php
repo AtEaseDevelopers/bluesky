@@ -467,6 +467,89 @@ class OrderController extends Controller
         return Driver::optionsForOrders([$order->driver_id]);
     }
 
+    /**
+     * Append extra products to an already-created order without touching the
+     * existing line items, then recalculate totals and payment status.
+     */
+    public function addProducts(Request $request, Order $order)
+    {
+        $admin = Auth::guard('web_admin')->user();
+        if (!$admin || !$admin->canModule('orders', 'edit')) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'product_id' => ['required', 'array', 'min:1'],
+            'product_id.*' => ['required'],
+            'product_options' => ['array'],
+            'remark' => ['array'],
+            'quantity' => ['array'],
+            'weight' => ['array'],
+        ]);
+
+        $user = $order->user_id ? User::find($order->user_id) : null;
+
+        $addedWeight = 0;
+        foreach ($data['product_id'] as $key => $product_id) {
+            $product = Product::find($product_id);
+            if (!$product) {
+                continue;
+            }
+
+            if (in_array($product->sell_in, [Product::SELL_IN_WEIGHT, Product::SELL_IN_QTY_BILL_WEIGHT], true)) {
+                $rawWeight = $data['weight'][$key] ?? null;
+                $line = $product->resolveLineInputs(
+                    (float) ($data['quantity'][$key] ?? 0),
+                    ($rawWeight !== null && $rawWeight !== '') ? (float) $rawWeight : null,
+                    true
+                );
+            } else {
+                $line = $product->resolveLineInputs((float) ($data['quantity'][$key] ?? 0), null);
+            }
+
+            $unit_price = Product::get_today_price($product->id, $user);
+            $price = $unit_price * $line['bill_amount'];
+
+            $order_product = OrderProduct::create([
+                'order_id' => $order->id,
+                'product_id' => $product_id,
+                'product_name' => Product::orderLineName($product),
+                'quantity' => $line['quantity'],
+                'weight' => $line['weight'],
+                'product_weight' => $line['product_weight'],
+                'unit_price' => $unit_price,
+                'price' => $price,
+                'remark' => $data['remark'][$key] ?? null,
+                'nos' => null,
+                'status' => OrderProduct::$status['active'],
+            ]);
+
+            if (!empty($data['product_options'][$key])) {
+                foreach ($data['product_options'][$key] as $opt => $opt_itm) {
+                    if ($opt_itm) {
+                        OrderProductOption::create([
+                            'order_product_id' => $order_product->id,
+                            'option' => $opt,
+                            'option_item' => $opt_itm,
+                            'status' => OrderProductOption::$status['active'],
+                        ]);
+                    }
+                }
+            }
+
+            $addedWeight += $line['order_weight'];
+        }
+
+        if ($addedWeight > 0) {
+            $order->update(['order_weight' => (float) $order->order_weight + $addedWeight]);
+        }
+
+        app(OrderService::class)->recalculateTotals($order->fresh());
+
+        return redirect(route('admin.orders.summary', $order->id))
+            ->with('success', __('orders.products_added'));
+    }
+
     public function updatePaymentDueDate(Request $request, $id)
     {
         $order = Order::with('customer')->findOrFail($id);
