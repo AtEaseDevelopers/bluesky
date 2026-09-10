@@ -33,7 +33,7 @@
     <script src="{{ asset('assets/js/jquery-3.6.0.min.js') }}"></script>
     <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/js/numeric-input.js') }}?v=1"></script>
-    <script src="{{ asset('assets/js/script.js') }}?v=2.4"></script>
+    <script src="{{ asset('assets/js/script.js') }}?v=2.5"></script>
     <script src="{{ asset('assets/js/select2.min.js') }}?v="></script>
     <script>
         if (window.jQuery && jQuery.fn.select2 && typeof adminSelect2UnicodeMatcher === 'function') {

@@ -836,8 +836,17 @@ function init_customer_details(options) {
     var order_customer = document.getElementById('order_customer');
     var customerInfo = document.getElementById('customer_info');
     var submitButton = document.querySelector("form button[type=submit]");
+    var walkInToggle = document.getElementById('is_walk_in');
 
     if (!order_customer) {
+        return Promise.resolve(null);
+    }
+
+    // In walk-in mode the customer select is empty/disabled and irrelevant.
+    // Bail out before touching the UI so we don't hide the "Next" button that
+    // enableWalkInMode() already revealed (which the empty-value early return
+    // below would otherwise leave permanently hidden).
+    if (walkInToggle && walkInToggle.checked) {
         return Promise.resolve(null);
     }
 
