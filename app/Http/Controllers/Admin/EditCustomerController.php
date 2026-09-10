@@ -116,9 +116,20 @@ class EditCustomerController extends Controller
                 ],
                 $statusUpdates
             )
-        )->save();
+        );
+
+        $changedFields = array_keys($customer->getDirty());
+        $customer->save();
 
         $customer = $customer->fresh();
+
+        // Auto re-queue for AutoCount sync when synced details changed so the
+        // AutoCount plugin picks up the updated customer on its next pull.
+        app(\App\Services\AutoCountSyncService::class)->requeueForDetailChange(
+            $customer,
+            $changedFields,
+            auth('web_admin')->id()
+        );
 
         if ($customer->isCreditCustomer()
             && (int) $previousPaymentTermDays !== (int) $customer->payment_term_days) {

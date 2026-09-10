@@ -9,6 +9,56 @@ use App\User;
 class AutoCountSyncService
 {
     /**
+     * Customer columns whose values are pushed to AutoCount (see
+     * AutoCountApiService::toCustomerPayload). Changing any of these on an
+     * already-known customer means AutoCount is now out of date.
+     *
+     * @var array<int, string>
+     */
+    public static $customerSyncFields = [
+        'name',
+        'email',
+        'category',
+        'customer_type',
+        'attn_name',
+        'attn_contact',
+        'billing_address',
+        'billing_postcode',
+        'billing_state',
+        'shipping_address',
+        'shipping_postcode',
+        'shipping_state',
+    ];
+
+    /**
+     * Re-queue a customer for AutoCount sync when their synced details change
+     * (e.g. after an admin edit). Returns the fresh user when re-queued, or
+     * null when nothing relevant changed / the customer isn't eligible.
+     *
+     * @param  array<int, string>  $changedFields  column names that changed
+     */
+    public function requeueForDetailChange(User $user, array $changedFields, ?int $adminId = null): ?User
+    {
+        if (empty(array_intersect($changedFields, self::$customerSyncFields))) {
+            return null;
+        }
+
+        // Mirror pendingCustomers() gating: only registered, active customers
+        // are eligible. Deactivations are handled by the status path
+        // (pending_inactive), so we never clobber that here.
+        if (!$user->hasCompletedRegistration() || !$user->isActiveCustomer()) {
+            return null;
+        }
+
+        $user->update([
+            'autocount_sync_status' => 'pending_sync',
+            'autocount_synced_at' => null,
+        ]);
+
+        return $user->fresh();
+    }
+
+    /**
      * Queue invoice sync to AutoCount after order is paid and completed.
      * Integration endpoint to be wired when AutoCount credentials are available.
      */
