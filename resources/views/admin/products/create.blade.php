@@ -291,6 +291,50 @@
         $(document).ready(function(){
             $('input[name="sell_in"]').trigger('change')
 
+            // Auto-fill the SKU as "<category code><4 digits>" (e.g. A0001) when a
+            // category is chosen, unless the admin has typed their own SKU.
+            let skuManuallyEdited = false;
+
+            $('#productSku').on('input', function () {
+                skuManuallyEdited = $(this).val().trim() !== '';
+            });
+
+            function fillNextSku(force) {
+                const categoryId = $('#product_category_id').val();
+                if (!categoryId) {
+                    return;
+                }
+                if (!force && skuManuallyEdited) {
+                    return;
+                }
+
+                fetch(appUrl + '/admin/product/next-sku', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({ product_category_id: categoryId }),
+                })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data && data.sku) {
+                        $('#productSku').val(data.sku);
+                        skuManuallyEdited = false;
+                    }
+                })
+                .catch(function () { /* leave SKU untouched on failure */ });
+            }
+
+            $('#product_category_id').on('change', function () {
+                fillNextSku(true);
+            });
+
+            // On load, prefill when a category is preselected and SKU is empty.
+            if ($('#product_category_id').val() && $('#productSku').val().trim() === '') {
+                fillNextSku(false);
+            }
+
             $('#addOptionModal').on('shown.bs.modal', function (e) {
                 $('#optionName').val("");
                 $('#optionItems').val("");

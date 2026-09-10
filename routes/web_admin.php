@@ -87,6 +87,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
 
                 Route::get('/product/add', 'AddProductController@showForm')->name('products.create');
                 Route::post('/product/add', 'AddProductController@addProduct')->name('products.store');
+                Route::post('/product/next-sku', 'AddProductController@nextSku')->name('products.next-sku');
 
                 Route::get('/product/edit/{product}', 'EditProductController@showForm')->name('products.edit');
                 Route::post('/product/edit/{product}', 'EditProductController@editProduct')->name('products.update');

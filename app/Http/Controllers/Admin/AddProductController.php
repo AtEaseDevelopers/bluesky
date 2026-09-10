@@ -30,6 +30,14 @@ class AddProductController extends Controller
         return view('admin.products.create', $data);
     }
 
+    public function nextSku(Request $request)
+    {
+        $categoryId = $request->input('product_category_id');
+        $sku = $categoryId ? Product::nextSkuForCategory($categoryId) : null;
+
+        return response()->json(['sku' => $sku]);
+    }
+
     public function addProduct(Request $request)
     {
         $data = $this->validateAddProduct($request);

@@ -194,6 +194,38 @@ class Product extends Model
         return $this->hasMany(ProductCategoryPrice::class);
     }
 
+    /**
+     * Generate the next available SKU for a product category, formatted as
+     * the category code followed by a zero-padded 4-digit running number
+     * (e.g. code "A" => "A0001", code "FF" => "FF0007").
+     *
+     * Returns null when the category has no code set.
+     */
+    public static function nextSkuForCategory($categoryId): ?string
+    {
+        $category = ProductCategory::find($categoryId);
+        if (! $category || ! $category->code) {
+            return null;
+        }
+
+        $code = $category->code;
+        $codeLen = strlen($code);
+
+        // Look at every SKU beginning with this code and keep the highest
+        // purely-numeric suffix. The numeric-suffix filter keeps codes that
+        // are prefixes of others distinct (e.g. "F" vs "FF").
+        $max = 0;
+        $skus = self::where('sku', 'LIKE', $code . '%')->pluck('sku');
+        foreach ($skus as $sku) {
+            $suffix = substr($sku, $codeLen);
+            if ($suffix !== '' && ctype_digit($suffix)) {
+                $max = max($max, (int) $suffix);
+            }
+        }
+
+        return $code . str_pad((string) ($max + 1), 4, '0', STR_PAD_LEFT);
+    }
+
     public function stock()
     {
         return $this->hasOne(ProductStock::class);

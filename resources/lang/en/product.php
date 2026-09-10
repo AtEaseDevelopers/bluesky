@@ -82,6 +82,7 @@ return [
         'add' => 'Add New Category',
         'edit' => 'Edit Category',
         'category_name' => 'Category Name',
+        'code' => 'Code',
         'total_products' => 'Total Products',
         'delete' => 'Delete Category',
         'delete_confirm' => 'Are you sure to delete this category?',
@@ -89,6 +90,7 @@ return [
         'deleted_success' => 'Product category has been deleted successfully.',
         'placeholder' => [
             'category_name' => 'Enter category name',
+            'code' => 'Short code, e.g. A, FF',
         ],
     ],
 

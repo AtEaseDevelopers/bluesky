@@ -22,6 +22,15 @@
                                         </span>
                                     @enderror
                                 </div>
+                                <div class="mb-4">
+                                    <label class="mb-2" for="code">{{ __('product.categories.code') }}</label>
+                                    <input type="text" class="form-control @error('code') is-invalid @enderror" name="code" id="code" placeholder="{{ __('product.categories.placeholder.code') }}" value="{{ old('code') }}" maxlength="10">
+                                    @error('code')
+                                        <span class="text-danger" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
                                 <div class="d-flex justify-content-end">
                                     <a href="{{ route('admin.product-categories.index') }}" class="btn btn-secondary me-2 mb-1">{{ __('ui.back') }}</a>
                                     <button type="submit" class="btn btn-primary mb-1">

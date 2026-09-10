@@ -24,6 +24,7 @@
                                 <tr>
                                     <th>{{ __('uom.id') }}</th>
                                     <th>{{ __('uom.options') }}</th>
+                                    <th>{{ __('product.categories.code') }}</th>
                                     <th>{{ __('product.category') }}</th>
                                     <th>{{ __('product.categories.total_products') }}</th>
                                     <th>{{ __('uom.created_at') }}</th>
@@ -104,6 +105,10 @@
                 {
                     "data": "options",
                     orderable: false
+                },
+                {
+                    "data": "code",
+                    orderable: true
                 },
                 {
                     "data": "category_name",

@@ -82,6 +82,7 @@ return [
         'add' => '新增分类',
         'edit' => '编辑分类',
         'category_name' => '分类名称',
+        'code' => '代码',
         'total_products' => '商品总数',
         'delete' => '删除分类',
         'delete_confirm' => '确定要删除此分类吗？',
@@ -89,6 +90,7 @@ return [
         'deleted_success' => '商品分类已删除。',
         'placeholder' => [
             'category_name' => '请输入分类名称',
+            'code' => '简短代码，如 A、FF',
         ],
     ],
 
