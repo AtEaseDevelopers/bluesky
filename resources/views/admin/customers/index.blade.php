@@ -116,7 +116,26 @@
                                     <th>{{ __('customers.login_link') }}</th>
                                     <th>{{ __('customers.registration') }}</th>
                                     <th>{{ __('customers.name') }}</th>
-                                    <th>{{ __('customers.customer_code') }}</th>
+                                    <th>
+                                        @php
+                                            $codeSortActive = ($input['sort'] ?? 'name') === 'sql_customer_code';
+                                            $codeSortDir = $codeSortActive ? ($input['dir'] ?? 'asc') : 'asc';
+                                            $codeSortNextDir = $codeSortActive && $codeSortDir === 'asc' ? 'desc' : 'asc';
+                                            $codeSortQuery = array_merge($input ?? [], [
+                                                'sort' => 'sql_customer_code',
+                                                'dir' => $codeSortNextDir,
+                                            ]);
+                                        @endphp
+                                        <a href="{{ route('admin.customers') . '?' . http_build_query($codeSortQuery) }}"
+                                            class="text-decoration-none text-dark d-inline-flex align-items-center gap-1">
+                                            {{ __('customers.customer_code') }}
+                                            @if ($codeSortActive)
+                                                <i class="fa fa-sort-{{ $codeSortDir === 'asc' ? 'up' : 'down' }}" aria-hidden="true"></i>
+                                            @else
+                                                <i class="fa fa-sort text-muted" aria-hidden="true"></i>
+                                            @endif
+                                        </a>
+                                    </th>
                                     <th>{{ __('customers.email') }}</th>
                                     <th>{{ __('customers.customer_type') }}</th>
                                     <th>{{ __('customers.credit_balance') }}</th>

@@ -77,8 +77,9 @@ class CustomerController extends Controller
             })
             ->when($customer_type === 'credit', function ($q) {
                 return $q->where('users.customer_type', 'credit');
-            })
-            ->paginate(15);
+            });
+
+        $users = $this->applyCustomerListSort($users, $request)->paginate(15);
 
         // $category_list = User::select('category')
         //     ->groupBy('category')
@@ -97,7 +98,7 @@ class CustomerController extends Controller
 
     public function export(Request $request)
     {
-        $users = User::query()->orderBy('name');
+        $users = User::query();
 
         if ($filter_name = $request->input('name')) {
             Helper::applyOrLikeSearch($users, [
@@ -141,9 +142,37 @@ class CustomerController extends Controller
         }
 
         return Excel::download(
-            new AdminCustomerExport($users->get()),
+            new AdminCustomerExport($this->applyCustomerListSort($users, $request)->get()),
             Carbon::now()->format('YmdHis') . '-Customer-List.xlsx'
         );
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function applyCustomerListSort($query, Request $request)
+    {
+        $sort = (string) $request->input('sort', 'name');
+        $dir = strtolower((string) $request->input('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        $columns = [
+            'name' => 'users.name',
+            'sql_customer_code' => 'users.sql_customer_code',
+            'created_at' => 'users.created_at',
+        ];
+
+        if (!isset($columns[$sort])) {
+            $sort = 'name';
+        }
+
+        if ($sort === 'sql_customer_code') {
+            $query->orderByRaw(
+                '(users.sql_customer_code IS NULL OR users.sql_customer_code = "") ' . ($dir === 'asc' ? 'ASC' : 'DESC')
+            );
+        }
+
+        return $query->orderBy($columns[$sort], $dir);
     }
 
     public function syncAutoCount(Request $request)
