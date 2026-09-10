@@ -850,6 +850,27 @@ function init_customer_details(options) {
         return Promise.resolve(null);
     }
 
+    // Step navigation (Next/Back) toggles the customer select's disabled state
+    // and fires trigger('change.select2'), which — because the select has an
+    // inline onchange="init_customer_details()" — re-enters this function. If
+    // the same customer is already loaded, re-fetching would rebuild the
+    // payment-method dropdown and reset the admin's chosen value. A genuine
+    // customer change has a different value and still falls through to a full
+    // reload below.
+    if (!options.paymentMethodsOnly
+        && order_customer.value
+        && order_customer.value === init_customer_details._loadedCustomerId) {
+        // Skip the refetch (which would reset the payment method) but keep the
+        // already-loaded customer details and the Next button visible — the
+        // caller may have just hidden them while switching steps.
+        customerInfo.classList.remove('d-none');
+        var loadedNextBtn = document.querySelector("form button.next");
+        if (loadedNextBtn) {
+            loadedNextBtn.classList.remove('d-none');
+        }
+        return Promise.resolve(null);
+    }
+
     if (!options.paymentMethodsOnly) {
         customerInfo.classList.add('d-none');
         if (submitButton) {
@@ -858,6 +879,7 @@ function init_customer_details(options) {
     }
 
     if (!order_customer.value) {
+        init_customer_details._loadedCustomerId = null;
         return Promise.resolve(null);
     }
 
@@ -904,6 +926,8 @@ function init_customer_details(options) {
             nextBtn.classList.remove('d-none');
         }
         document.getElementById('transferSlipGroup').style.display = 'none';
+
+        init_customer_details._loadedCustomerId = order_customer.value;
 
         return data;
     })
