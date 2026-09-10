@@ -3,7 +3,7 @@
 return [
 
     'company' => [
-        'name' => env('PORTAL_COMPANY_NAME', 'Bluesky Live Seafood Supply Sdn Bhd'),
+        'name' => env('PORTAL_COMPANY_NAME', env('APP_NAME', 'Bluesky Live Seafood')),
         'registration_no' => env('PORTAL_COMPANY_REG', '1130071.K'),
         'phone' => env('PORTAL_COMPANY_PHONE', ''),
         'email' => env('PORTAL_COMPANY_EMAIL', ''),
