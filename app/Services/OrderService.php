@@ -282,6 +282,8 @@ class OrderService
             ]);
         }
 
+        $this->postCreditTermCharge($order, $payment, $amountToOrder, $adminId, $driverId);
+
         if ($overpayment > 0 && $order->user_id && $order->allowsOverpayment()) {
             $customer = $order->customer;
             if ($customer) {
@@ -559,6 +561,8 @@ class OrderService
                 'recorded_by' => $adminId,
             ]);
 
+            $this->postCreditTermCharge($order, $payment->fresh(), $amountToOrder, $adminId, null);
+
             if ($overpayment > 0 && $order->user_id && $order->allowsOverpayment()) {
                 $customer = $order->customer;
                 if ($customer) {
@@ -594,6 +598,38 @@ class OrderService
         $this->refreshPaymentStatus($payment->order->fresh());
 
         return $payment->fresh();
+    }
+
+    /**
+     * A confirmed credit-term payment settles the order balance on account:
+     * mirror it as a negative movement on the customer's credit ledger so the
+     * outstanding amount shows on their profile. No-op for any other method.
+     */
+    private function postCreditTermCharge(
+        Order $order,
+        ?OrderPayment $payment,
+        float $amount,
+        ?int $adminId,
+        ?int $driverId
+    ): void {
+        if (!$payment || $amount <= 0 || $payment->payment_method !== 'credit-term' || !$order->user_id) {
+            return;
+        }
+
+        $customer = $order->customer;
+        if (!$customer || !$customer->isCreditCustomer()) {
+            return;
+        }
+
+        app(CreditService::class)->recordCreditTermCharge(
+            $customer,
+            $amount,
+            $order,
+            $payment->id,
+            $adminId,
+            $driverId,
+            $payment->notes
+        );
     }
 
     private function assertAdminPaymentMethod(Order $order, string $method): void

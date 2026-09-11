@@ -24,6 +24,7 @@ class CustomerCreditLog extends Model
         'applied_to_order' => 'Applied to Order',
         'manual_adjustment' => 'Manual Adjustment',
         'cod_collection' => 'COD Collection',
+        'credit_term' => 'Credit Term',
     ];
 
     public function customer()

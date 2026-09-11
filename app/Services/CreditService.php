@@ -98,6 +98,39 @@ class CreditService
         );
     }
 
+    /**
+     * Record a "buy now, pay later" credit-term charge against the customer's
+     * account. The order balance is settled by the credit-term OrderPayment, so
+     * this posts a matching negative ledger movement — the customer now owes the
+     * amount and it surfaces on their profile as an outstanding balance.
+     */
+    public function recordCreditTermCharge(
+        User $user,
+        float $amount,
+        Order $order,
+        ?int $orderPaymentId = null,
+        ?int $adminId = null,
+        ?int $driverId = null,
+        ?string $notes = null
+    ): ?CustomerCreditLog {
+        if ($amount <= 0) {
+            return null;
+        }
+
+        $this->assertCreditCustomer($user);
+
+        return $this->adjustBalance(
+            $user,
+            -$amount,
+            'credit_term',
+            $order->id,
+            $orderPaymentId,
+            $adminId,
+            $driverId,
+            $notes ?: 'Credit term charge on order #' . $order->id
+        );
+    }
+
     public function manualAdjust(User $user, float $amount, string $notes, int $adminId): CustomerCreditLog
     {
         if ($amount == 0) {
