@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use App\ProductOptionItem;
 use App\ProductOption;
@@ -130,7 +131,7 @@ class AddProductController extends Controller
             "images" => array_merge(Product::$attribute_rules['images'], []),
             "name" => array_merge(Product::$attribute_rules['name'], []),
             "description" => array_merge(Product::$attribute_rules['description'], []),
-            "sku" => array_merge(Product::$attribute_rules['sku'], []),
+            "sku" => array_merge(Product::$attribute_rules['sku'], [Rule::unique('products', 'sku')]),
             "price" => array_merge(Product::$attribute_rules['price'], []),
             "status" => array_merge(Product::$attribute_rules['status'], []),
             "product_option" => ['nullable'],
@@ -144,7 +145,9 @@ class AddProductController extends Controller
         ];
 
         try {
-            $data = $request->validate($rules);
+            $data = $request->validate($rules, [
+                'sku.unique' => 'This SKU is already used by another product.',
+            ]);
         } catch (ValidationException $err) {
             return [
                 'error' => $err->getMessage(),

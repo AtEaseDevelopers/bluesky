@@ -73,7 +73,7 @@
                                             <td>{{ $estLabel }}</td>
                                             <td>
                                                 @if ($needsQty)
-                                                    <input type="number" step="0.001" min="0.001" class="form-control line-qty"
+                                                    <input type="number" step="1" min="1" class="form-control line-qty"
                                                         name="line_items[{{ $product->id }}][quantity]" value="{{ $product->quantity }}" required>
                                                 @else
                                                     <span class="text-muted">—</span>

@@ -378,7 +378,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    if (document.querySelector('input[name="quantity[]"]')) {
+    if (document.querySelector('input[name^="quantity["]')) {
         calculateTotal();
     }
 
@@ -625,7 +625,7 @@ document.addEventListener('change', function(event) {
         syncSelectAllControl();
     }
 
-    if (event.target.matches('input[name="quantity[]"], input[name="weight[]"]')) {
+    if (event.target.matches('input[name^="quantity["], input[name^="weight["]')) {
         syncBagQuantityToSelectedProducts(event.target);
         calculateTotal();
     }
@@ -636,7 +636,7 @@ document.addEventListener('change', function(event) {
 });
 
 document.addEventListener('input', function(event) {
-    if (event.target.matches('input[name="quantity[]"], input[name="weight[]"]')) {
+    if (event.target.matches('input[name^="quantity["], input[name^="weight["]')) {
         syncBagQuantityToSelectedProducts(event.target);
         calculateTotal();
     }
@@ -978,7 +978,7 @@ function display_selected_products() {
 
         let totalPriceForProduct = parseFloat(product.total_price);
         productHtml += `<div class="sel-product mb-3" id="sel-product-${product.product_id}" ${product.id ? `data-id="${product.product_id}"` : ''}>
-            <input type="hidden" name="product_id[]" value="${product.product_id}"/>
+            <input type="hidden" name="product_id[${index}]" value="${product.product_id}"/>
                 <div class="card"><div class="card-body">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-2">
                         <h5>${product.product_name}</h5>
@@ -1000,7 +1000,7 @@ function display_selected_products() {
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="minus">
                             <i class="fa fa-minus"></i>
                         </button>
-                        <input type="number" class="form-control text-center add-products-quantity" id="bagQty_${product.product_id}" name="quantity[]" value="${product.quantity || 1}" data-pid="${product.product_id}" data-price="${product.price}" data-field="quantity" data-sell-in="qty_bill_weight" min="0.001" step="0.001" required>
+                        <input type="number" class="form-control text-center add-products-quantity" id="bagQty_${product.product_id}" name="quantity[${index}]" value="${product.quantity || 1}" data-pid="${product.product_id}" data-price="${product.price}" data-field="quantity" data-sell-in="qty_bill_weight" min="1" step="1" required>
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="plus">
                             <i class="fa fa-plus"></i>
                         </button>
@@ -1012,7 +1012,7 @@ function display_selected_products() {
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagBillWeight_${product.product_id}" data-action="minus">
                             <i class="fa fa-minus"></i>
                         </button>
-                        <input type="number" class="form-control text-center add-products-bill-weight" id="bagBillWeight_${product.product_id}" name="weight[]" value="${product.weight || ''}" data-pid="${product.product_id}" data-price="${product.price}" data-field="bill_weight" data-sell-in="qty_bill_weight" min="0" step="0.001">
+                        <input type="number" class="form-control text-center add-products-bill-weight" id="bagBillWeight_${product.product_id}" name="weight[${index}]" value="${product.weight || ''}" data-pid="${product.product_id}" data-price="${product.price}" data-field="bill_weight" data-sell-in="qty_bill_weight" min="0" step="0.001">
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagBillWeight_${product.product_id}" data-action="plus">
                             <i class="fa fa-plus"></i>
                         </button>
@@ -1020,7 +1020,7 @@ function display_selected_products() {
                 </div>
                 <div class="form-group mb-3">
                     <label class="mb-2">${orderUi('remark', 'Remark')}</label>
-                    <textarea class="form-control" name="remark[]">${product.remark || ''}</textarea>
+                    <textarea class="form-control" name="remark[${index}]">${product.remark || ''}</textarea>
                 </div>
             `;
             } else if (sellIn === 'weight') {
@@ -1033,7 +1033,7 @@ function display_selected_products() {
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagWeight_${product.product_id}" data-action="minus">
                             <i class="fa fa-minus"></i>
                         </button>
-                        <input type="number" class="form-control text-center add-products-weight" id="bagWeight_${product.product_id}" name="weight[]" value="${product.weight || 1}" data-pid="${product.product_id}" data-price="${product.price}" data-field="weight" data-sell-in="weight" min="0.001" step="0.001" required>
+                        <input type="number" class="form-control text-center add-products-weight" id="bagWeight_${product.product_id}" name="weight[${index}]" value="${product.weight || 1}" data-pid="${product.product_id}" data-price="${product.price}" data-field="weight" data-sell-in="weight" min="0.001" step="0.001" required>
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagWeight_${product.product_id}" data-action="plus">
                             <i class="fa fa-plus"></i>
                         </button>
@@ -1041,7 +1041,7 @@ function display_selected_products() {
                 </div>
                 <div class="form-group mb-3">
                     <label class="mb-2">${orderUi('remark', 'Remark')}</label>
-                    <textarea class="form-control" name="remark[]">${product.remark || ''}</textarea>
+                    <textarea class="form-control" name="remark[${index}]">${product.remark || ''}</textarea>
                 </div>
             `;
             } else {
@@ -1054,7 +1054,7 @@ function display_selected_products() {
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="minus">
                             <i class="fa fa-minus"></i>
                         </button>
-                        <input type="number" class="form-control text-center add-products-quantity" id="bagQty_${product.product_id}" name="quantity[]" value="${product.quantity || 1}" data-pid="${product.product_id}" data-price="${product.price}" data-field="quantity" data-sell-in="qty" min="0.001" step="0.001" required>
+                        <input type="number" class="form-control text-center add-products-quantity" id="bagQty_${product.product_id}" name="quantity[${index}]" value="${product.quantity || 1}" data-pid="${product.product_id}" data-price="${product.price}" data-field="quantity" data-sell-in="qty" min="1" step="1" required>
                         <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="bagQty_${product.product_id}" data-action="plus">
                             <i class="fa fa-plus"></i>
                         </button>
@@ -1062,7 +1062,7 @@ function display_selected_products() {
                 </div>
                 <div class="form-group mb-3">
                     <label class="mb-2">${orderUi('remark', 'Remark')}</label>
-                    <textarea class="form-control" name="remark[]">${product.remark || ''}</textarea>
+                    <textarea class="form-control" name="remark[${index}]">${product.remark || ''}</textarea>
                 </div>
             `;
             }

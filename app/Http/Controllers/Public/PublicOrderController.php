@@ -166,11 +166,13 @@ class PublicOrderController extends Controller
         $cart_product = CartProduct::find($request->id);
         if ($cart_product && $this->ownsCartProduct($request, $cart_product)) {
             $price = Product::getPublicTodayPrice($cart_product->product_id);
+            // Quantity is a whole-number count; normalise to an integer.
+            $quantity = $request->quantity !== null ? (int) round((float) $request->quantity) : null;
             $cart_product->update([
-                'quantity' => $request->quantity ?? null,
+                'quantity' => $quantity,
                 'weight' => $request->weight ?? null,
                 'unit_price' => $price,
-                'price' => $price * ($request->quantity ?? $request->weight),
+                'price' => $price * ($quantity ?? $request->weight),
             ]);
         }
 

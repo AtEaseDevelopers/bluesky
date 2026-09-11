@@ -35,14 +35,16 @@ class EditCartItemController extends Controller
 
         $product = Product::find($cart_product->product_id);
         $product_price = Product::get_today_price($product->id, $user);
+        // Quantity is a whole-number count; normalise to an integer.
+        $quantity = $request->quantity !== null ? (int) round((float) $request->quantity) : null;
         $linePrice = $product->calculateLinePrice(
             $product_price,
-            $request->quantity !== null ? (float) $request->quantity : null,
+            $quantity !== null ? (float) $quantity : null,
             $request->weight !== null ? (float) $request->weight : null
         );
         $cart_product->update(
             [
-                'quantity' => $request->quantity ?? null,
+                'quantity' => $quantity,
                 'weight' => $request->weight ?? null,
                 'unit_price' => $product_price,
                 'price' => $linePrice,

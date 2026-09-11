@@ -306,7 +306,7 @@ class DeliveryOrderController extends Controller
             $sellIn = Product::resolveSellInForOrderLine($orderProduct, $product);
 
             if (Product::lineNeedsQuantityInput($sellIn)) {
-                $rules['line_items.' . $lineId . '.quantity'] = 'required|numeric|min:0.001';
+                $rules['line_items.' . $lineId . '.quantity'] = 'required|integer|min:1';
             } else {
                 $rules['line_items.' . $lineId . '.quantity'] = 'nullable';
             }

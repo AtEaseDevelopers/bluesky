@@ -71,7 +71,7 @@
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productQuantity_{{ $product->id }}" data-action="minus">
                                 <i class="fa fa-minus"></i>
                             </button>
-                            <input type="number" class="form-control text-center" id="productQuantity_{{ $product->id }}" name="quantity" value="1" min="0.001" step="0.001" required>
+                            <input type="number" class="form-control text-center" id="productQuantity_{{ $product->id }}" name="quantity" value="1" min="1" step="1" required>
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productQuantity_{{ $product->id }}" data-action="plus">
                                 <i class="fa fa-plus"></i>
                             </button>
@@ -85,7 +85,7 @@
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productQuantity_{{ $product->id }}" data-action="minus">
                                 <i class="fa fa-minus"></i>
                             </button>
-                            <input type="number" class="form-control text-center" id="productQuantity_{{ $product->id }}" name="quantity" value="1" min="0.001" step="0.001" required>
+                            <input type="number" class="form-control text-center" id="productQuantity_{{ $product->id }}" name="quantity" value="1" min="1" step="1" required>
                             <button type="button" class="btn btn-outline-primary btn-adjust-qty" data-target="productQuantity_{{ $product->id }}" data-action="plus">
                                 <i class="fa fa-plus"></i>
                             </button>

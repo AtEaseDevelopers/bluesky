@@ -175,17 +175,19 @@ class PosOrderController extends Controller
         if ($cartProduct && $pos->ownsCartProduct($request, $cartProduct)) {
             $price = $pos->productPrice((int) $cartProduct->product_id, $request);
             $product = Product::find($cartProduct->product_id);
+            // Quantity is a whole-number count; normalise to an integer.
+            $quantity = $request->quantity !== null ? (int) round((float) $request->quantity) : null;
             $linePrice = $product
                 ? $product->calculateLinePrice(
                     $price,
-                    $request->quantity !== null ? (float) $request->quantity : null,
+                    $quantity !== null ? (float) $quantity : null,
                     $request->weight !== null ? (float) $request->weight : null,
                     true
                 )
-                : $price * ($request->quantity ?? $request->weight);
+                : $price * ($quantity ?? $request->weight);
 
             $cartProduct->update([
-                'quantity' => $request->quantity ?? null,
+                'quantity' => $quantity,
                 'weight' => $request->weight ?? null,
                 'unit_price' => $price,
                 'price' => $linePrice,

@@ -11,6 +11,7 @@ use App\ProductOptionItem;
 use App\ProductCategoryPrice;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 class EditProductController extends Controller
 {
@@ -42,8 +43,8 @@ class EditProductController extends Controller
 
     public function editProduct(Request $request, $id)
     {
-        $data = $this->validateEditProduct($request);
         $product = Product::find(decrypt($id));
+        $data = $this->validateEditProduct($request, $product->id);
 
         if (isset($data['error']) && $data['error']) {
             return redirect()->back()->withInput()->withErrors($data['field_err']);
@@ -131,7 +132,7 @@ class EditProductController extends Controller
         return $categories;
     }
 
-    public function validateEditProduct(Request $request)
+    public function validateEditProduct(Request $request, $productId)
     {
         $rules = [
             "images" => [
@@ -142,7 +143,7 @@ class EditProductController extends Controller
             ],
             "name" => array_merge(Product::$attribute_rules['name'], []),
             "description" => array_merge(Product::$attribute_rules['description'], []),
-            "sku" => array_merge(Product::$attribute_rules['sku'], []),
+            "sku" => array_merge(Product::$attribute_rules['sku'], [Rule::unique('products', 'sku')->ignore($productId)]),
             "price" => array_merge(Product::$attribute_rules['price'], []),
             "status" => array_merge(Product::$attribute_rules['status'], []),
             "product_option" => ['nullable'],
@@ -156,7 +157,9 @@ class EditProductController extends Controller
         ];
 
         try {
-            $data = $request->validate($rules);
+            $data = $request->validate($rules, [
+                'sku.unique' => 'This SKU is already used by another product.',
+            ]);
         } catch (ValidationException $err) {
             return [
                 'error' => $err->getMessage(),

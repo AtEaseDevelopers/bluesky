@@ -203,6 +203,50 @@ class AdminOrderAddProductsTest extends TestCase
         $this->assertSame(0, OrderProduct::where('order_id', $order->id)->count());
     }
 
+    /**
+     * Regression: with mixed sell types, quantity[]/weight[] must stay aligned
+     * with product_id[] by index. The frontend emits sparse indexed arrays
+     * (a weight-only product has no quantity at its index, and vice versa);
+     * each line must persist its OWN weight/quantity, not a neighbour's.
+     *
+     * @test
+     */
+    public function mixed_sell_types_keep_weight_and_quantity_aligned_by_index(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer();
+        $order = $this->makeOrder($customer);
+
+        $qty = $this->makeProduct(10.00, Product::SELL_IN_QTY);
+        $weight = $this->makeProduct(45.00, Product::SELL_IN_WEIGHT);
+        $qbw = $this->makeProduct(28.00, Product::SELL_IN_QTY_BILL_WEIGHT);
+
+        $this->actingAs($admin, 'web_admin')
+            ->post(route('admin.orders.products.add', $order->id), [
+                'product_id' => [0 => $qty->id, 1 => $weight->id, 2 => $qbw->id],
+                // Sparse, index-aligned: no quantity for the weight-only line (idx 1);
+                // no weight for the qty-only line (idx 0).
+                'quantity' => [0 => 2, 2 => 3],
+                'weight' => [1 => 2.5, 2 => 1.006],
+                'remark' => [0 => 'a', 1 => 'b', 2 => 'c'],
+            ])
+            ->assertRedirect(route('admin.orders.summary', $order->id));
+
+        // Qty line: its own quantity, no stray weight.
+        $qtyLine = OrderProduct::where('order_id', $order->id)->where('product_id', $qty->id)->first();
+        $this->assertEquals(2, (int) $qtyLine->quantity);
+        $this->assertEmpty($qtyLine->weight);
+
+        // Weight line: its own weight (2.5), not the qbw line's 1.006.
+        $weightLine = OrderProduct::where('order_id', $order->id)->where('product_id', $weight->id)->first();
+        $this->assertEquals(2.5, (float) $weightLine->weight);
+
+        // Qty-bill-weight line: its own quantity (3) and weight (1.006).
+        $qbwLine = OrderProduct::where('order_id', $order->id)->where('product_id', $qbw->id)->first();
+        $this->assertEquals(3, (int) $qbwLine->quantity);
+        $this->assertEquals(1.006, (float) $qbwLine->weight);
+    }
+
     /** @test */
     public function admin_without_orders_edit_permission_is_forbidden(): void
     {

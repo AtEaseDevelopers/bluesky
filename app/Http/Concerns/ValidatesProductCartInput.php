@@ -17,12 +17,14 @@ trait ValidatesProductCartInput
         $customMessages = [];
 
         if ($product->sell_in === Product::SELL_IN_QTY_BILL_WEIGHT) {
-            $rules['quantity'] = ['required', 'numeric', 'min:0.001'];
+            $rules['quantity'] = ['required', 'integer', 'min:1'];
             $rules['weight'] = ['nullable', 'numeric', 'min:0'];
             $customMessages['quantity.required'] = 'The quantity is required';
+            $customMessages['quantity.integer'] = 'The quantity must be a whole number';
         } elseif ($product->sell_in === Product::SELL_IN_QTY) {
-            $rules['quantity'] = ['required', 'numeric', 'min:0.001'];
+            $rules['quantity'] = ['required', 'integer', 'min:1'];
             $customMessages['quantity.required'] = 'The quantity is required';
+            $customMessages['quantity.integer'] = 'The quantity must be a whole number';
         } else {
             $rules['weight'] = ['required', 'numeric', 'min:0.001'];
             $customMessages['weight.required'] = 'The weight is required';

@@ -38,7 +38,7 @@
                                             @if (in_array($product->sell_in, ['qty', 'qty_bill_weight'], true))
                                                 <div class="quantity-controls">
                                                     <button class="btn btn-sm btn-primary decrease-quantity" type="button">-</button>
-                                                    <input type="number" name="quantity" class="quantity-input" data-id="{{ $product->cart_product_id }}" data-sell-in="{{ $product->sell_in }}" value="{{ $product->quantity }}" min="0.001" step="0.001">
+                                                    <input type="number" name="quantity" class="quantity-input" data-id="{{ $product->cart_product_id }}" data-sell-in="{{ $product->sell_in }}" value="{{ $product->quantity }}" min="1" step="1">
                                                     <button class="btn btn-sm btn-primary increase-quantity" type="button">+</button>
                                                 </div>
                                             @else
@@ -222,6 +222,17 @@
                     return true;
                 }
 
+                // Quantity is a whole-number count; weight stays decimal.
+                if ($input.hasClass('quantity-input')) {
+                    var qty = parseInt(raw, 10);
+                    if (raw === '' || isNaN(qty) || qty < 1) {
+                        $input.val(1);
+                    } else {
+                        $input.val(qty);
+                    }
+                    return true;
+                }
+
                 if (raw === '' || parseFloat(raw) < 0.001) {
                     $input.val(0.001);
                 }
@@ -231,15 +242,15 @@
 
             $(document).on('click', '.decrease-quantity', function() {
                 var quantityInput = $(this).closest('.quantity-controls').find('.quantity-input');
-                var currentQuantity = parseFloat(quantityInput.val()) || 1;
-                if (currentQuantity > 0.001) {
-                    quantityInput.val(Math.max(0.001, currentQuantity - 1)).trigger('input');
+                var currentQuantity = parseInt(quantityInput.val(), 10) || 1;
+                if (currentQuantity > 1) {
+                    quantityInput.val(currentQuantity - 1).trigger('input');
                 }
             });
 
             $(document).on('click', '.increase-quantity', function() {
                 var quantityInput = $(this).closest('.quantity-controls').find('.quantity-input');
-                var currentQuantity = parseFloat(quantityInput.val()) || 0;
+                var currentQuantity = parseInt(quantityInput.val(), 10) || 0;
                 quantityInput.val(currentQuantity + 1).trigger('input');
             });
 

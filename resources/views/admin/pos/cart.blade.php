@@ -38,7 +38,7 @@
                                             @if (in_array($product->sell_in, ['qty', 'qty_bill_weight', 'weight'], true))
                                                 <div class="quantity-controls">
                                                     <button class="btn btn-sm btn-primary decrease-quantity" type="button">-</button>
-                                                    <input type="number" name="quantity" class="quantity-input" data-id="{{ $product->cart_product_id }}" data-sell-in="{{ $product->sell_in }}" value="{{ $product->quantity }}" min="0.001" step="0.001">
+                                                    <input type="number" name="quantity" class="quantity-input" data-id="{{ $product->cart_product_id }}" data-sell-in="{{ $product->sell_in }}" value="{{ $product->quantity }}" min="1" step="1">
                                                     <button class="btn btn-sm btn-primary increase-quantity" type="button">+</button>
                                                 </div>
                                             @else
@@ -208,7 +208,11 @@
                 var $input = $(this);
                 var raw = $input.val();
 
-                if (!($input.hasClass('weight-input-optional') && raw === '')) {
+                if ($input.hasClass('quantity-input')) {
+                    // Quantity is a whole-number count.
+                    var qty = parseInt(raw, 10);
+                    $input.val((raw === '' || isNaN(qty) || qty < 1) ? 1 : qty);
+                } else if (!($input.hasClass('weight-input-optional') && raw === '')) {
                     if (raw === '' || parseFloat(raw) < 0.001) {
                         $input.val(0.001);
                     }
