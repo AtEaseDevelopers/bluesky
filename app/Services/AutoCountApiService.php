@@ -736,8 +736,12 @@ class AutoCountApiService
             $product = $products->get($line->product_id);
             $qty = (float) ($line->weight > 0 ? $line->weight : $line->quantity);
             $unitPrice = (float) $line->unit_price;
+            // Item codes are not maintained in AutoCount's stock master, so every
+            // line syncs without an ItemCode (description-only line). This avoids
+            // the "item code not exist, save aborted" rejection; the product name
+            // is still carried in Description and the value in the amount fields.
             $details[] = [
-                'Item' => $product ? $product->sku : $line->product_name,
+                'Item' => '',
                 'UOM' => $product && $product->uom ? $product->uom->uom_name : 'KG',
                 'Qty' => $qty,
                 'UnitPrice' => number_format($unitPrice, 2, '.', ''),
