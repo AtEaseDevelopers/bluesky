@@ -79,6 +79,7 @@ class DeliveryOrderController extends Controller
         }
 
         $orders = $query->orderByRaw("CASE status
+                WHEN 'on_hold' THEN 0
                 WHEN 'in_route' THEN 0 WHEN 'delivering' THEN 0
                 WHEN 'packing' THEN 1 WHEN 'pending' THEN 1 WHEN 'processing' THEN 1
                 WHEN 'delivered' THEN 2 WHEN 'completed' THEN 2
@@ -220,6 +221,56 @@ class DeliveryOrderController extends Controller
     }
 
     /**
+     * Put an in-route order on hold because the customer has not paid yet.
+     * No proof/photo required — this simply flags the delivery as unpaid.
+     */
+    public function hold(Request $request, $id)
+    {
+        $order = $this->findAssignedOrder($id);
+
+        if (!self::canDriverHold($order)) {
+            return back()->with('error', __('driver_portal.deliveries.hold_requires_in_route'));
+        }
+
+        try {
+            app(OrderStatusService::class)->transition(
+                $order,
+                Order::$status['on_hold'],
+                null
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', __('driver_portal.deliveries.hold_success'));
+    }
+
+    /**
+     * Take an on-hold order off hold (e.g. once payment is settled) so the
+     * driver can resume the delivery and mark it delivered.
+     */
+    public function resume(Request $request, $id)
+    {
+        $order = $this->findAssignedOrder($id);
+
+        if (!self::canDriverResume($order)) {
+            return back()->with('error', __('driver_portal.deliveries.resume_not_allowed'));
+        }
+
+        try {
+            app(OrderStatusService::class)->transition(
+                $order,
+                Order::$status['in_route'],
+                null
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', __('driver_portal.deliveries.resume_success'));
+    }
+
+    /**
      * Adjust actual qty/weight on delivery (recalculates line totals and order total).
      */
     public function adjustOrder(Request $request, $id)
@@ -353,6 +404,7 @@ class DeliveryOrderController extends Controller
         return match ($filter) {
             'processing' => ['pending', 'packing', 'processing'],
             'in_route', 'delivering' => ['in_route', 'delivering'],
+            'on_hold' => ['on_hold'],
             'delivered', 'completed' => ['delivered', 'completed'],
             default => [],
         };
@@ -377,6 +429,20 @@ class DeliveryOrderController extends Controller
         return $canonical === Order::$status['in_route'];
     }
 
+    /** Driver may put an order on hold (unpaid) only while it is in route. */
+    public static function canDriverHold(Order $order): bool
+    {
+        $canonical = self::$legacy_status_map[$order->status] ?? $order->status;
+
+        return $canonical === Order::$status['in_route'];
+    }
+
+    /** Driver may resume a delivery only while it is on hold. */
+    public static function canDriverResume(Order $order): bool
+    {
+        return $order->status === Order::$status['on_hold'];
+    }
+
     /** @return array<string, string> */
     public static function driverStatusesForOrder(Order $order): array
     {
@@ -396,6 +462,13 @@ class DeliveryOrderController extends Controller
      */
     public static function driverDeliveryStatusContext(Order $order): array
     {
+        if ($order->status === Order::$status['on_hold']) {
+            return [
+                'mode' => 'on_hold',
+                'canonical' => Order::$status['on_hold'],
+            ];
+        }
+
         if (self::canDriverMarkDelivered($order)) {
             return [
                 'mode' => 'confirm',

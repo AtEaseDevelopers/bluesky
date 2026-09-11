@@ -276,6 +276,8 @@ return [
         'driver.notifications.assignments' => 'delivery_orders',
         'driver.orders.show' => 'order_detail',
         'driver.orders.update-status' => 'update_status',
+        'driver.orders.hold' => 'update_status',
+        'driver.orders.resume' => 'update_status',
         'driver.orders.adjust' => 'adjust_order',
         'driver.orders.record-payment' => 'record_payment',
         'driver.orders.payment-proof' => 'payment_proof',

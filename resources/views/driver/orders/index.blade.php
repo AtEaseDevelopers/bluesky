@@ -36,7 +36,7 @@
             <a class="nav-link {{ !$activeStatus ? 'active' : '' }}"
                href="{{ route('driver.orders.index', array_filter(['q' => $searchQuery ?: null])) }}">{{ __('ui.all') }}</a>
         </li>
-        @foreach (['processing' => 'order.status.processing', 'in_route' => 'order.status.in_route', 'delivered' => 'order.status.delivered'] as $st => $labelKey)
+        @foreach (['processing' => 'order.status.processing', 'in_route' => 'order.status.in_route', 'on_hold' => 'order.status.on_hold', 'delivered' => 'order.status.delivered'] as $st => $labelKey)
             <li class="nav-item">
                 <a class="nav-link text-nowrap {{ $activeStatus === $st ? 'active' : '' }}"
                    href="{{ route('driver.orders.index', array_filter(['status' => $st, 'q' => $searchQuery ?: null])) }}">{{ __($labelKey) }}</a>

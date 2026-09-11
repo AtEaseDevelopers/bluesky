@@ -12,7 +12,8 @@ class OrderStatusService
     private static array $transitions = [
         'pending' => ['packing', 'cancelled'],
         'packing' => ['in_route', 'cancelled'],
-        'in_route' => ['delivered', 'cancelled'],
+        'in_route' => ['delivered', 'on_hold', 'cancelled'],
+        'on_hold' => ['in_route', 'cancelled'],
         'delivered' => ['completed', 'cancelled'],
         'completed' => [],
         'cancelled' => [],
@@ -23,8 +24,9 @@ class OrderStatusService
         if ($order->isPickup()) {
             return [
                 'pending' => ['packing', 'cancelled'],
-                'packing' => ['delivered', 'cancelled'],
-                'in_route' => ['delivered', 'cancelled'],
+                'packing' => ['delivered', 'on_hold', 'cancelled'],
+                'in_route' => ['delivered', 'on_hold', 'cancelled'],
+                'on_hold' => ['delivered', 'cancelled'],
                 'delivered' => ['completed', 'cancelled'],
                 'completed' => [],
                 'cancelled' => [],

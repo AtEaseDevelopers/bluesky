@@ -114,6 +114,7 @@ class Order extends Model
         'pending' => 'pending',
         'packing' => 'packing',
         'in_route' => 'in_route',
+        'on_hold' => 'on_hold',
         'delivered' => 'delivered',
         'completed' => 'completed',
         'cancelled' => 'cancelled',

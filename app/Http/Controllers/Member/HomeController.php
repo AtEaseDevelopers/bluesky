@@ -13,7 +13,10 @@ class HomeController extends Controller
         if (Auth::guard('web')->user()) {
             return redirect(route('member.products'));
         } elseif (Auth::check()) {
-            return redirect(route('admin.dashboard'));
+            $admin = Auth::guard('web_admin')->user();
+            $landing = $admin ? $admin->defaultLandingRoute() : null;
+
+            return redirect($landing ? route($landing) : route('admin.dashboard'));
         } else {
             return view('home');
         }

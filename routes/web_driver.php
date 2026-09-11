@@ -22,6 +22,8 @@ Route::namespace('Driver')->middleware(['web'])->prefix('driver')->group(
                 Route::get('/notifications/assignments', 'DeliveryOrderController@assignmentNotifications')->name('notifications.assignments');
                 Route::get('/orders/{id}', 'DeliveryOrderController@show')->name('orders.show');
                 Route::post('/orders/{id}/status', 'DeliveryOrderController@updateStatus')->name('orders.update-status');
+                Route::post('/orders/{id}/hold', 'DeliveryOrderController@hold')->name('orders.hold');
+                Route::post('/orders/{id}/resume', 'DeliveryOrderController@resume')->name('orders.resume');
                 Route::post('/orders/{id}/adjust', 'DeliveryOrderController@adjustOrder')->name('orders.adjust');
                 Route::post('/orders/{id}/payment', 'DeliveryOrderController@recordPayment')->name('orders.record-payment');
                 Route::post('/orders/{id}/pay', 'RevenueMonsterPaymentController@generate')->name('orders.rm-pay');

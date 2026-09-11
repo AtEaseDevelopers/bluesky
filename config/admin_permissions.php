@@ -28,6 +28,21 @@ return [
         'settings' => ['superadmin'],
     ],
 
+    /*
+    | Ordered landing pages per module. Used to pick a safe redirect target
+    | for an admin whose role cannot access the dashboard. The first module
+    | the admin can view (in this order) determines the landing route.
+    */
+    'landing_routes' => [
+        'dashboard' => 'admin.dashboard',
+        'orders' => 'admin.orders',
+        'customers' => 'admin.customers',
+        'products' => 'admin.products',
+        'reports' => 'admin.daily-sales-report',
+        'drivers' => 'admin.drivers.index',
+        'settings' => 'admin.settings.delivery-order',
+    ],
+
     'route_modules' => [
         'dashboard' => 'dashboard',
         'profile' => 'dashboard',

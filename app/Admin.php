@@ -70,6 +70,24 @@ class Admin extends Authenticatable
             ->canModule((string) $this->role, $module, $capability);
     }
 
+    /**
+     * The route name of the first module this admin may view.
+     *
+     * Used to pick a safe post-login/redirect target so admins whose role
+     * cannot access the dashboard are not sent to a 403 page. Returns null
+     * when the admin has no accessible module at all.
+     */
+    public function defaultLandingRoute(): ?string
+    {
+        foreach (config('admin_permissions.landing_routes', []) as $module => $routeName) {
+            if ($this->canAccessModule($module)) {
+                return $routeName;
+            }
+        }
+
+        return null;
+    }
+
     public function canManageRolePermissions(): bool
     {
         return $this->isSuperadmin();

@@ -221,6 +221,80 @@ class DriverPortalTest extends TestCase
     }
 
     /** @test */
+    public function driver_can_put_in_route_order_on_hold_without_proof()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, ['status' => 'in_route']);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.hold', $order->id))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame('on_hold', $order->fresh()->status);
+    }
+
+    /** @test */
+    public function driver_cannot_put_order_on_hold_unless_in_route()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, ['status' => 'pending']);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.hold', $order->id))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertSame('pending', $order->fresh()->status);
+    }
+
+    /** @test */
+    public function driver_can_resume_an_on_hold_order_back_to_in_route()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, ['status' => 'on_hold']);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.resume', $order->id))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame('in_route', $order->fresh()->status);
+    }
+
+    /** @test */
+    public function driver_cannot_resume_an_order_that_is_not_on_hold()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, ['status' => 'in_route']);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.resume', $order->id))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertSame('in_route', $order->fresh()->status);
+    }
+
+    /** @test */
+    public function in_route_order_detail_shows_hold_action_and_on_hold_shows_resume()
+    {
+        $driver = $this->makeDriver();
+        $inRoute = $this->makeOrder($driver, ['status' => 'in_route']);
+        $held = $this->makeOrder($driver, ['status' => 'on_hold']);
+
+        $this->actingAs($driver, 'web_driver')
+            ->get(route('driver.orders.show', $inRoute->id))
+            ->assertOk()
+            ->assertSee(__('driver_portal.deliveries.hold_button'));
+
+        $this->actingAs($driver, 'web_driver')
+            ->get(route('driver.orders.show', $held->id))
+            ->assertOk()
+            ->assertSee(__('driver_portal.deliveries.resume_button'));
+    }
+
+    /** @test */
     public function driver_can_record_a_cash_payment_without_proof()
     {
         $driver = $this->makeDriver();

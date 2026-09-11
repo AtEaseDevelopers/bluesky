@@ -44,7 +44,12 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 // Admin routes
                 Route::get(
                     '/', function () {
-                        return redirect('dashboard');
+                        $admin = Auth::guard('web_admin')->user();
+                        $landing = $admin ? $admin->defaultLandingRoute() : null;
+
+                        return $landing
+                            ? redirect(route($landing))
+                            : redirect(route('admin.login'));
                     }
                 );
                 Route::get('/dashboard', 'DashboardController@index')->name('dashboard');

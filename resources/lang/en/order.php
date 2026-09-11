@@ -5,6 +5,7 @@ return [
         'pending' => 'Pending',
         'packing' => 'Packing',
         'in_route' => 'In Route',
+        'on_hold' => 'On Hold',
         'delivered' => 'Delivered',
         'completed' => 'Completed',
         'cancelled' => 'Cancelled',

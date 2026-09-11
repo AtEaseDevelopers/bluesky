@@ -1,10 +1,11 @@
 @php
     $user = Auth::guard('web_admin')->user();
     $currentRoute = Route::currentRouteName();
+    $brandLanding = $user ? ($user->defaultLandingRoute() ?? 'admin.dashboard') : 'admin.dashboard';
 @endphp
 <nav class="navbar sticky-top navbar-expand-lg bg-body-tertiary">
     <div class="container">
-        <a class="navbar-brand" href="{{ route('admin.dashboard') }}">
+        <a class="navbar-brand" href="{{ route($brandLanding) }}">
             @include('partials.brand-logo')
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarScroll"

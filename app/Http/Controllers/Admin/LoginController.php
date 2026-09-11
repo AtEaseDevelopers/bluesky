@@ -29,7 +29,7 @@ class LoginController extends Controller
     public function showForm()
     {
         if (Auth::guard('web_admin')->check()) {
-            return redirect(route('admin.dashboard'));
+            return $this->redirectToLanding(Auth::guard('web_admin')->user());
         }
 
         return view('admin.login');
@@ -61,11 +61,35 @@ class LoginController extends Controller
 
             $localeService->syncSessionFromUser($admin);
 
-            return redirect(route('admin.dashboard'));
+            return $this->redirectToLanding($admin);
         } else {
             // Authentication failed
             return back()->with('error', 'Account Not Found.')->withInput();
         }
+    }
+
+    /**
+     * Redirect an authenticated admin to the first module they can access.
+     *
+     * Admins whose role cannot view the dashboard would otherwise land on a
+     * 403 page; send them to their first accessible module instead. When no
+     * module is accessible, log them out with an explanation.
+     *
+     * @param  \App\Admin  $admin
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    protected function redirectToLanding($admin)
+    {
+        $landing = $admin->defaultLandingRoute();
+
+        if ($landing === null) {
+            Auth::guard('web_admin')->logout();
+
+            return redirect(route('admin.login'))
+                ->with('error', 'Your account has no accessible modules. Please contact a superadmin.');
+        }
+
+        return redirect(route($landing));
     }
 
     /**

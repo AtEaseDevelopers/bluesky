@@ -409,6 +409,23 @@
                         @endforeach
                     </div>
                 </form>
+                <form action="{{ route('driver.orders.hold', $order->id) }}" method="POST" class="mt-2">
+                    @csrf
+                    <button type="submit" class="btn btn-block-tall w-100 btn-outline-hold">
+                        <i class="fa fa-pause-circle me-1"></i> {{ __('driver_portal.deliveries.hold_button') }}
+                    </button>
+                </form>
+                <p class="text-muted-ink mb-0 mt-2" style="font-size:.9rem;">{{ __('driver_portal.deliveries.hold_hint') }}</p>
+            @elseif ($deliveryStatusContext['mode'] === 'on_hold')
+                <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.95rem;">
+                    <i class="fa fa-pause-circle me-1"></i> {{ __('driver_portal.deliveries.on_hold_notice') }}
+                </div>
+                <form action="{{ route('driver.orders.resume', $order->id) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="btn btn-brand btn-block-tall w-100">
+                        <i class="fa fa-play-circle me-1"></i> {{ __('driver_portal.deliveries.resume_button') }}
+                    </button>
+                </form>
             @elseif ($deliveryStatusContext['mode'] === 'done_with_proof')
                 <p class="text-muted-ink mb-3" style="font-size:.92rem;">{{ __('driver_portal.deliveries.already_delivered') }}</p>
                 <a href="{{ route('driver.orders.delivery-proof', $order->id) }}" target="_blank" class="btn btn-outline-brand w-100">

@@ -78,6 +78,9 @@
         }
         .pill-processing { background: #e7eef6; color: var(--deep); }
         .pill-delivering { background: #fff1e6; color: var(--warn); }
+        .pill-in_route   { background: #fff1e6; color: var(--warn); }
+        .pill-on_hold    { background: #fde2cf; color: #9a3412; }
+        .pill-delivered  { background: #e3f3ec; color: var(--ok); }
         .pill-completed  { background: #e3f3ec; color: var(--ok); }
         .pill-cancelled  { background: #fbe5e9; color: var(--danger); }
         .pill-unpaid  { background: #fbe5e9; color: var(--danger); }
@@ -95,6 +98,8 @@
         .btn-accent:hover { background: #ed4a28; border-color: #ed4a28; color: #fff; }
         .btn-outline-brand { border: 2px solid var(--deep); color: var(--deep); background: transparent; }
         .btn-outline-brand:hover { background: var(--deep); color: #fff; }
+        .btn-outline-hold { border: 2px solid #9a3412; color: #9a3412; background: transparent; }
+        .btn-outline-hold:hover { background: #9a3412; color: #fff; }
 
         .order-row-link { text-decoration: none; color: inherit; display: block; }
         .order-row-link:active .driver-card { transform: scale(.99); }

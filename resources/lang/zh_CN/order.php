@@ -6,6 +6,7 @@ return [
         'packing' => '打包中',
         'handed_to_customer' => '已送达',
         'in_route' => '配送中',
+        'on_hold' => '暂缓（未付款）',
         'delivered' => '已送达',
         'completed' => '已完成',
         'cancelled' => '已取消',
