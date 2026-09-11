@@ -100,4 +100,22 @@ class AutoCountItemCodeSyncTest extends TestCase
         $this->assertSame('10.00', $line['UnitPrice']);
         $this->assertEquals(20.0, $line['SubTotal']);
     }
+
+    /** @test */
+    public function every_line_is_stamped_with_the_configured_location(): void
+    {
+        config()->set('autocount.default_location', 'Penang');
+
+        $customer = $this->makeCustomer();
+        $order = $this->makeEligibleOrder($customer);
+        $product = $this->makeProduct('M0010');
+        $this->addLine($order, $product, 'Located Item', 3);
+
+        $payload = app(AutoCountApiService::class)->nextPendingOrder();
+        $line = collect($payload['detail'])->firstWhere('Description', 'Located Item');
+
+        // AutoCount rejects the DO when a line has no location, so it must be set.
+        $this->assertSame('Penang', $line['Location']);
+        $this->assertNotSame('', $line['Location']);
+    }
 }

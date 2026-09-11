@@ -3,6 +3,10 @@
 return [
     'api_token' => env('AUTOCOUNT_API_TOKEN', ''),
     'branch_email' => env('AUTOCOUNT_BRANCH_EMAIL', env('PORTAL_COMPANY_EMAIL', '')),
+    // AutoCount stock location assigned to every DO/invoice line. AutoCount
+    // rejects the document ("Every item need to be assigned a location") when
+    // any line has a blank location, so this must match a location in AutoCount.
+    'default_location' => env('AUTOCOUNT_DEFAULT_LOCATION', 'Penang'),
     // AutoCount debtor AccNo for orders without a registered customer account.
     'walk_in_debtor_code' => env('AUTOCOUNT_WALK_IN_DEBTOR_CODE', ''),
     'walk_in_debtor_codes' => [

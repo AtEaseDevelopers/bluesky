@@ -731,6 +731,11 @@ class AutoCountApiService
         $productIds = $lines->pluck('product_id')->filter()->unique();
         $products = \App\Product::with('uom')->whereIn('id', $productIds)->get()->keyBy('id');
 
+        // AutoCount rejects the DO ("Every item need to be assigned a location")
+        // when any line has a blank location, so stamp every line with the
+        // configured stock location.
+        $location = (string) config('autocount.default_location', '');
+
         $details = [];
         foreach ($lines as $line) {
             $product = $products->get($line->product_id);
@@ -746,7 +751,7 @@ class AutoCountApiService
                 'Qty' => $qty,
                 'UnitPrice' => number_format($unitPrice, 2, '.', ''),
                 'Description' => $line->product_name,
-                'Location' => '',
+                'Location' => $location,
                 'AccNo' => $debtorCode ?? '',
                 'DeliveryDate' => optional($order->delivery_date)->format('Y-m-d') ?: $order->created_at->format('Y-m-d'),
                 'Discount' => '',
