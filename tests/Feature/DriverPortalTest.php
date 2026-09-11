@@ -195,6 +195,26 @@ class DriverPortalTest extends TestCase
     }
 
     /** @test */
+    public function delivery_proof_input_lets_driver_pick_from_phone_gallery()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, ['status' => 'in_route']);
+
+        $response = $this->actingAs($driver, 'web_driver')
+            ->get(route('driver.orders.show', $order->id))
+            ->assertOk();
+
+        // The delivery-proof form must render...
+        $response->assertSee('name="delivery_proof"', false);
+        $response->assertSee('accept="image/', false);
+
+        // ...but must NOT force the camera, so the driver can choose an
+        // existing photo from their phone gallery (and iOS can transcode
+        // HEIC gallery photos to JPEG so validation passes).
+        $response->assertDontSee('capture=', false);
+    }
+
+    /** @test */
     public function driver_cannot_mark_delivered_without_delivery_proof()
     {
         $driver = $this->makeDriver();

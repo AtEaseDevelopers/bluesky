@@ -7,6 +7,7 @@ return [
         'in_route' => 'In Route',
         'on_hold' => 'On Hold',
         'delivered' => 'Delivered',
+        'credit' => 'Credit',
         'completed' => 'Completed',
         'cancelled' => 'Cancelled',
         // Legacy status alias for old records.
@@ -19,7 +20,7 @@ return [
     'payment_status' => [
         'unpaid' => 'Unpaid',
         'pending' => 'Pending',
-        'partial' => 'Unpaid',
+        'partial' => 'Partially Paid',
         'paid' => 'Paid',
         'payment_due' => 'Due',
     ],

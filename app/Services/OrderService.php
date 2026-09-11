@@ -317,6 +317,10 @@ class OrderService
 
         $this->refreshPaymentStatus($order->fresh());
 
+        if ($method === 'credit-term') {
+            app(OrderStatusService::class)->maybeEnterCredit($order->fresh(), $adminId);
+        }
+
         return $payment;
     }
 
@@ -578,6 +582,10 @@ class OrderService
             }
 
             $this->refreshPaymentStatus($order->fresh());
+
+            if ($payment->payment_method === 'credit-term') {
+                app(OrderStatusService::class)->maybeEnterCredit($order->fresh(), $adminId);
+            }
 
             return $payment->fresh();
         });

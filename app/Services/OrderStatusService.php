@@ -14,7 +14,8 @@ class OrderStatusService
         'packing' => ['in_route', 'cancelled'],
         'in_route' => ['delivered', 'on_hold', 'cancelled'],
         'on_hold' => ['in_route', 'cancelled'],
-        'delivered' => ['completed', 'cancelled'],
+        'delivered' => ['credit', 'completed', 'cancelled'],
+        'credit' => ['completed', 'cancelled'],
         'completed' => [],
         'cancelled' => [],
     ];
@@ -27,7 +28,8 @@ class OrderStatusService
                 'packing' => ['delivered', 'on_hold', 'cancelled'],
                 'in_route' => ['delivered', 'on_hold', 'cancelled'],
                 'on_hold' => ['delivered', 'cancelled'],
-                'delivered' => ['completed', 'cancelled'],
+                'delivered' => ['credit', 'completed', 'cancelled'],
+                'credit' => ['completed', 'cancelled'],
                 'completed' => [],
                 'cancelled' => [],
             ];
@@ -69,8 +71,17 @@ class OrderStatusService
             throw new InvalidArgumentException(__('orders.assign_driver_required'));
         }
 
+        if ($newStatus === Order::$status['credit']
+            && !($order->isCreditCustomer() && $order->hasConfirmedCreditTermPayment())) {
+            throw new InvalidArgumentException(__('orders.credit_status_requires_credit_term'));
+        }
+
         if ($newStatus === Order::$status['completed'] && !$order->isFullyPaid()) {
             throw new InvalidArgumentException(__('orders.payment_required_for_complete'));
+        }
+
+        if ($newStatus === Order::$status['completed'] && $order->requiresCreditSettlementBeforeComplete()) {
+            throw new InvalidArgumentException(__('orders.credit_settlement_required_for_complete'));
         }
 
         $order->update(['status' => $newStatus]);
@@ -120,19 +131,45 @@ class OrderStatusService
 
         app(OrderService::class)->refreshPaymentStatus($order->fresh());
 
+        if ($newStatus === Order::$status['delivered']) {
+            return $this->maybeEnterCredit($order->fresh(), $adminId);
+        }
+
         return $order->fresh();
+    }
+
+    /**
+     * A delivered credit order carrying a "buy now, pay later" charge is parked
+     * in the credit holding state until the customer settles their balance.
+     */
+    public function maybeEnterCredit(Order $order, ?int $adminId = null): Order
+    {
+        if ($order->status === Order::$status['delivered']
+            && $order->isCreditCustomer()
+            && $order->hasConfirmedCreditTermPayment()) {
+            return $this->transition($order, Order::$status['credit'], $adminId);
+        }
+
+        return $order;
     }
 
     public function nextStatuses(Order $order): array
     {
         $statuses = $this->transitionsFor($order)[$order->status] ?? [];
 
-        if (in_array(Order::$status['completed'], $statuses, true) && !$order->isFullyPaid()) {
+        if (in_array(Order::$status['completed'], $statuses, true)
+            && (!$order->isFullyPaid() || $order->requiresCreditSettlementBeforeComplete())) {
             $statuses = array_values(array_filter(
                 $statuses,
                 fn ($status) => $status !== Order::$status['completed']
             ));
         }
+
+        // Credit is an automatic holding state, never a manual action.
+        $statuses = array_values(array_filter(
+            $statuses,
+            fn ($status) => $status !== Order::$status['credit']
+        ));
 
         if ($order->isPickup()) {
             $statuses = array_values(array_filter(

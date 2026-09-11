@@ -25,6 +25,7 @@ class CustomerCreditLog extends Model
         'manual_adjustment' => 'Manual Adjustment',
         'cod_collection' => 'COD Collection',
         'credit_term' => 'Credit Term',
+        'credit_settlement' => 'Balance Settled',
     ];
 
     public function customer()

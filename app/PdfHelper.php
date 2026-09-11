@@ -198,6 +198,11 @@ class PdfHelper extends Model
             'order_items' => $order_products,
             'void' => $void,
             'show_prices' => OrderFieldSetting::deliveryOrderShowsPrices(),
+            'payments' => $order->payments()
+                ->where('status', OrderPayment::STATUS_CONFIRMED)
+                ->orderBy('id')
+                ->get(),
+            'payment_method_labels' => OrderPayment::$payment_methods,
         ]);
 
         $pdf = self::configurePdf(PDF::loadView('pdf.delivery-order', $data));

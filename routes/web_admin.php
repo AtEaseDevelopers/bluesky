@@ -159,6 +159,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::post('/delete-customer-visibility-product', 'CustomerController@deleteCustomerProduct');
                 Route::post('/get-products-for-category', 'AddCustomerController@getProductsForCategory');
                 Route::post('/customer/{customer}/credit-adjust', 'CustomerCreditController@adjust')->name('customers.credit.adjust');
+                Route::post('/customer/{customer}/credit-mark-paid', 'CustomerCreditController@markPaid')->name('customers.credit.mark-paid');
 
                 Route::resource('customer-categories', CustomerCategoryController::class);
                 Route::controller(CustomerCategoryController::class)->group(

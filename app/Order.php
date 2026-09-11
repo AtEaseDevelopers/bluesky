@@ -116,6 +116,7 @@ class Order extends Model
         'in_route' => 'in_route',
         'on_hold' => 'on_hold',
         'delivered' => 'delivered',
+        'credit' => 'credit',
         'completed' => 'completed',
         'cancelled' => 'cancelled',
     ];
@@ -280,8 +281,77 @@ class Order extends Model
     {
         return in_array($this->status, [
             self::$status['delivered'],
+            self::$status['credit'],
             self::$status['completed'],
         ], true);
+    }
+
+    /** Order is parked on the customer's credit account, awaiting settlement. */
+    public function isOnCredit(): bool
+    {
+        return $this->status === self::$status['credit'];
+    }
+
+    /** A confirmed "buy now, pay later" charge has been recorded on this order. */
+    public function hasConfirmedCreditTermPayment(): bool
+    {
+        return $this->payments()
+            ->where('status', OrderPayment::STATUS_CONFIRMED)
+            ->where('payment_method', 'credit-term')
+            ->exists();
+    }
+
+    /**
+     * The credit customer still owes money on their account (negative balance),
+     * so credit orders may not be completed until it is settled.
+     */
+    public function hasOutstandingCredit(): bool
+    {
+        if (!$this->isCreditCustomer()) {
+            return false;
+        }
+
+        $this->loadMissing('customer');
+
+        return (float) ($this->customer->credit_balance ?? 0) < -0.009;
+    }
+
+    /** Total confirmed "buy now, pay later" charges recorded on this order. */
+    public function creditTermChargedAmount(): float
+    {
+        return (float) $this->payments()
+            ->where('status', OrderPayment::STATUS_CONFIRMED)
+            ->where('payment_method', 'credit-term')
+            ->sum('amount');
+    }
+
+    /** Portion of this order's credit-term charge already settled on the ledger. */
+    public function creditSettledAmount(): float
+    {
+        return (float) CustomerCreditLog::where('order_id', $this->id)
+            ->where('type', 'credit_settlement')
+            ->sum('amount');
+    }
+
+    /** Credit-term amount still owed on this specific order. */
+    public function creditOutstandingAmount(): float
+    {
+        return max(0, round($this->creditTermChargedAmount() - $this->creditSettledAmount(), 2));
+    }
+
+    /**
+     * Only an order carried on the credit account (parked in the credit state or
+     * settled by a credit-term charge) must wait for its own credit-term amount
+     * to be settled before it can complete. Each order settles independently, so
+     * other unsettled orders on the same customer do not block it.
+     */
+    public function requiresCreditSettlementBeforeComplete(): bool
+    {
+        if (!$this->isOnCredit() && !$this->hasConfirmedCreditTermPayment()) {
+            return false;
+        }
+
+        return $this->creditOutstandingAmount() > 0.009;
     }
 
     public function isCompleted(): bool
@@ -299,6 +369,7 @@ class Order extends Model
     {
         return $this->canShowFulfillmentPanel()
             && !in_array($this->status, [
+                self::$status['credit'],
                 self::$status['completed'],
                 self::$status['cancelled'],
             ], true);
@@ -719,6 +790,7 @@ class Order extends Model
             self::$status['packing'],
             self::$status['in_route'],
             self::$status['delivered'],
+            self::$status['credit'],
         ], true);
     }
 

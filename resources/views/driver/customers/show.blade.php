@@ -135,8 +135,7 @@
                                     <label class="form-label" for="proof-{{ $invoice->id }}">{{ __('driver_portal.deliveries.payment_proof') }} <span class="text-muted-ink" style="font-weight:500;">{{ __('driver_portal.deliveries.payment_proof_hint') }}</span></label>
                                     <input type="file" class="form-control js-pay-proof" name="payment_proof"
                                         id="proof-{{ $invoice->id }}"
-                                        accept="{{ \App\OrderPayment::proofAcceptAttribute() }}"
-                                        capture="{{ \App\OrderPayment::proofCaptureAttribute() }}">
+                                        accept="{{ \App\OrderPayment::proofAcceptAttribute() }}">
                                 </div>
                                 @if ($isCredit)
                                     </div>

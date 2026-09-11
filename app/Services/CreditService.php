@@ -131,6 +131,39 @@ class CreditService
         );
     }
 
+    /**
+     * Settle the outstanding credit-term amount on a single order — posts a
+     * positive ledger movement tied to the order, lifting the customer's balance
+     * by exactly what that order still owes. Returns null when nothing is due.
+     */
+    public function settleOrderCredit(Order $order, ?int $adminId = null, ?string $notes = null): ?CustomerCreditLog
+    {
+        if (!$order->user_id) {
+            return null;
+        }
+
+        $customer = User::find($order->user_id);
+        if (!$customer || !$customer->isCreditCustomer()) {
+            return null;
+        }
+
+        $outstanding = $order->creditOutstandingAmount();
+        if ($outstanding <= 0.009) {
+            return null;
+        }
+
+        return $this->adjustBalance(
+            $customer,
+            $outstanding,
+            'credit_settlement',
+            $order->id,
+            null,
+            $adminId,
+            null,
+            $notes ?: 'Credit balance settled for order #' . $order->id . '.'
+        );
+    }
+
     public function manualAdjust(User $user, float $amount, string $notes, int $adminId): CustomerCreditLog
     {
         if ($amount == 0) {

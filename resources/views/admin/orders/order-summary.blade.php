@@ -62,7 +62,13 @@
                                     @endif
                                 </div>
                                 <div class="col-md-6">
-                                    <p><strong>{{ __('orders.status_label') }}</strong> {{ __('order.status.' . $order->status) }}</p>
+                                    <p><strong>{{ __('orders.status_label') }}</strong>
+                                        @if ($order->status === Order::$status['credit'])
+                                            <span class="badge bg-warning text-dark">{{ __('order.status.credit') }}</span>
+                                        @else
+                                            {{ __('order.status.' . $order->status) }}
+                                        @endif
+                                    </p>
                                     <p><strong>{{ __('orders.payment_label') }}</strong>
                                         @php
                                             $paymentBadgeClass = match ($order->payment_status) {

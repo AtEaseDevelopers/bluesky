@@ -768,6 +768,7 @@ class OrderController extends Controller
     
             foreach ($orders->get() as $order) {
                 if ($order->canShowDeliveryOrder()) {
+                    PdfHelper::GenerateDeliveryOrder($order);
                     $orderFile = storage_path('app/orders/' . $order->id . '/delivery-order-' . $order->id . '.pdf');
                     if (file_exists($orderFile)) {
                         $zip->addFile($orderFile, 'do/delivery-order-' . $order->id . '.pdf');
@@ -838,10 +839,8 @@ class OrderController extends Controller
                 continue;
             }
 
+            PdfHelper::GenerateDeliveryOrder($order);
             $orderFile = storage_path('app/orders/' . $order->id . '/delivery-order-' . $order->id . '.pdf');
-            if (!file_exists($orderFile)) {
-                PdfHelper::GenerateDeliveryOrder($order);
-            }
 
             if (file_exists($orderFile)) {
                 $zip->addFile($orderFile, 'do/delivery-order-' . $order->id . '.pdf');

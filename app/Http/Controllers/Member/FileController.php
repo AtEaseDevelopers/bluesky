@@ -33,6 +33,7 @@ class FileController extends Controller
         $this->guardOrderDocumentAccess($folder, $id, $filename);
 
         $this->refreshCustomerInvoiceIfNeeded($folder, $id, $filename);
+        $this->refreshCustomerDeliveryOrderIfNeeded($folder, $id, $filename);
 
         $path = "$folder/$id/$filename";
         if (!Storage::disk('local')->exists($path)) {
@@ -51,6 +52,7 @@ class FileController extends Controller
         $this->guardOrderDocumentAccess($folder, $id, $filename);
 
         $this->refreshCustomerInvoiceIfNeeded($folder, $id, $filename);
+        $this->refreshCustomerDeliveryOrderIfNeeded($folder, $id, $filename);
 
         $path = "$folder/$id/$filename";
         if (!Storage::disk('local')->exists($path)) {
@@ -181,5 +183,23 @@ class FileController extends Controller
         }
 
         PdfHelper::GenerateOrderInvoice($order);
+    }
+
+    /**
+     * Customers must always see the same live delivery-order PDF as admin
+     * (title, prices, DO no.), so regenerate rather than serve a stale cache.
+     */
+    private function refreshCustomerDeliveryOrderIfNeeded(string $folder, $id, string $filename): void
+    {
+        if ($folder !== Order::$path || !str_contains($filename, 'delivery-order')) {
+            return;
+        }
+
+        $order = Order::find($id);
+        if (!$order || !$order->canShowDeliveryOrder()) {
+            return;
+        }
+
+        PdfHelper::GenerateDeliveryOrder($order);
     }
 }

@@ -310,7 +310,13 @@
                                                 -
                                             @endif
                                         </td>
-                                        <td class="text-center">{{ __('order.status.' . $order->status) }}</td>
+                                        <td class="text-center">
+                                            @if ($order->status === Order::$status['credit'])
+                                                <span class="badge bg-warning text-dark">{{ __('order.status.credit') }}</span>
+                                            @else
+                                                {{ __('order.status.' . $order->status) }}
+                                            @endif
+                                        </td>
                                         <td class="text-center">
                                             @php
                                                 $paymentBadgeClass = match ($order->payment_status ?? 'unpaid') {
@@ -427,6 +433,7 @@
                             <select class="form-select" id="order_status" name="status" required>
                                 <option value="">{{ __('orders.choose') }}</option>
                                 @foreach ($statuses as $key => $value)
+                                    @continue($key === \App\Order::$status['credit'])
                                     <option value="{{ $key }}">
                                         {{ $value }}
                                     </option>

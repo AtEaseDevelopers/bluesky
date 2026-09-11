@@ -550,6 +550,43 @@
                         </div>
                     </div>
 
+                    @if ($credit_orders->isNotEmpty())
+                    <form action="{{ route('admin.customers.credit.mark-paid', encrypt($customer->id)) }}" method="POST" class="form-wrapper mb-4" id="mark-credit-paid-form">
+                        @csrf
+                        <div class="alert alert-warning mb-0">
+                            <p class="mb-2"><strong>{{ __('customers.mark_paid_heading') }}</strong></p>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-2">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:2.5rem;">
+                                                <input type="checkbox" class="form-check-input" id="credit_orders_all" aria-label="{{ __('customers.select_all') }}">
+                                            </th>
+                                            <th>{{ __('customers.order') }}</th>
+                                            <th class="text-end">{{ __('customers.amount') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($credit_orders as $creditOrder)
+                                            <tr>
+                                                <td>
+                                                    <input type="checkbox" class="form-check-input credit-order-check" name="order_ids[]" value="{{ $creditOrder->id }}" id="credit_order_{{ $creditOrder->id }}">
+                                                </td>
+                                                <td>
+                                                    <a href="{{ route('admin.orders.summary', $creditOrder->id) }}" target="_blank" rel="noopener">#{{ $creditOrder->id }}</a>
+                                                </td>
+                                                <td class="text-end">RM {{ number_format($creditOrder->creditOutstandingAmount(), 2) }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            <small class="text-muted d-block mb-2">{{ __('customers.mark_paid_help') }}</small>
+                            <button type="submit" class="btn btn-success btn-sm">{{ __('customers.mark_paid_button') }}</button>
+                        </div>
+                    </form>
+                    @endif
+
                     <form action="{{ route('admin.customers.credit.adjust', encrypt($customer->id)) }}" method="POST" class="form-wrapper mb-4">
                         @csrf
                         <div class="row">
@@ -590,7 +627,13 @@
                                             {{ $log->amount >= 0 ? '+' : '' }}{{ number_format($log->amount, 2) }}
                                         </td>
                                         <td>{{ number_format($log->balance_after, 2) }}</td>
-                                        <td>{{ $log->order_id ? '#' . $log->order_id : '-' }}</td>
+                                        <td>
+                                            @if ($log->order_id)
+                                                <a href="{{ route('admin.orders.summary', $log->order_id) }}" target="_blank" rel="noopener">#{{ $log->order_id }}</a>
+                                            @else
+                                                -
+                                            @endif
+                                        </td>
                                         <td>{{ $log->notes ?: '-' }}</td>
                                     </tr>
                                 @empty
@@ -688,6 +731,26 @@
 
             $('#customer_type').on('change', syncPaymentTermField);
             syncPaymentTermField();
+
+            // Credit orders "mark as paid" — select-all toggles each row.
+            $('#credit_orders_all').on('change', function() {
+                $('.credit-order-check').prop('checked', $(this).prop('checked'));
+            });
+            $('.credit-order-check').on('change', function() {
+                const total = $('.credit-order-check').length;
+                const checked = $('.credit-order-check:checked').length;
+                $('#credit_orders_all').prop('checked', total > 0 && checked === total);
+            });
+            $('#mark-credit-paid-form').on('submit', function(e) {
+                if ($('.credit-order-check:checked').length === 0) {
+                    e.preventDefault();
+                    Swal.fire(
+                        @json(__('customers.mark_paid_heading')),
+                        @json(__('customers.mark_paid_none_selected')),
+                        'info'
+                    );
+                }
+            });
 
             $('#payment_method').select2({
                 placeholder: 'Select a payment method'

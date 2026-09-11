@@ -61,6 +61,12 @@ class EditCustomerController extends Controller
                 'credit_logs' => $customer->isCreditCustomer()
                     ? app(CreditService::class)->logsForCustomer($customer->id)
                     : collect(),
+                'credit_orders' => $customer->isCreditCustomer()
+                    ? \App\Order::where('user_id', $customer->id)
+                        ->where('status', \App\Order::$status['credit'])
+                        ->orderBy('id')
+                        ->get()
+                    : collect(),
             ]
         );
     }
