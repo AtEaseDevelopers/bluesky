@@ -550,6 +550,73 @@ class OrderController extends Controller
             ->with('success', __('orders.products_added'));
     }
 
+    /**
+     * Soft-remove a single product line from an order and recalculate totals.
+     * The line (and its options) are flagged 'removed' rather than deleted so
+     * the order history stays intact. The last remaining active line cannot be
+     * removed — cancel the order instead.
+     */
+    public function removeProduct(Order $order, OrderProduct $orderProduct)
+    {
+        $admin = Auth::guard('web_admin')->user();
+        if (!$admin || !$admin->canModule('orders', 'edit')) {
+            abort(403);
+        }
+
+        if ((int) $orderProduct->order_id !== (int) $order->id) {
+            abort(404);
+        }
+
+        if ($orderProduct->status !== OrderProduct::$status['active']) {
+            return redirect(route('admin.orders.summary', $order->id))
+                ->with('error', __('orders.product_already_removed'));
+        }
+
+        $activeCount = OrderProduct::where('order_id', $order->id)
+            ->where('status', OrderProduct::$status['active'])
+            ->count();
+        if ($activeCount <= 1) {
+            return redirect(route('admin.orders.summary', $order->id))
+                ->with('error', __('orders.cannot_remove_last_product'));
+        }
+
+        $removedWeight = $this->orderLineWeight($orderProduct);
+
+        $orderProduct->update(['status' => OrderProduct::$status['removed']]);
+        OrderProductOption::where('order_product_id', $orderProduct->id)
+            ->update(['status' => OrderProductOption::$status['removed']]);
+
+        if ($removedWeight > 0) {
+            $order->update([
+                'order_weight' => max(0, (float) $order->order_weight - $removedWeight),
+            ]);
+        }
+
+        app(OrderService::class)->recalculateTotals($order->fresh());
+
+        return redirect(route('admin.orders.summary', $order->id))
+            ->with('success', __('orders.products_removed'));
+    }
+
+    /**
+     * Weight this line contributes to the order total weight, mirroring
+     * Product::resolveLineInputs(): weight-billed lines carry their own weight,
+     * quantity lines use the catalog per-unit weight times quantity.
+     */
+    private function orderLineWeight(OrderProduct $line): float
+    {
+        if ($line->weight !== null && $line->weight !== '') {
+            return (float) $line->weight;
+        }
+
+        $product = Product::find($line->product_id);
+        if ($product) {
+            return (float) $product->weight * (float) $line->quantity;
+        }
+
+        return 0.0;
+    }
+
     public function updatePaymentDueDate(Request $request, $id)
     {
         $order = Order::with('customer')->findOrFail($id);

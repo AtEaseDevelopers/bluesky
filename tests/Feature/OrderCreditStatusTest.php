@@ -342,4 +342,121 @@ class OrderCreditStatusTest extends TestCase
         $this->assertEqualsWithDelta(-30.00, (float) $customer->fresh()->credit_balance, 0.001);
         $this->assertSame(Order::$status['credit'], $order->fresh()->status);
     }
+
+    /** A pre-feature order: completed with an unsettled credit-term charge. */
+    private function makeLegacyCompletedCreditOrder(User $customer, float $amount = 30.00): Order
+    {
+        $order = $this->makeOrder($customer, [
+            'total_price' => $amount,
+            'subtotal' => $amount,
+            'paid_amount' => $amount,
+            'status' => Order::$status['completed'],
+            'payment_status' => Order::$payment_status['paid'],
+            'completed_at' => now()->subDays(3),
+        ]);
+
+        OrderPayment::forceCreate([
+            'order_id' => $order->id,
+            'payment_method' => 'credit-term',
+            'amount' => $amount,
+            'status' => OrderPayment::STATUS_CONFIRMED,
+        ]);
+
+        return $order->fresh();
+    }
+
+    /** @test */
+    public function backfill_dry_run_reports_but_leaves_orders_completed(): void
+    {
+        $customer = $this->makeCreditCustomer();
+        $order = $this->makeLegacyCompletedCreditOrder($customer);
+
+        $this->artisan('credit:backfill-credit-status', ['--dry-run' => true])
+            ->assertExitCode(0);
+
+        $this->assertSame(Order::$status['completed'], $order->fresh()->status);
+        $this->assertNotNull($order->fresh()->completed_at);
+    }
+
+    /** @test */
+    public function backfill_moves_unsettled_completed_credit_orders_to_credit(): void
+    {
+        $customer = $this->makeCreditCustomer();
+        $order = $this->makeLegacyCompletedCreditOrder($customer);
+
+        $this->artisan('credit:backfill-credit-status')->assertExitCode(0);
+
+        $this->assertSame(Order::$status['credit'], $order->fresh()->status);
+        $this->assertNull($order->fresh()->completed_at);
+    }
+
+    /** @test */
+    public function backfill_moves_delivered_credit_orders_that_never_advanced(): void
+    {
+        $customer = $this->makeCreditCustomer();
+
+        // Delivered credit-term order that predates the auto-credit trigger.
+        $order = $this->makeOrder($customer, [
+            'status' => Order::$status['delivered'],
+            'payment_status' => Order::$payment_status['paid'],
+            'paid_amount' => 30.00,
+        ]);
+        OrderPayment::forceCreate([
+            'order_id' => $order->id,
+            'payment_method' => 'credit-term',
+            'amount' => 30.00,
+            'status' => OrderPayment::STATUS_CONFIRMED,
+        ]);
+
+        $this->artisan('credit:backfill-credit-status')->assertExitCode(0);
+
+        $this->assertSame(Order::$status['credit'], $order->fresh()->status);
+    }
+
+    /** @test */
+    public function backfill_skips_a_completed_credit_order_that_was_settled(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCreditCustomer();
+        $order = $this->makeLegacyCompletedCreditOrder($customer, 30.00);
+
+        // Its credit-term charge has already been cleared on the ledger.
+        CustomerCreditLog::forceCreate([
+            'user_id' => $customer->id,
+            'type' => 'credit_settlement',
+            'amount' => 30.00,
+            'balance_before' => -30.00,
+            'balance_after' => 0,
+            'order_id' => $order->id,
+            'recorded_by' => $admin->id,
+        ]);
+
+        $this->assertEqualsWithDelta(0.00, $order->fresh()->creditOutstandingAmount(), 0.001);
+
+        $this->artisan('credit:backfill-credit-status')->assertExitCode(0);
+
+        $this->assertSame(Order::$status['completed'], $order->fresh()->status);
+    }
+
+    /** @test */
+    public function backfill_ignores_completed_orders_without_a_credit_term_charge(): void
+    {
+        $customer = $this->makeCreditCustomer();
+
+        $order = $this->makeOrder($customer, [
+            'status' => Order::$status['completed'],
+            'payment_status' => Order::$payment_status['paid'],
+            'paid_amount' => 30.00,
+        ]);
+        OrderPayment::forceCreate([
+            'order_id' => $order->id,
+            'payment_method' => 'bank-transfer',
+            'amount' => 30.00,
+            'status' => OrderPayment::STATUS_CONFIRMED,
+        ]);
+
+        $this->artisan('credit:backfill-credit-status')->assertExitCode(0);
+
+        $this->assertSame(Order::$status['completed'], $order->fresh()->status);
+    }
 }

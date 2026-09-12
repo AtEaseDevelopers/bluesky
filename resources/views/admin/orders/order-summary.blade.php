@@ -132,6 +132,7 @@
 
                             <p><strong>{{ __('orders.shipping_address_label') }}</strong><br>{!! nl2br(e(strip_tags($order->shipping_address))) !!}</p>
 
+                            @php $canEditItems = $admin->canModule('orders', 'edit'); $summaryColspan = $canEditItems ? 5 : 4; @endphp
                             <div class="table-responsive mt-4">
                                 <table class="table table-bordered">
                                     <thead>
@@ -141,6 +142,9 @@
                                             <th>{{ __('orders.qty') }}</th>
                                             <th>{{ __('orders.weight') }}</th>
                                             <th class="text-end">{{ __('orders.total') }}</th>
+                                            @if ($canEditItems)
+                                                <th class="text-center">{{ __('orders.actions') }}</th>
+                                            @endif
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -173,38 +177,57 @@
                                                 </td>
                                                 <td>{{ \App\OrderProduct::displayWeight($product) ?? '-' }}</td>
                                                 <td class="text-end">{{ number_format($product->price, 2) }}</td>
+                                                @if ($canEditItems)
+                                                    <td class="text-center">
+                                                        @if (count($products) > 1)
+                                                            <form method="POST"
+                                                                  action="{{ route('admin.orders.products.remove', [$order->id, $product->order_product_id]) }}"
+                                                                  onsubmit="return confirm('{{ __('orders.remove_product_confirm') }}');"
+                                                                  class="d-inline">
+                                                                @csrf
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                                        title="{{ __('orders.remove_product') }}"
+                                                                        aria-label="{{ __('orders.remove_product') }}">
+                                                                    <i class="fa fa-trash" aria-hidden="true"></i>
+                                                                </button>
+                                                            </form>
+                                                        @else
+                                                            <span class="text-muted">-</span>
+                                                        @endif
+                                                    </td>
+                                                @endif
                                             </tr>
                                         @endforeach
                                         <tr>
-                                            <td colspan="4" class="text-end"><strong>{{ __('orders.subtotal') }}</strong></td>
+                                            <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.subtotal') }}</strong></td>
                                             <td class="text-end">{{ number_format($order->subtotal, 2) }}</td>
                                         </tr>
                                         <tr>
-                                            <td colspan="4" class="text-end"><strong>{{ __('orders.delivery_fee') }}</strong></td>
+                                            <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.delivery_fee') }}</strong></td>
                                             <td class="text-end">{{ number_format($order->delivery_fee, 2) }}</td>
                                         </tr>
                                         @if ($order->amount_adjustment != 0)
                                             <tr>
-                                                <td colspan="4" class="text-end"><strong>{{ __('orders.adjustment') }}</strong></td>
+                                                <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.adjustment') }}</strong></td>
                                                 <td class="text-end">{{ number_format($order->amount_adjustment, 2) }}</td>
                                             </tr>
                                         @endif
                                         <tr>
-                                            <td colspan="4" class="text-end"><strong>{{ __('orders.grand_total') }}</strong></td>
+                                            <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.grand_total') }}</strong></td>
                                             <td class="text-end"><strong>{{ number_format($order->total_price, 2) }}</strong></td>
                                         </tr>
                                         <tr>
-                                            <td colspan="4" class="text-end"><strong>{{ __('orders.paid') }}</strong></td>
+                                            <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.paid') }}</strong></td>
                                             <td class="text-end text-success">{{ number_format($order->paid_amount, 2) }}</td>
                                         </tr>
                                         @if ($payments->count())
                                             <tr>
-                                                <td colspan="4" class="text-end"><strong>{{ __('orders.payment_breakdown') }}</strong></td>
+                                                <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.payment_breakdown') }}</strong></td>
                                                 <td class="text-end">{{ $order->paymentMethodsLabel() }}</td>
                                             </tr>
                                         @endif
                                         <tr>
-                                            <td colspan="4" class="text-end"><strong>{{ __('orders.balance_due') }}</strong></td>
+                                            <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.balance_due') }}</strong></td>
                                             <td class="text-end text-danger"><strong>{{ number_format($order->balanceDue(), 2) }}</strong></td>
                                         </tr>
                                     </tbody>
