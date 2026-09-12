@@ -113,29 +113,8 @@
                                         </div>
                                     </th>
                                     <th>{{ __('customers.options') }}</th>
-                                    <th>{{ __('customers.login_link') }}</th>
                                     <th>{{ __('customers.registration') }}</th>
                                     <th>{{ __('customers.name') }}</th>
-                                    <th>
-                                        @php
-                                            $codeSortActive = ($input['sort'] ?? 'name') === 'sql_customer_code';
-                                            $codeSortDir = $codeSortActive ? ($input['dir'] ?? 'asc') : 'asc';
-                                            $codeSortNextDir = $codeSortActive && $codeSortDir === 'asc' ? 'desc' : 'asc';
-                                            $codeSortQuery = array_merge($input ?? [], [
-                                                'sort' => 'sql_customer_code',
-                                                'dir' => $codeSortNextDir,
-                                            ]);
-                                        @endphp
-                                        <a href="{{ route('admin.customers') . '?' . http_build_query($codeSortQuery) }}"
-                                            class="text-decoration-none text-dark d-inline-flex align-items-center gap-1">
-                                            {{ __('customers.customer_code') }}
-                                            @if ($codeSortActive)
-                                                <i class="fa fa-sort-{{ $codeSortDir === 'asc' ? 'up' : 'down' }}" aria-hidden="true"></i>
-                                            @else
-                                                <i class="fa fa-sort text-muted" aria-hidden="true"></i>
-                                            @endif
-                                        </a>
-                                    </th>
                                     <th>{{ __('customers.email') }}</th>
                                     <th>{{ __('customers.customer_type') }}</th>
                                     <th>{{ __('customers.credit_balance') }}</th>
@@ -159,49 +138,49 @@
                                             </div>
                                         </td>
                                         <td>
-                                            @if ($admin->canModule('customers', 'edit'))
-                                                <a href="{{ route('admin.customers.edit', encrypt($user->id)) }}" class="btn btn-sm btn-primary" title="{{ __('customers.edit_customer') }}">
-                                                    <i class="fa fa-edit"></i>
-                                                </a>
-                                                @if (($user->orders_count ?? 0) === 0)
-                                                    <button type="button"
-                                                        class="btn btn-sm btn-danger btn-delete-customer"
-                                                        title="{{ __('customers.delete') }}"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#deleteCustomerModal"
-                                                        data-action="{{ route('admin.customers.destroy', encrypt($user->id)) }}"
-                                                        data-name="{{ $user->name }}">
-                                                        <i class="fa fa-trash"></i>
-                                                    </button>
-                                                @elseif ($user->isActiveCustomer())
-                                                    <button type="button"
-                                                        class="btn btn-sm btn-warning btn-deactivate-customer"
-                                                        title="{{ __('customers.deactivate') }}"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#deactivateCustomerModal"
-                                                        data-action="{{ route('admin.customers.deactivate', encrypt($user->id)) }}"
-                                                        data-name="{{ $user->name }}">
-                                                        <i class="fa fa-ban"></i>
-                                                    </button>
-                                                @endif
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if ($user->hasCompletedRegistration())
-                                                <input type="text" class="form-control fast_link mb-2" style="min-width: 280px;" value="{{ $user->fastLoginUrl() }}" readonly />
-                                                <p>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    {{ __('customers.options') }}
+                                                </button>
+                                                <ul class="dropdown-menu">
                                                     @if ($admin->canModule('customers', 'edit'))
-                                                        <a href="{{ route('admin.customers.generate-new-login-link', $user->id) }}" class="btn btn-sm btn-primary me-1" title="{{ __('customers.generate_new_login_link') }}">
-                                                            <i class="fa fa-refresh"></i>
-                                                        </a>
+                                                        <li>
+                                                            <a class="dropdown-item" href="{{ route('admin.customers.edit', encrypt($user->id)) }}"><i class="fa fa-edit me-1"></i>{{ __('customers.edit_customer') }}</a>
+                                                        </li>
                                                     @endif
-                                                    <a type="button" class="btn btn-sm btn-primary copylink">
-                                                        <i class="fa fa-clipboard"></i>
-                                                    </a>
-                                                </p>
-                                            @else
-                                                <span class="text-muted">{{ __('customers.available_after_registration') }}</span>
-                                            @endif
+                                                    @if ($user->hasCompletedRegistration())
+                                                        <li>
+                                                            <button type="button" class="dropdown-item copylink" data-link="{{ $user->fastLoginUrl() }}"><i class="fa fa-clipboard me-1"></i>{{ __('customers.login_link') }}</button>
+                                                        </li>
+                                                        @if ($admin->canModule('customers', 'edit'))
+                                                            <li>
+                                                                <a class="dropdown-item" href="{{ route('admin.customers.generate-new-login-link', $user->id) }}"><i class="fa fa-refresh me-1"></i>{{ __('customers.generate_new_login_link') }}</a>
+                                                            </li>
+                                                        @endif
+                                                    @endif
+                                                    @if ($admin->canModule('customers', 'edit'))
+                                                        @if (($user->orders_count ?? 0) === 0)
+                                                            <li>
+                                                                <button type="button"
+                                                                    class="dropdown-item text-danger btn-delete-customer"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#deleteCustomerModal"
+                                                                    data-action="{{ route('admin.customers.destroy', encrypt($user->id)) }}"
+                                                                    data-name="{{ $user->name }}"><i class="fa fa-trash me-1"></i>{{ __('customers.delete') }}</button>
+                                                            </li>
+                                                        @elseif ($user->isActiveCustomer())
+                                                            <li>
+                                                                <button type="button"
+                                                                    class="dropdown-item text-warning btn-deactivate-customer"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#deactivateCustomerModal"
+                                                                    data-action="{{ route('admin.customers.deactivate', encrypt($user->id)) }}"
+                                                                    data-name="{{ $user->name }}"><i class="fa fa-ban me-1"></i>{{ __('customers.deactivate') }}</button>
+                                                            </li>
+                                                        @endif
+                                                    @endif
+                                                </ul>
+                                            </div>
                                         </td>
                                         <td>
                                             @if ($user->isPendingRegistration() && $user->registrationUrl())
@@ -220,18 +199,6 @@
                                                 {{ $user->name }}
                                             @else
                                                 {{ __('customers.pending_registration') }}
-                                            @endif
-                                        </td>
-                                        <td class="customer-code-col" style="min-width: 110px;">
-                                            @if ($admin->canModule('customers', 'edit'))
-                                                <span class="customer-code-display d-inline-block w-100 {{ $user->sql_customer_code ? '' : 'text-muted' }}"
-                                                    data-customer-id="{{ encrypt($user->id) }}"
-                                                    data-update-url="{{ route('admin.customers.update-code', encrypt($user->id)) }}"
-                                                    title="{{ __('customers.customer_code_dblclick_edit') }}">
-                                                    {{ $user->sql_customer_code ?: '--' }}
-                                                </span>
-                                            @else
-                                                {{ $user->sql_customer_code ?: '--' }}
                                             @endif
                                         </td>
                                         <td>{{ $user->email ?: '--' }}</td>
@@ -290,7 +257,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="17">
+                                    <td colspan="15">
                                         {{ $users->appends(request()->query())->links('pagination::bootstrap-4') }}
                                     </td>
                                 </tr>
@@ -357,8 +324,6 @@
         $(document).ready(function() {
             const customersJs = {
                 select_customer: @json(__('customers.js.select_customer')),
-                customer_code_saved: @json(__('customers.js.customer_code_saved')),
-                customer_code_save_failed: @json(__('customers.js.customer_code_save_failed')),
             };
 
             $("#customer_checkall").on('change', function() {
@@ -391,9 +356,10 @@
             });
 
             $(".copylink").click(function() {
-                const linkToCopy = $(this).closest("td").children(".fast_link");
-                linkToCopy.select();
+                const link = $(this).data('link');
+                const temp = $('<input>').val(link).appendTo('body').select();
                 document.execCommand('copy');
+                temp.remove();
                 alert(@json(__('customers.js.link_copied')));
             });
 
@@ -424,110 +390,6 @@
                     document.getElementById('deactivateCustomerForm').setAttribute('action', deactivateBtn.getAttribute('data-action'));
                     document.getElementById('deactivateCustomerName').textContent = deactivateBtn.getAttribute('data-name');
                 }
-            });
-
-            let activeCustomerCodeEditor = null;
-
-            function finishCustomerCodeEdit(save) {
-                if (!activeCustomerCodeEditor) {
-                    return;
-                }
-
-                const wrap = activeCustomerCodeEditor.wrap;
-                const display = activeCustomerCodeEditor.display;
-                const input = activeCustomerCodeEditor.input;
-                const original = activeCustomerCodeEditor.original;
-                const updateUrl = display.getAttribute('data-update-url');
-
-                activeCustomerCodeEditor = null;
-
-                if (!save) {
-                    display.textContent = original || '--';
-                    display.classList.toggle('text-muted', !original);
-                    wrap.replaceChild(display, input);
-                    return;
-                }
-
-                const value = input.value.trim();
-
-                fetch(updateUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json',
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ sql_customer_code: value }),
-                })
-                .then(response => response.json().then(data => ({ ok: response.ok, data })))
-                .then(({ ok, data }) => {
-                    if (!ok || !data.success) {
-                        const message = (data && data.message) ? data.message : customersJs.customer_code_save_failed;
-                        if (data && data.errors && data.errors.sql_customer_code) {
-                            alert(data.errors.sql_customer_code[0]);
-                        } else {
-                            alert(message);
-                        }
-                        display.textContent = original || '--';
-                        display.classList.toggle('text-muted', !original);
-                        wrap.replaceChild(display, input);
-                        return;
-                    }
-
-                    const saved = (data.sql_customer_code || '').trim();
-                    display.textContent = saved || '--';
-                    display.classList.toggle('text-muted', !saved);
-                    wrap.replaceChild(display, input);
-                })
-                .catch(() => {
-                    alert(customersJs.customer_code_save_failed);
-                    display.textContent = original || '--';
-                    display.classList.toggle('text-muted', !original);
-                    wrap.replaceChild(display, input);
-                });
-            }
-
-            document.querySelectorAll('.customer-code-display').forEach(function (display) {
-                display.style.cursor = 'pointer';
-
-                display.addEventListener('dblclick', function () {
-                    if (activeCustomerCodeEditor) {
-                        finishCustomerCodeEdit(false);
-                    }
-
-                    const wrap = display.parentElement;
-                    const original = display.textContent.trim() === '--' ? '' : display.textContent.trim();
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'form-control form-control-sm';
-                    input.value = original;
-                    input.maxLength = 30;
-
-                    wrap.replaceChild(input, display);
-                    input.focus();
-                    input.select();
-
-                    activeCustomerCodeEditor = { wrap, display, input, original };
-
-                    input.addEventListener('keydown', function (event) {
-                        if (event.key === 'Enter') {
-                            event.preventDefault();
-                            finishCustomerCodeEdit(true);
-                        } else if (event.key === 'Escape') {
-                            event.preventDefault();
-                            finishCustomerCodeEdit(false);
-                        }
-                    });
-
-                    input.addEventListener('blur', function () {
-                        setTimeout(function () {
-                            if (activeCustomerCodeEditor && activeCustomerCodeEditor.input === input) {
-                                finishCustomerCodeEdit(true);
-                            }
-                        }, 0);
-                    });
-                });
             });
         });
     </script>
