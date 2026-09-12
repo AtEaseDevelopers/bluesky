@@ -94,8 +94,10 @@ return [
         'delivery_proof_required' => '必须上传送达凭证照片。',
         'delivery_proof_format' => '送达凭证须为 JPG 或 PNG 图片。',
         'delivery_proof_size' => '送达凭证不得超过 4 MB。',
+        'delivery_proof_upload_failed' => '照片上传失败——可能是文件过大或网络中断，请重试。',
         'delivery_proof_not_found' => '找不到送达凭证。',
         'view_delivery_proof' => '查看送达凭证',
+        'optimising_photo' => '正在优化照片，请稍候…',
     ],
 
     'customers' => [

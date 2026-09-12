@@ -215,6 +215,23 @@ class DriverPortalTest extends TestCase
     }
 
     /** @test */
+    public function delivery_proof_form_wires_up_client_side_compression()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, ['status' => 'in_route']);
+
+        $response = $this->actingAs($driver, 'web_driver')
+            ->get(route('driver.orders.show', $order->id))
+            ->assertOk();
+
+        // Large phone photos must be downscaled in the browser before upload so
+        // they don't trip PHP's upload limit / drop on flaky mobile networks.
+        // The form + input carry the hooks the compression script binds to.
+        $response->assertSee('data-compress-upload', false);
+        $response->assertSee('data-compress-image', false);
+    }
+
+    /** @test */
     public function driver_cannot_mark_delivered_without_delivery_proof()
     {
         $driver = $this->makeDriver();

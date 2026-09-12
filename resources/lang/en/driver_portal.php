@@ -94,8 +94,10 @@ return [
         'delivery_proof_required' => 'Delivery proof photo is required.',
         'delivery_proof_format' => 'Delivery proof must be a JPG or PNG image.',
         'delivery_proof_size' => 'Delivery proof must not exceed 4 MB.',
+        'delivery_proof_upload_failed' => 'The photo could not be uploaded — it may be too large or the connection dropped. Please try again.',
         'delivery_proof_not_found' => 'Delivery proof not found.',
         'view_delivery_proof' => 'View Delivery Proof',
+        'optimising_photo' => 'Optimising photo, please wait…',
     ],
 
     'customers' => [

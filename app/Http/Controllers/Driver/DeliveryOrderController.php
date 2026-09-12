@@ -182,6 +182,7 @@ class DeliveryOrderController extends Controller
             'delivery_proof' => ['required', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
         ], [
             'delivery_proof.required' => __('driver_portal.deliveries.delivery_proof_required'),
+            'delivery_proof.uploaded' => __('driver_portal.deliveries.delivery_proof_upload_failed'),
             'delivery_proof.image' => __('driver_portal.deliveries.delivery_proof_format'),
             'delivery_proof.mimes' => __('driver_portal.deliveries.delivery_proof_format'),
             'delivery_proof.max' => __('driver_portal.deliveries.delivery_proof_size'),

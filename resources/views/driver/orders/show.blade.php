@@ -288,7 +288,7 @@
 
                 @if ($canRecordPayment)
                     <div id="driver-payment-record" @if (!$showRecordPanelInitially) style="display:none;" @endif>
-                        <form action="{{ route('driver.orders.record-payment', $order->id) }}" method="POST" enctype="multipart/form-data" id="driver-record-payment-form">
+                        <form action="{{ route('driver.orders.record-payment', $order->id) }}" method="POST" enctype="multipart/form-data" id="driver-record-payment-form" data-compress-upload>
                             @csrf
                             @if ($order->isCreditCustomer())
                                 @php $defaultPaymentTiming = old('payment_timing', 'pay_now'); @endphp
@@ -327,8 +327,12 @@
                                 <label class="form-label" for="payment_proof">{{ __('driver_portal.deliveries.payment_proof') }} <span class="text-muted-ink" style="font-weight:500;">{{ __('driver_portal.deliveries.payment_proof_hint') }}</span></label>
                                 <input type="file" class="form-control @error('payment_proof') is-invalid @enderror"
                                     name="payment_proof" id="payment_proof"
-                                    accept="{{ \App\OrderPayment::proofAcceptAttribute() }}">
+                                    accept="{{ \App\OrderPayment::proofAcceptAttribute() }}"
+                                    data-compress-image>
                                 @error('payment_proof')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                                <div class="text-muted-ink mt-2" data-compress-hint style="display:none; font-size:.92rem;">
+                                    <i class="fa fa-spinner fa-spin me-1"></i> {{ __('driver_portal.deliveries.optimising_photo') }}
+                                </div>
                             </div>
                             @if ($order->isCreditCustomer())
                                 </div>
@@ -385,7 +389,7 @@
             <h5 class="display-font mb-3" style="font-size:1.15rem;">{{ __('driver_portal.deliveries.update_status') }}</h5>
             @if ($deliveryStatusContext['mode'] === 'confirm' && count($deliveryStatusContext['statuses'] ?? []))
                 <p class="text-muted-ink mb-3" style="font-size:.92rem;">{{ __('driver_portal.deliveries.update_status_help') }}</p>
-                <form action="{{ route('driver.orders.update-status', $order->id) }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('driver.orders.update-status', $order->id) }}" method="POST" enctype="multipart/form-data" data-compress-upload>
                     @csrf
                     <div class="mb-3">
                         <label class="form-label" for="delivery_proof">{{ __('driver_portal.deliveries.delivery_proof') }} <span class="text-danger">*</span></label>
@@ -394,8 +398,12 @@
                                name="delivery_proof"
                                id="delivery_proof"
                                accept="{{ \App\OrderPayment::photoProofAcceptAttribute() }}"
+                               data-compress-image
                                required>
                         @error('delivery_proof')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        <div class="text-muted-ink mt-2" data-compress-hint style="display:none; font-size:.92rem;">
+                            <i class="fa fa-spinner fa-spin me-1"></i> {{ __('driver_portal.deliveries.optimising_photo') }}
+                        </div>
                     </div>
                     <div class="d-flex gap-2">
                         @foreach ($deliveryStatusContext['statuses'] as $value => $label)
@@ -594,4 +602,103 @@
         })();
     </script>
     @endif
+    <script>
+        (function () {
+            // Downscale + re-encode proof photos on the client before upload.
+            // Phone cameras produce 4-12MB JPEGs (and HEIC) that overflow PHP's
+            // upload_max_filesize or die mid-transfer on flaky mobile networks,
+            // surfacing Laravel's generic "failed to upload" error. Shrinking to
+            // a small JPEG here makes the upload reliable on any server/connection.
+            var MAX_DIM = 1920;              // px, longest edge after resize
+            var QUALITY = 0.82;              // JPEG quality
+            var SKIP_BELOW = 1024 * 1024;    // leave already-small JPG/PNG untouched
+
+            function supported() {
+                return 'DataTransfer' in window
+                    && typeof document.createElement('canvas').toBlob === 'function'
+                    && 'URL' in window && typeof URL.createObjectURL === 'function';
+            }
+
+            function compress(file) {
+                return new Promise(function (resolve, reject) {
+                    var url = URL.createObjectURL(file);
+                    var img = new Image();
+                    img.onload = function () {
+                        var w = img.naturalWidth, h = img.naturalHeight;
+                        if (!w || !h) { URL.revokeObjectURL(url); reject(); return; }
+                        var scale = Math.min(1, MAX_DIM / Math.max(w, h));
+                        var canvas = document.createElement('canvas');
+                        canvas.width = Math.round(w * scale);
+                        canvas.height = Math.round(h * scale);
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        URL.revokeObjectURL(url);
+                        canvas.toBlob(function (blob) {
+                            blob ? resolve(blob) : reject();
+                        }, 'image/jpeg', QUALITY);
+                    };
+                    img.onerror = function () { URL.revokeObjectURL(url); reject(); };
+                    img.src = url;
+                });
+            }
+
+            function setBusy(form, on) {
+                form.querySelectorAll('button[type="submit"]').forEach(function (btn) {
+                    btn.disabled = on;
+                });
+                var hint = form.querySelector('[data-compress-hint]');
+                if (hint) { hint.style.display = on ? '' : 'none'; }
+            }
+
+            function resubmit(form, submitter) {
+                // Programmatic submit() drops the clicked button's name/value
+                // (the delivery form uses it to pass status=delivered), so re-add it.
+                if (submitter && submitter.name) {
+                    var hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = submitter.name;
+                    hidden.value = submitter.value;
+                    form.appendChild(hidden);
+                }
+                form.submit();
+            }
+
+            document.querySelectorAll('form[data-compress-upload]').forEach(function (form) {
+                var input = form.querySelector('input[type="file"][data-compress-image]');
+                if (!input || !supported()) { return; }
+
+                // Track the last-clicked submit button for browsers where the
+                // submit event's `submitter` is unavailable (older iOS Safari).
+                var lastSubmitter = null;
+                form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (btn) {
+                    btn.addEventListener('click', function () { lastSubmitter = btn; });
+                });
+
+                var processed = false;
+                form.addEventListener('submit', function (event) {
+                    if (processed) { return; }          // second pass: let it through
+                    var file = input.files && input.files[0];
+                    if (!file || file.type.indexOf('image/') !== 0) { return; }  // no file / PDF
+                    if (file.size < SKIP_BELOW && /^image\/(jpe?g|png)$/.test(file.type)) { return; }
+
+                    event.preventDefault();
+                    var submitter = event.submitter || lastSubmitter;
+                    setBusy(form, true);
+
+                    compress(file).then(function (blob) {
+                        var name = (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg';
+                        var dt = new DataTransfer();
+                        dt.items.add(new File([blob], name, { type: 'image/jpeg' }));
+                        input.files = dt.files;
+                    }).catch(function () {
+                        // Compression failed (e.g. Android can't decode HEIC on a
+                        // canvas) — fall back to the original file and let the
+                        // server validate it.
+                    }).then(function () {
+                        processed = true;
+                        resubmit(form, submitter);
+                    });
+                });
+            });
+        })();
+    </script>
 @endsection
