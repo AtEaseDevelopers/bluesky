@@ -592,7 +592,7 @@
                                                         </form>
                                                     @endif
                                                     @if ($admin->canModule('orders', 'edit'))
-                                                        @if ($payment->isLedgerBacked())
+                                                        @if ($payment->isLedgerBacked() && !$payment->isCreditTermReversible())
                                                             <span class="text-muted small">{{ __('orders.credit_ledger_note') }}</span>
                                                         @else
                                                             <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-payment"

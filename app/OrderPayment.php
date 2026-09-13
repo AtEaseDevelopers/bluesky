@@ -258,6 +258,24 @@ class OrderPayment extends Model
         return CustomerCreditLog::where('order_payment_id', $this->id)->exists();
     }
 
+    /**
+     * A credit-term payment whose only ledger footprint is its own credit-term
+     * charge (plus any reversals we posted for prior edits). These CAN be edited
+     * or deleted directly: the edit path cleanly reverses that charge and, if it
+     * stays credit-term, re-posts it. Customer-credit draw-downs and overpayment
+     * movements are not reversible this way and must go through the credit flow.
+     */
+    public function isCreditTermReversible(): bool
+    {
+        if ($this->payment_method !== 'credit-term') {
+            return false;
+        }
+
+        return !CustomerCreditLog::where('order_payment_id', $this->id)
+            ->whereNotIn('type', ['credit_term', 'credit_reversal'])
+            ->exists();
+    }
+
     public function scopeConfirmed($query)
     {
         return $query->where('status', self::STATUS_CONFIRMED);

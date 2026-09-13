@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\CustomerCreditLog;
 use App\Order;
 use App\OrderPayment;
 use App\OrderProduct;
@@ -618,9 +619,14 @@ class OrderService
 
     /**
      * Edit an already-recorded payment (method / amount / notes) and recalculate
-     * the order's paid amount and status. Ledger-backed payments (credit-term,
-     * customer-credit, or any that moved the customer credit balance) are refused
-     * so the credit ledger cannot silently drift.
+     * the order's paid amount and status.
+     *
+     * Credit-term payments are editable: their credit-ledger charge is reversed
+     * first, then re-posted for the new amount if the method stays credit-term
+     * (or dropped entirely when switched to a cash-like method). Switching a
+     * plain payment TO credit-term posts a fresh charge. Only ledger movements we
+     * cannot cleanly reverse here — customer-credit draw-downs and overpayment
+     * credit — are refused and must go through the credit flow.
      */
     public function updateRecordedPayment(
         OrderPayment $payment,
@@ -635,9 +641,20 @@ class OrderService
             throw new \InvalidArgumentException('Order not found for this payment.');
         }
 
-        if ($payment->isLedgerBacked() || in_array($method, ['credit-term', 'customer-credit'], true)) {
+        // Ledger movements we can't cleanly unwind here (customer-credit, or a
+        // payment tied to overpayment / applied-credit entries) stay locked to
+        // the credit flow. Credit-term payments are reversible and pass through.
+        if ($payment->isLedgerBacked() && !$payment->isCreditTermReversible()) {
             throw new \InvalidArgumentException(
-                'Credit-term / customer-credit payments must be adjusted through the customer credit ledger, not edited here.'
+                'Customer-credit / overpayment payments must be adjusted through the customer credit ledger, not edited here.'
+            );
+        }
+
+        // customer-credit draws down stored credit — it can't be created by
+        // relabelling a recorded payment; route it through the credit ledger.
+        if ($method === 'customer-credit') {
+            throw new \InvalidArgumentException(
+                'Customer-credit must be applied through the customer credit ledger, not edited here.'
             );
         }
 
@@ -647,64 +664,128 @@ class OrderService
 
         $this->assertAdminPaymentMethod($order, $method);
 
-        $attributes = [
-            'payment_method' => $method,
-            'amount' => $amount,
-            'notes' => $notes,
-            'recorded_by' => $adminId,
-        ];
-
-        // Optional new proof replaces the existing one.
-        if ($proof) {
-            OrderPayment::assertValidProof($proof, false);
-            $dir = Order::$path . '/' . $payment->order_id . '/payments';
-            $filename = time() . rand() . '.' . $proof->getClientOriginalExtension();
-            Storage::disk('local')->put($dir . '/' . $filename, file_get_contents($proof));
-
-            if ($payment->payment_proof) {
-                $old = $dir . '/' . $payment->payment_proof;
-                if (Storage::disk('local')->exists($old)) {
-                    Storage::disk('local')->delete($old);
-                }
+        return DB::transaction(function () use ($payment, $order, $method, $amount, $notes, $adminId, $proof) {
+            // Unwind any credit-term charge this payment already carries before
+            // applying the edit; we re-post below if it remains credit-term.
+            if ($payment->isCreditTermReversible()) {
+                $this->reverseCreditTermLedgerImpact($payment, $adminId);
             }
 
-            $attributes['payment_proof'] = $filename;
+            $attributes = [
+                'payment_method' => $method,
+                'amount' => $amount,
+                'notes' => $notes,
+                'recorded_by' => $adminId,
+            ];
+
+            // Optional new proof replaces the existing one.
+            if ($proof) {
+                OrderPayment::assertValidProof($proof, false);
+                $dir = Order::$path . '/' . $payment->order_id . '/payments';
+                $filename = time() . rand() . '.' . $proof->getClientOriginalExtension();
+                Storage::disk('local')->put($dir . '/' . $filename, file_get_contents($proof));
+
+                if ($payment->payment_proof) {
+                    $old = $dir . '/' . $payment->payment_proof;
+                    if (Storage::disk('local')->exists($old)) {
+                        Storage::disk('local')->delete($old);
+                    }
+                }
+
+                $attributes['payment_proof'] = $filename;
+            }
+
+            $payment->update($attributes);
+
+            // Credit-term settles the order on account: mirror it onto the
+            // customer credit ledger and move the order into credit status,
+            // matching a freshly recorded credit-term payment.
+            if ($method === 'credit-term') {
+                $this->postCreditTermCharge($order->fresh(), $payment->fresh(), $amount, $adminId, null);
+            }
+
+            $this->refreshPaymentStatus($order->fresh());
+
+            if ($method === 'credit-term') {
+                app(OrderStatusService::class)->maybeEnterCredit($order->fresh(), $adminId);
+            }
+
+            return $payment->fresh();
+        });
+    }
+
+    /**
+     * Post a ledger reversal that zeroes out a credit-term payment's current
+     * credit impact — the net of its credit-term charge and any earlier
+     * reversals we posted. Used when the payment is edited or deleted so the
+     * customer no longer owes the amount on account. No-op when the payment
+     * never moved the customer's balance.
+     */
+    private function reverseCreditTermLedgerImpact(OrderPayment $payment, ?int $adminId): void
+    {
+        $order = $payment->order;
+        if (!$order || !$order->user_id) {
+            return;
         }
 
-        $payment->update($attributes);
+        $customer = $order->customer;
+        if (!$customer || !$customer->isCreditCustomer()) {
+            return;
+        }
 
-        $this->refreshPaymentStatus($order->fresh());
+        $net = (float) CustomerCreditLog::where('order_payment_id', $payment->id)->sum('amount');
+        if (abs($net) < 0.009) {
+            return;
+        }
 
-        return $payment->fresh();
+        app(CreditService::class)->adjustBalance(
+            $customer,
+            -round($net, 2),
+            'credit_reversal',
+            $order->id,
+            $payment->id,
+            $adminId,
+            null,
+            'Credit-term charge reversed — payment #' . $payment->id . ' edited/removed by admin.'
+        );
     }
 
     /**
      * Delete a recorded payment (removing its proof file) and recalculate the
-     * order totals. Ledger-backed payments are refused for the same reason as
-     * editing — reverse them through the credit flow instead.
+     * order totals. A credit-term payment's ledger charge is reversed first so
+     * the customer no longer owes the deleted amount on account. Only movements
+     * we cannot cleanly reverse here — customer-credit / overpayment — are
+     * refused and must go through the credit flow instead.
      */
-    public function deleteRecordedPayment(OrderPayment $payment): void
+    public function deleteRecordedPayment(OrderPayment $payment, ?int $adminId = null): void
     {
-        if ($payment->isLedgerBacked()) {
+        if ($payment->isLedgerBacked() && !$payment->isCreditTermReversible()) {
             throw new \InvalidArgumentException(
-                'Credit-term / customer-credit payments must be reversed through the customer credit ledger, not deleted here.'
+                'Customer-credit / overpayment payments must be reversed through the customer credit ledger, not deleted here.'
             );
         }
 
         $order = $payment->order;
 
-        if ($payment->payment_proof) {
-            $proofPath = Order::$path . '/' . $payment->order_id . '/payments/' . $payment->payment_proof;
-            if (Storage::disk('local')->exists($proofPath)) {
-                Storage::disk('local')->delete($proofPath);
+        DB::transaction(function () use ($payment, $order, $adminId) {
+            // Unwind the credit-term charge before removing the payment.
+            if ($payment->isCreditTermReversible()) {
+                $this->reverseCreditTermLedgerImpact($payment, $adminId);
             }
-        }
 
-        $payment->delete();
+            if ($payment->payment_proof) {
+                $proofPath = Order::$path . '/' . $payment->order_id . '/payments/' . $payment->payment_proof;
+                if (Storage::disk('local')->exists($proofPath)) {
+                    Storage::disk('local')->delete($proofPath);
+                }
+            }
 
-        if ($order) {
-            $this->refreshPaymentStatus($order->fresh());
-        }
+            $payment->delete();
+
+            if ($order) {
+                $this->refreshPaymentStatus($order->fresh());
+            }
+        });
     }
 
     /**

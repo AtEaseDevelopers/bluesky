@@ -103,7 +103,7 @@ class OrderPaymentController extends Controller
         $payment = OrderPayment::where('order_id', $order->id)->findOrFail($paymentId);
 
         try {
-            app(OrderService::class)->deleteRecordedPayment($payment);
+            app(OrderService::class)->deleteRecordedPayment($payment, Auth::guard('web_admin')->id());
         } catch (\InvalidArgumentException $e) {
             return back()->with('error', $e->getMessage());
         }

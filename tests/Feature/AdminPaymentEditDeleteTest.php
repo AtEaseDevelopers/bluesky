@@ -79,6 +79,27 @@ class AdminPaymentEditDeleteTest extends TestCase
         ]);
     }
 
+    /**
+     * A credit-term payment whose charge is already posted to the customer credit
+     * ledger — mirrors what recording a credit-term payment produces.
+     */
+    private function makeCreditTermPayment(Order $order, User $customer, float $amount = 30.00): OrderPayment
+    {
+        $customer->update(['credit_balance' => -$amount]);
+        $payment = $this->makePayment($order, 'credit-term', $amount);
+        CustomerCreditLog::forceCreate([
+            'user_id' => $customer->id,
+            'order_id' => $order->id,
+            'order_payment_id' => $payment->id,
+            'type' => 'credit_term',
+            'amount' => -$amount,
+            'balance_before' => 0,
+            'balance_after' => -$amount,
+        ]);
+
+        return $payment;
+    }
+
     /** @test */
     public function admin_can_edit_a_recorded_payment_and_totals_recalculate(): void
     {
@@ -141,38 +162,136 @@ class AdminPaymentEditDeleteTest extends TestCase
     }
 
     /** @test */
-    public function editing_a_credit_term_payment_is_refused(): void
+    public function editing_a_credit_term_payment_reverses_and_reposts_the_ledger_charge(): void
     {
         $admin = $this->makeAdmin();
-        $order = $this->makeOrder($this->makeCustomer('credit'));
-        $payment = $this->makePayment($order, 'credit-term', 30.00);
+        $customer = $this->makeCustomer('credit');
+        $order = $this->makeOrder($customer);
+        $payment = $this->makeCreditTermPayment($order, $customer, 30.00);
+
+        // Reduce the credit-term amount: the old RM30 charge is reversed and a
+        // fresh RM20 charge posted, leaving the customer owing exactly RM20.
+        $this->actingAs($admin, 'web_admin')
+            ->post(route('admin.orders.payments.update', [$order->id, $payment->id]), [
+                'payment_method' => 'credit-term',
+                'amount' => 20.00,
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('order_payments', [
+            'id' => $payment->id,
+            'payment_method' => 'credit-term',
+            'amount' => 20.00,
+        ]);
+        $this->assertEqualsWithDelta(-20.00, (float) $customer->fresh()->credit_balance, 0.001);
+        $this->assertDatabaseHas('customer_credit_logs', [
+            'order_payment_id' => $payment->id,
+            'type' => 'credit_reversal',
+        ]);
+    }
+
+    /** @test */
+    public function editing_a_credit_term_payment_to_cash_clears_the_ledger_charge(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer('credit');
+        $order = $this->makeOrder($customer);
+        $payment = $this->makeCreditTermPayment($order, $customer, 30.00);
 
         $this->actingAs($admin, 'web_admin')
             ->post(route('admin.orders.payments.update', [$order->id, $payment->id]), [
                 'payment_method' => 'cash',
-                'amount' => 20.00,
+                'amount' => 30.00,
             ])
-            ->assertSessionHas('error');
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('order_payments', [
+            'id' => $payment->id,
+            'payment_method' => 'cash',
+        ]);
+        // Charge fully reversed — the customer no longer owes on account.
+        $this->assertEqualsWithDelta(0.00, (float) $customer->fresh()->credit_balance, 0.001);
+    }
+
+    /** @test */
+    public function admin_can_convert_a_recorded_payment_to_credit_term_and_it_posts_to_the_ledger(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer('credit');
+        $order = $this->makeOrder($customer);
+        $payment = $this->makePayment($order, 'cash', 30.00);
+
+        $this->actingAs($admin, 'web_admin')
+            ->post(route('admin.orders.payments.update', [$order->id, $payment->id]), [
+                'payment_method' => 'credit-term',
+                'amount' => 30.00,
+                'notes' => 'on account',
+            ])
+            ->assertSessionHas('success');
 
         $this->assertDatabaseHas('order_payments', [
             'id' => $payment->id,
             'payment_method' => 'credit-term',
             'amount' => 30.00,
         ]);
+
+        // A credit-term charge is mirrored onto the customer credit ledger,
+        // linked back to this payment, so the amount shows as owed on account.
+        $this->assertDatabaseHas('customer_credit_logs', [
+            'order_id' => $order->id,
+            'order_payment_id' => $payment->id,
+        ]);
+        $this->assertTrue($payment->fresh()->isLedgerBacked());
     }
 
     /** @test */
-    public function deleting_a_credit_term_payment_is_refused(): void
+    public function a_converted_credit_term_payment_can_be_edited_again(): void
     {
         $admin = $this->makeAdmin();
-        $order = $this->makeOrder($this->makeCustomer('credit'));
-        $payment = $this->makePayment($order, 'credit-term', 30.00);
+        $customer = $this->makeCustomer('credit');
+        $order = $this->makeOrder($customer);
+        $payment = $this->makePayment($order, 'cash', 30.00);
+
+        // Convert cash -> credit-term (posts a RM30 charge).
+        $this->actingAs($admin, 'web_admin')
+            ->post(route('admin.orders.payments.update', [$order->id, $payment->id]), [
+                'payment_method' => 'credit-term',
+                'amount' => 30.00,
+            ])
+            ->assertSessionHas('success');
+        $this->assertEqualsWithDelta(-30.00, (float) $customer->fresh()->credit_balance, 0.001);
+
+        // Re-edit down to RM20: charge reversed and re-posted, net owed RM20.
+        $this->actingAs($admin, 'web_admin')
+            ->post(route('admin.orders.payments.update', [$order->id, $payment->id]), [
+                'payment_method' => 'credit-term',
+                'amount' => 20.00,
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('order_payments', [
+            'id' => $payment->id,
+            'payment_method' => 'credit-term',
+            'amount' => 20.00,
+        ]);
+        $this->assertEqualsWithDelta(-20.00, (float) $customer->fresh()->credit_balance, 0.001);
+    }
+
+    /** @test */
+    public function deleting_a_credit_term_payment_reverses_the_ledger_charge(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer('credit');
+        $order = $this->makeOrder($customer);
+        $payment = $this->makeCreditTermPayment($order, $customer, 30.00);
 
         $this->actingAs($admin, 'web_admin')
             ->post(route('admin.orders.payments.destroy', [$order->id, $payment->id]))
-            ->assertSessionHas('error');
+            ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('order_payments', ['id' => $payment->id]);
+        $this->assertDatabaseMissing('order_payments', ['id' => $payment->id]);
+        // The charge is reversed so the customer no longer owes on account.
+        $this->assertEqualsWithDelta(0.00, (float) $customer->fresh()->credit_balance, 0.001);
     }
 
     /** @test */
