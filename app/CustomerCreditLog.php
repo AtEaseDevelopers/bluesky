@@ -26,6 +26,7 @@ class CustomerCreditLog extends Model
         'cod_collection' => 'COD Collection',
         'credit_term' => 'Credit Term',
         'credit_settlement' => 'Balance Settled',
+        'credit_reversal' => 'Order Cancelled — Reversal',
     ];
 
     public function customer()

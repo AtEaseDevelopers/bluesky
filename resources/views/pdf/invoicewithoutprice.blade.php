@@ -102,5 +102,6 @@
             <td style="font-size: 14px; border-top: solid 1px black; border-bottom: solid 1px black; font-weight: 700; text-align: right; padding: 5px 0 5px 0;">Total Quantity : {{ $total_weight }}</td>
         </tr>
     </table>
+    @include('pdf.partials.bank-details')
 </body>
 </html>

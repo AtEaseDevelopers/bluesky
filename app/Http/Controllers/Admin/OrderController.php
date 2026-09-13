@@ -27,6 +27,7 @@ use App\Services\OrderStatusService;
 use App\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
@@ -231,30 +232,54 @@ class OrderController extends Controller
     public function update_order_products_weight(Request $request)
     {
         $order = Order::find(decrypt($request['orders_id']));
-        $products = DB::table('order_products')
-            ->select('id')
-            ->where('order_id', $order->id)
-            ->get()
-            ->toArray();
+        $lines = OrderProduct::where('order_id', $order->id)->get();
 
         $order_weight = 0;
-        foreach ($products as $product) {
-            $weight = $request->input('order_product_' . $product->id);
-            DB::table('order_products')->where('id', $product->id)->update(
-                [
-                    'weight' => $weight
-                ]
-            );
-            $order_weight += $weight;
-        }
+        DB::transaction(function () use ($order, $lines, $request, &$order_weight) {
+            foreach ($lines as $line) {
+                $weightInput = $request->input('order_product_' . $line->id);
+                $weight = ($weightInput !== null && $weightInput !== '') ? (float) $weightInput : null;
 
-        // update order weight
-        $order->update(
-            [
-            'order_weight' => $order_weight,
-            'do_date' => $request['do_date']
-            ]
-        );
+                $product = Product::find($line->product_id);
+
+                if ($product) {
+                    $sellIn = Product::resolveSellInForOrderLine($line, $product);
+                    $qtyInput = Product::lineNeedsQuantityInput($sellIn)
+                        ? ($line->quantity !== null ? (float) $line->quantity : null)
+                        : null;
+                    $weightForCalc = Product::lineNeedsWeightInput($sellIn) ? $weight : null;
+
+                    $calcProduct = clone $product;
+                    $calcProduct->sell_in = $sellIn;
+
+                    $resolved = $calcProduct->resolveLineInputs($qtyInput, $weightForCalc, true);
+                    $lineTotal = $calcProduct->calculateLinePrice(
+                        (float) $line->unit_price,
+                        $qtyInput,
+                        $weightForCalc,
+                        true
+                    );
+
+                    $line->update([
+                        'weight' => $weight,
+                        'product_weight' => $resolved['product_weight'] ?? $weight,
+                        'price' => $lineTotal,
+                    ]);
+
+                    $order_weight += $resolved['order_weight'] ?? ($weight ?? 0);
+                } else {
+                    $line->update(['weight' => $weight]);
+                    $order_weight += $weight ?? 0;
+                }
+            }
+
+            $order->update([
+                'order_weight' => $order_weight,
+                'do_date' => $request['do_date'],
+            ]);
+
+            app(OrderService::class)->recalculateTotals($order->fresh());
+        });
 
         return back()->with('success', 'Order products weight updated successfully.');
     }
@@ -644,6 +669,42 @@ class OrderController extends Controller
         }
 
         return back()->with('success', 'Payment due date updated successfully.');
+    }
+
+    /**
+     * Change the payment method of an already-created order. Only the methods
+     * allowed for the customer type (registered or walk-in) may be selected,
+     * and the order must still be adjustable (not delivered + fully paid).
+     */
+    public function updatePaymentMethod(Request $request, $id)
+    {
+        $admin = Auth::guard('web_admin')->user();
+        if (!$admin || !$admin->canModule('orders', 'edit')) {
+            abort(403);
+        }
+
+        $order = Order::with('customer')->findOrFail($id);
+
+        if (!$order->canAdminChangePaymentMethod()) {
+            return back()->with('error', __('orders.payment_method_locked'));
+        }
+
+        $allowedPaymentMethods = $order->customer
+            ? User::adminOrderPaymentMethodKeys($order->customer)
+            : User::walkInOrderPaymentMethodKeys();
+
+        $request->validate([
+            'payment_method' => ['required', Rule::in($allowedPaymentMethods)],
+        ], [
+            'payment_method.in' => __('orders.invalid_payment_method'),
+        ]);
+
+        $order->update([
+            'payment_method' => $request->input('payment_method'),
+        ]);
+
+        return redirect(route('admin.orders.summary', $order->id))
+            ->with('success', __('orders.payment_method_updated'));
     }
 
     public function confirmPickup(Request $request, $id)

@@ -142,5 +142,6 @@
             <td style="font-size: 14px; text-align: center; border-top: solid 1px black; padding: 5px 0 0 0;">Customer Company Stamp & Signature</td>
         </tr>
     </table>
+    @include('pdf.partials.bank-details')
 </body>
 </html>

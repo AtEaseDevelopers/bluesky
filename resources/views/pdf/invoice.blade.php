@@ -169,5 +169,6 @@
             @endif
         @endif
     </table>
+    @include('pdf.partials.bank-details')
 </body>
 </html>

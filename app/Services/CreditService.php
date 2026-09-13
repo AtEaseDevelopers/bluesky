@@ -164,6 +164,66 @@ class CreditService
         );
     }
 
+    /**
+     * Undo the credit impact of a cancelled order. Charges for goods that will
+     * never be delivered — credit spent on the order (applied_to_order) and
+     * "buy now, pay later" charges (credit_term) — are reversed so the customer
+     * neither owes for nor keeps having paid credit against the order. Real money
+     * they handed over (settlements, overpayments) is left untouched and survives
+     * as available credit. Idempotent: a second call is a no-op.
+     */
+    public function reverseForOrder(Order $order, ?int $adminId = null): void
+    {
+        if (!$order->user_id) {
+            return;
+        }
+
+        $customer = User::find($order->user_id);
+        if (!$customer || !$customer->isCreditCustomer()) {
+            return;
+        }
+
+        DB::transaction(function () use ($order, $customer, $adminId) {
+            $alreadyReversed = CustomerCreditLog::where('order_id', $order->id)
+                ->where('type', 'credit_reversal')
+                ->exists();
+            if ($alreadyReversed) {
+                return;
+            }
+
+            // Void the internal, ledger-backed payments so the cancelled order no
+            // longer counts as charged or settled.
+            OrderPayment::where('order_id', $order->id)
+                ->where('status', OrderPayment::STATUS_CONFIRMED)
+                ->whereIn('payment_method', ['customer-credit', 'credit-term'])
+                ->update([
+                    'status' => OrderPayment::STATUS_REJECTED,
+                    'notes' => 'Voided — order #' . $order->id . ' cancelled.',
+                ]);
+
+            // Charge-side movements are negative; posting their negation restores
+            // the customer's balance to where it stood before the order.
+            $chargeTotal = (float) CustomerCreditLog::where('order_id', $order->id)
+                ->whereIn('type', ['applied_to_order', 'credit_term'])
+                ->sum('amount');
+
+            if (abs($chargeTotal) < 0.009) {
+                return;
+            }
+
+            $this->adjustBalance(
+                $customer,
+                -round($chargeTotal, 2),
+                'credit_reversal',
+                $order->id,
+                null,
+                $adminId,
+                null,
+                'Credit reversed — order #' . $order->id . ' cancelled.'
+            );
+        });
+    }
+
     public function manualAdjust(User $user, float $amount, string $notes, int $adminId): CustomerCreditLog
     {
         if ($amount == 0) {

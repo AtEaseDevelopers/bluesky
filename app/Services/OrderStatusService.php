@@ -118,6 +118,7 @@ class OrderStatusService
         }
 
         if ($newStatus === Order::$status['cancelled']) {
+            app(CreditService::class)->reverseForOrder($order->fresh(), $adminId);
             PdfHelper::GenerateOrderInvoice($order);
             PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
         }
