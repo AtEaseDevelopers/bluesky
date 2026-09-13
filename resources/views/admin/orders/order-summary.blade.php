@@ -580,18 +580,45 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @if ($payment->status === \App\OrderPayment::STATUS_PENDING)
-                                                    <form action="{{ route('admin.orders.payments.confirm', [$order->id, $payment->id]) }}" method="POST" class="d-inline">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-sm btn-success">{{ __('orders.confirm') }}</button>
-                                                    </form>
-                                                    <form action="{{ route('admin.orders.payments.reject', [$order->id, $payment->id]) }}" method="POST" class="d-inline">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger">{{ __('orders.reject') }}</button>
-                                                    </form>
-                                                @else
-                                                    -
-                                                @endif
+                                                <div class="d-flex gap-1 flex-wrap align-items-center">
+                                                    @if ($payment->status === \App\OrderPayment::STATUS_PENDING)
+                                                        <form action="{{ route('admin.orders.payments.confirm', [$order->id, $payment->id]) }}" method="POST" class="d-inline">
+                                                            @csrf
+                                                            <button type="submit" class="btn btn-sm btn-success">{{ __('orders.confirm') }}</button>
+                                                        </form>
+                                                        <form action="{{ route('admin.orders.payments.reject', [$order->id, $payment->id]) }}" method="POST" class="d-inline">
+                                                            @csrf
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger">{{ __('orders.reject') }}</button>
+                                                        </form>
+                                                    @endif
+                                                    @if ($admin->canModule('orders', 'edit'))
+                                                        @if ($payment->isLedgerBacked())
+                                                            <span class="text-muted small">{{ __('orders.credit_ledger_note') }}</span>
+                                                        @else
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-payment"
+                                                                data-bs-toggle="modal" data-bs-target="#editPaymentModal"
+                                                                data-action="{{ route('admin.orders.payments.update', [$order->id, $payment->id]) }}"
+                                                                data-method="{{ $payment->payment_method }}"
+                                                                data-amount="{{ number_format($payment->amount, 2, '.', '') }}"
+                                                                data-notes="{{ $payment->notes }}"
+                                                                data-has-proof="{{ $payment->payment_proof ? '1' : '0' }}"
+                                                                title="{{ __('ui.edit') }}" aria-label="{{ __('ui.edit') }}">
+                                                                <i class="fa fa-edit" aria-hidden="true"></i>
+                                                            </button>
+                                                            <form action="{{ route('admin.orders.payments.destroy', [$order->id, $payment->id]) }}" method="POST" class="d-inline"
+                                                                onsubmit="return confirm('{{ __('orders.delete_payment_confirm') }}');">
+                                                                @csrf
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                                    title="{{ __('ui.delete') }}" aria-label="{{ __('ui.delete') }}">
+                                                                    <i class="fa fa-trash" aria-hidden="true"></i>
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    @endif
+                                                    @if ($payment->status !== \App\OrderPayment::STATUS_PENDING && !$admin->canModule('orders', 'edit'))
+                                                        -
+                                                    @endif
+                                                </div>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -605,6 +632,51 @@
     </div>
 
     @include('admin.orders.partials.pdf-modal')
+
+    @if ($admin->canModule('orders', 'edit') && $payments->count())
+        <div class="modal fade" id="editPaymentModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" id="edit-payment-form" enctype="multipart/form-data">
+                        @csrf
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{ __('orders.edit_payment') }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="mb-1" for="edit-payment-method">{{ __('orders.method') }}</label>
+                                <select name="payment_method" id="edit-payment-method" class="form-select" required>
+                                    @foreach ($paymentMethods as $key => $label)
+                                        <option value="{{ $key }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="mb-1" for="edit-payment-amount">{{ __('orders.amount_rm') }}</label>
+                                <input type="number" step="0.01" min="0.01" name="amount" id="edit-payment-amount" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="mb-1" for="edit-payment-notes">{{ __('orders.notes') }}</label>
+                                <input type="text" name="notes" id="edit-payment-notes" class="form-control" placeholder="{{ __('orders.optional') }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="mb-1" for="edit-payment-proof">{{ __('orders.proof') }}</label>
+                                <input type="file" name="payment_proof" id="edit-payment-proof" class="form-control"
+                                    accept="{{ \App\OrderPayment::proofAcceptAttribute() }}"
+                                    capture="{{ \App\OrderPayment::proofCaptureAttribute() }}">
+                                <small class="text-muted d-block mt-1" id="edit-payment-proof-help">{{ \App\OrderPayment::proofHelpText() }}</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('ui.cancel') }}</button>
+                            <button type="submit" class="btn btn-primary">{{ __('ui.save') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
 
     @if ($admin->canModule('orders', 'edit'))
         @include('admin.includes.add_products_modal')
@@ -924,5 +996,28 @@
                 loadSummaryDeliverySlots(dateSelect.value, summarySlotId);
             }
         })();
+
+        // Populate the shared "edit payment" modal from the clicked row's data.
+        var editProofDefaultHelp = @json(\App\OrderPayment::proofHelpText());
+        var editProofReplaceHelp = @json(__('orders.proof_replace_help'));
+        document.querySelectorAll('.btn-edit-payment').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var form = document.getElementById('edit-payment-form');
+                if (!form) return;
+                form.setAttribute('action', this.dataset.action);
+                var methodSelect = document.getElementById('edit-payment-method');
+                if (methodSelect) methodSelect.value = this.dataset.method;
+                document.getElementById('edit-payment-amount').value = this.dataset.amount;
+                document.getElementById('edit-payment-notes').value = this.dataset.notes || '';
+                var proofInput = document.getElementById('edit-payment-proof');
+                if (proofInput) proofInput.value = '';
+                var proofHelp = document.getElementById('edit-payment-proof-help');
+                if (proofHelp) {
+                    proofHelp.textContent = this.dataset.hasProof === '1'
+                        ? editProofReplaceHelp
+                        : editProofDefaultHelp;
+                }
+            });
+        });
     </script>
 @endsection

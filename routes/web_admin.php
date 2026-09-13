@@ -180,6 +180,8 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
 
                 Route::controller('OrderPaymentController')->group(function () {
                     Route::post('/order/{id}/payments', 'store')->name('orders.payments.store');
+                    Route::post('/order/{orderId}/payments/{paymentId}/update', 'update')->name('orders.payments.update');
+                    Route::post('/order/{orderId}/payments/{paymentId}/delete', 'destroy')->name('orders.payments.destroy');
                     Route::post('/order/{orderId}/payments/{paymentId}/confirm', 'confirm')->name('orders.payments.confirm');
                     Route::post('/order/{orderId}/payments/{paymentId}/reject', 'reject')->name('orders.payments.reject');
                     Route::get('/orders/{order}/payment-proof/{filename}', 'viewProof')->name('orders.payment-proof');

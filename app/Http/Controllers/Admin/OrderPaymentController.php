@@ -67,6 +67,50 @@ class OrderPaymentController extends Controller
         return back()->with('success', $message);
     }
 
+    public function update(Request $request, $orderId, $paymentId)
+    {
+        $order = Order::with('customer')->findOrFail($orderId);
+        $payment = OrderPayment::where('order_id', $order->id)->findOrFail($paymentId);
+
+        $allowedMethods = array_keys($order->allowedAdminPaymentMethods());
+
+        $data = $request->validate([
+            'payment_method' => 'required|in:' . implode(',', $allowedMethods),
+            'amount' => 'required|numeric|min:0.01',
+            'notes' => 'nullable|string|max:500',
+            'payment_proof' => OrderPayment::proofRules(false),
+        ], OrderPayment::proofValidationMessages('payment_proof'));
+
+        try {
+            app(OrderService::class)->updateRecordedPayment(
+                $payment,
+                $data['payment_method'],
+                (float) $data['amount'],
+                $data['notes'] ?? null,
+                Auth::guard('web_admin')->id(),
+                $request->file('payment_proof')
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Payment updated.');
+    }
+
+    public function destroy($orderId, $paymentId)
+    {
+        $order = Order::findOrFail($orderId);
+        $payment = OrderPayment::where('order_id', $order->id)->findOrFail($paymentId);
+
+        try {
+            app(OrderService::class)->deleteRecordedPayment($payment);
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Payment deleted.');
+    }
+
     public function confirm(Request $request, $orderId, $paymentId)
     {
         $order = Order::findOrFail($orderId);

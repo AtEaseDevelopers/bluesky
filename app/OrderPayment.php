@@ -243,6 +243,21 @@ class OrderPayment extends Model
         return $this->status === self::STATUS_CONFIRMED;
     }
 
+    /**
+     * Whether this payment is backed by the customer credit ledger — either an
+     * internal credit method, or it produced a credit ledger movement (e.g. an
+     * overpayment posted to customer credit). Such payments must be reconciled
+     * through the credit flow, not edited/deleted directly.
+     */
+    public function isLedgerBacked(): bool
+    {
+        if (in_array($this->payment_method, ['credit-term', 'customer-credit'], true)) {
+            return true;
+        }
+
+        return CustomerCreditLog::where('order_payment_id', $this->id)->exists();
+    }
+
     public function scopeConfirmed($query)
     {
         return $query->where('status', self::STATUS_CONFIRMED);

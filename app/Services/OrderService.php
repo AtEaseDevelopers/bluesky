@@ -617,6 +617,97 @@ class OrderService
     }
 
     /**
+     * Edit an already-recorded payment (method / amount / notes) and recalculate
+     * the order's paid amount and status. Ledger-backed payments (credit-term,
+     * customer-credit, or any that moved the customer credit balance) are refused
+     * so the credit ledger cannot silently drift.
+     */
+    public function updateRecordedPayment(
+        OrderPayment $payment,
+        string $method,
+        float $amount,
+        ?string $notes,
+        int $adminId,
+        ?UploadedFile $proof = null
+    ): OrderPayment {
+        $order = $payment->order;
+        if (!$order) {
+            throw new \InvalidArgumentException('Order not found for this payment.');
+        }
+
+        if ($payment->isLedgerBacked() || in_array($method, ['credit-term', 'customer-credit'], true)) {
+            throw new \InvalidArgumentException(
+                'Credit-term / customer-credit payments must be adjusted through the customer credit ledger, not edited here.'
+            );
+        }
+
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Payment amount must be greater than zero.');
+        }
+
+        $this->assertAdminPaymentMethod($order, $method);
+
+        $attributes = [
+            'payment_method' => $method,
+            'amount' => $amount,
+            'notes' => $notes,
+            'recorded_by' => $adminId,
+        ];
+
+        // Optional new proof replaces the existing one.
+        if ($proof) {
+            OrderPayment::assertValidProof($proof, false);
+            $dir = Order::$path . '/' . $payment->order_id . '/payments';
+            $filename = time() . rand() . '.' . $proof->getClientOriginalExtension();
+            Storage::disk('local')->put($dir . '/' . $filename, file_get_contents($proof));
+
+            if ($payment->payment_proof) {
+                $old = $dir . '/' . $payment->payment_proof;
+                if (Storage::disk('local')->exists($old)) {
+                    Storage::disk('local')->delete($old);
+                }
+            }
+
+            $attributes['payment_proof'] = $filename;
+        }
+
+        $payment->update($attributes);
+
+        $this->refreshPaymentStatus($order->fresh());
+
+        return $payment->fresh();
+    }
+
+    /**
+     * Delete a recorded payment (removing its proof file) and recalculate the
+     * order totals. Ledger-backed payments are refused for the same reason as
+     * editing — reverse them through the credit flow instead.
+     */
+    public function deleteRecordedPayment(OrderPayment $payment): void
+    {
+        if ($payment->isLedgerBacked()) {
+            throw new \InvalidArgumentException(
+                'Credit-term / customer-credit payments must be reversed through the customer credit ledger, not deleted here.'
+            );
+        }
+
+        $order = $payment->order;
+
+        if ($payment->payment_proof) {
+            $proofPath = Order::$path . '/' . $payment->order_id . '/payments/' . $payment->payment_proof;
+            if (Storage::disk('local')->exists($proofPath)) {
+                Storage::disk('local')->delete($proofPath);
+            }
+        }
+
+        $payment->delete();
+
+        if ($order) {
+            $this->refreshPaymentStatus($order->fresh());
+        }
+    }
+
+    /**
      * A confirmed credit-term payment settles the order balance on account:
      * mirror it as a negative movement on the customer's credit ledger so the
      * outstanding amount shows on their profile. No-op for any other method.
