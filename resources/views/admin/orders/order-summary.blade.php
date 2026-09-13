@@ -264,7 +264,7 @@
                 </div>
 
                 <div class="col-lg-4">
-                    @if ($admin->canModule('orders', 'edit') && $order->canAdminChangePaymentMethod())
+                    @if ($admin->canModule('orders', 'edit'))
                         @php
                             $paymentMethodChoices = \App\User::adminOrderPaymentMethodLabels($customer);
                         @endphp

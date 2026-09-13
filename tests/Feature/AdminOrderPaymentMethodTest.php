@@ -143,7 +143,7 @@ class AdminOrderPaymentMethodTest extends TestCase
     }
 
     /** @test */
-    public function payment_method_cannot_change_on_a_delivered_fully_paid_order(): void
+    public function payment_method_can_change_even_on_a_delivered_fully_paid_order(): void
     {
         $admin = $this->makeAdmin();
         $customer = $this->makeCustomer('cod');
@@ -158,11 +158,35 @@ class AdminOrderPaymentMethodTest extends TestCase
             ->post(route('admin.orders.payment-method', $order->id), [
                 'payment_method' => 'in-store',
             ])
-            ->assertSessionHas('error');
+            ->assertRedirect(route('admin.orders.summary', $order->id))
+            ->assertSessionHas('success');
 
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
+            'payment_method' => 'in-store',
+        ]);
+    }
+
+    /** @test */
+    public function payment_method_can_change_even_on_a_cancelled_order(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCustomer('cod');
+        $order = $this->makeOrder($customer, [
             'payment_method' => 'cod',
+            'status' => 'cancelled',
+        ]);
+
+        $this->actingAs($admin, 'web_admin')
+            ->post(route('admin.orders.payment-method', $order->id), [
+                'payment_method' => 'in-store',
+            ])
+            ->assertRedirect(route('admin.orders.summary', $order->id))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'payment_method' => 'in-store',
         ]);
     }
 

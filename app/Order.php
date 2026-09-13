@@ -615,20 +615,6 @@ class Order extends Model
         return OrderPayment::customerSubmitMethodsFor($this->customerType());
     }
 
-    /**
-     * Whether an admin may still change the order's payment method after it was
-     * created. Mirrors the edit-order restriction: once an order is delivered and
-     * fully settled its payment method is final, and cancelled orders are locked.
-     */
-    public function canAdminChangePaymentMethod(): bool
-    {
-        if ($this->status === self::$status['cancelled']) {
-            return false;
-        }
-
-        return !($this->status === self::$status['delivered'] && $this->isFullyPaid());
-    }
-
     public function canConfirmHandover(): bool
     {
         if (!$this->canEditFulfillment() || !$this->allowsHandoverProofUpload()) {

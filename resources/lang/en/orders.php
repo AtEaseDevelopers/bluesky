@@ -105,7 +105,6 @@ return [
     'change_payment_method' => 'Payment Method',
     'update_payment_method' => 'Update Payment Method',
     'payment_method_updated' => 'Payment method updated successfully.',
-    'payment_method_locked' => 'The payment method can no longer be changed for this order.',
     'upload_transfer_slip' => 'Upload Transfer Slip',
     'add_products' => 'Add Products',
     'add_products_hint' => 'Please add products to this order.',

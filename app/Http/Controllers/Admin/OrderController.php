@@ -672,9 +672,9 @@ class OrderController extends Controller
     }
 
     /**
-     * Change the payment method of an already-created order. Only the methods
-     * allowed for the customer type (registered or walk-in) may be selected,
-     * and the order must still be adjustable (not delivered + fully paid).
+     * Change the payment method of an already-created order, regardless of its
+     * status. Only the methods allowed for the customer type (registered or
+     * walk-in) may be selected.
      */
     public function updatePaymentMethod(Request $request, $id)
     {
@@ -684,10 +684,6 @@ class OrderController extends Controller
         }
 
         $order = Order::with('customer')->findOrFail($id);
-
-        if (!$order->canAdminChangePaymentMethod()) {
-            return back()->with('error', __('orders.payment_method_locked'));
-        }
 
         $allowedPaymentMethods = $order->customer
             ? User::adminOrderPaymentMethodKeys($order->customer)
