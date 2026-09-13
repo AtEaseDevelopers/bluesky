@@ -264,33 +264,6 @@
                 </div>
 
                 <div class="col-lg-4">
-                    @if ($admin->canModule('orders', 'edit'))
-                        @php
-                            $paymentMethodChoices = \App\User::adminOrderPaymentMethodLabels($customer);
-                        @endphp
-                        <div class="card shadow no-border mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title">{{ __('orders.change_payment_method') }}</h5>
-                                <hr>
-                                <form action="{{ route('admin.orders.payment-method', $order->id) }}" method="POST">
-                                    @csrf
-                                    <div class="mb-3">
-                                        <label class="mb-1" for="order_payment_method">{{ __('orders.payment_method') }}</label>
-                                        <select name="payment_method" id="order_payment_method" class="form-select" required>
-                                            @foreach ($paymentMethodChoices as $key => $label)
-                                                <option value="{{ $key }}" {{ $order->payment_method === $key ? 'selected' : '' }}>{{ $label }}</option>
-                                            @endforeach
-                                        </select>
-                                        @error('payment_method')
-                                            <small class="text-danger d-block mt-1">{{ $message }}</small>
-                                        @enderror
-                                    </div>
-                                    <button type="submit" class="btn btn-primary w-100">{{ __('orders.update_payment_method') }}</button>
-                                </form>
-                            </div>
-                        </div>
-                    @endif
-
                     @if ($isCreditCustomer && $order->balanceDue() > 0 && $order->status !== Order::$status['cancelled'])
                         <div class="card shadow no-border mb-4">
                             <div class="card-body">
@@ -478,7 +451,7 @@
                         </div>
                     </div>
 
-                    @if ($order->canRecordAdminPayment())
+                    @if ($admin->canModule('orders', 'edit'))
                     <div class="card shadow no-border mb-4">
                         <div class="card-body">
                             <h5 class="card-title">{{ __('orders.record_payment') }}</h5>
@@ -810,35 +783,12 @@
         }
 
         document.getElementById('split-payment-form')?.addEventListener('submit', function (event) {
+            // Admins may record any amount regardless of the balance due — only
+            // the payment proof is validated client-side.
             var proofError = validatePaymentProofInputs(this);
             if (proofError) {
                 event.preventDefault();
                 Swal.fire(ordersJs.invalid_payment_proof, proofError, 'warning');
-                return;
-            }
-
-            if (!requiresExactTotal) {
-                var total = 0;
-                document.querySelectorAll('.payment-amount').forEach(function (input) {
-                    total += parseFloat(input.value) || 0;
-                });
-                if (total > balanceDue + 0.009) {
-                    event.preventDefault();
-                    Swal.fire(
-                        ordersJs.invalid_amount,
-                        (ordersJs.payment_exceeds_balance || 'Payment total cannot exceed the balance due (RM :amount).').replace(':amount', balanceDue.toFixed(2)),
-                        'warning'
-                    );
-                }
-                return;
-            }
-            var total = 0;
-            document.querySelectorAll('.payment-amount').forEach(function (input) {
-                total += parseFloat(input.value) || 0;
-            });
-            if (Math.abs(total - balanceDue) > 0.009) {
-                event.preventDefault();
-                Swal.fire(ordersJs.invalid_amount, ordersJs.cod_exact_balance.replace(':amount', balanceDue.toFixed(2)), 'warning');
             }
         });
 

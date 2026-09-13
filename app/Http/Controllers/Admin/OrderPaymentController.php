@@ -22,16 +22,9 @@ class OrderPaymentController extends Controller
     {
         $order = Order::with('customer')->findOrFail($id);
 
-        if ($order->status === Order::$status['cancelled']) {
-            return back()->with('error', 'Payments cannot be recorded on a cancelled order.');
-        }
-
-        if (!$order->canRecordAdminPayment()) {
-            return back()->with('error', $order->isCodCustomer()
-                ? 'COD payment can only be recorded when the order is packing, in route, or delivered.'
-                : 'Payment cannot be recorded for this order in its current status.');
-        }
-
+        // Admins may record a payment on an order in any status. The underlying
+        // balance/overpayment rules (in OrderService::recordPayment) still apply,
+        // so nothing can be recorded when there is genuinely nothing owed.
         $allowedMethods = array_keys($order->allowedAdminPaymentMethods());
 
         $proofMessages = OrderPayment::proofValidationMessages('payments.*.payment_proof');
@@ -58,7 +51,9 @@ class OrderPaymentController extends Controller
             app(OrderService::class)->recordPayments(
                 $order,
                 $payments,
-                Auth::guard('web_admin')->id()
+                Auth::guard('web_admin')->id(),
+                null,
+                true // admin override: record regardless of balance due
             );
         } catch (\InvalidArgumentException $e) {
             return back()->withInput()->with('error', $e->getMessage());

@@ -27,7 +27,6 @@ use App\Services\OrderStatusService;
 use App\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
@@ -669,38 +668,6 @@ class OrderController extends Controller
         }
 
         return back()->with('success', 'Payment due date updated successfully.');
-    }
-
-    /**
-     * Change the payment method of an already-created order, regardless of its
-     * status. Only the methods allowed for the customer type (registered or
-     * walk-in) may be selected.
-     */
-    public function updatePaymentMethod(Request $request, $id)
-    {
-        $admin = Auth::guard('web_admin')->user();
-        if (!$admin || !$admin->canModule('orders', 'edit')) {
-            abort(403);
-        }
-
-        $order = Order::with('customer')->findOrFail($id);
-
-        $allowedPaymentMethods = $order->customer
-            ? User::adminOrderPaymentMethodKeys($order->customer)
-            : User::walkInOrderPaymentMethodKeys();
-
-        $request->validate([
-            'payment_method' => ['required', Rule::in($allowedPaymentMethods)],
-        ], [
-            'payment_method.in' => __('orders.invalid_payment_method'),
-        ]);
-
-        $order->update([
-            'payment_method' => $request->input('payment_method'),
-        ]);
-
-        return redirect(route('admin.orders.summary', $order->id))
-            ->with('success', __('orders.payment_method_updated'));
     }
 
     public function confirmPickup(Request $request, $id)

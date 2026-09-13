@@ -242,7 +242,8 @@ class OrderService
         ?string $notes,
         ?int $adminId,
         ?int $driverId = null,
-        bool $splitLine = false
+        bool $splitLine = false,
+        bool $ignoreBalance = false
     ): OrderPayment {
         if ($amount <= 0) {
             throw new \InvalidArgumentException('Payment amount must be greater than zero.');
@@ -251,12 +252,20 @@ class OrderService
         $this->assertAdminPaymentMethod($order, $method);
 
         $balanceDue = $order->balanceDue();
-        $this->assertPaymentAmount($order, $amount, $balanceDue, $splitLine);
 
-        $amountToOrder = min($amount, $balanceDue);
-        $overpayment = $order->allowsOverpayment()
-            ? max(0, round($amount - $balanceDue, 2))
-            : 0;
+        // Admin override: record the full amount against the order without any
+        // balance-due checks (allows recording on paid orders / over-collection).
+        if ($ignoreBalance) {
+            $amountToOrder = $amount;
+            $overpayment = 0;
+        } else {
+            $this->assertPaymentAmount($order, $amount, $balanceDue, $splitLine);
+
+            $amountToOrder = min($amount, $balanceDue);
+            $overpayment = $order->allowsOverpayment()
+                ? max(0, round($amount - $balanceDue, 2))
+                : 0;
+        }
 
         $proofPath = null;
         if ($proof) {
@@ -328,32 +337,30 @@ class OrderService
         Order $order,
         array $payments,
         ?int $adminId = null,
-        ?int $driverId = null
+        ?int $driverId = null,
+        bool $ignoreBalance = false
     ): array {
-        if (!$order->canRecordAdminPayment()) {
-            throw new \InvalidArgumentException(
-                $order->isCodCustomer()
-                    ? 'COD payment can only be recorded when the order is packing, in route, or delivered.'
-                    : 'Payment cannot be recorded for this order in its current status.'
-            );
-        }
-
+        // Admin-recorded payments are allowed regardless of order status. When
+        // $ignoreBalance is set the balance-due / exact / overpayment checks are
+        // skipped entirely and the full amount is recorded against the order.
         $totalAmount = 0;
         foreach ($payments as $paymentData) {
             $totalAmount += (float) ($paymentData['amount'] ?? 0);
         }
 
-        if ($order->requiresExactPayment()) {
-            $balanceDue = $order->balanceDue();
-            if (abs($totalAmount - $balanceDue) > 0.009) {
+        if (!$ignoreBalance) {
+            if ($order->requiresExactPayment()) {
+                $balanceDue = $order->balanceDue();
+                if (abs($totalAmount - $balanceDue) > 0.009) {
+                    throw new \InvalidArgumentException(
+                        'In-store orders require the full exact balance (RM ' . number_format($balanceDue, 2) . ').'
+                    );
+                }
+            } elseif ($totalAmount > $order->balanceDue() + 0.009 && !$order->allowsOverpayment()) {
                 throw new \InvalidArgumentException(
-                    'In-store orders require the full exact balance (RM ' . number_format($balanceDue, 2) . ').'
+                    'Payment total exceeds balance due (RM ' . number_format($order->balanceDue(), 2) . ').'
                 );
             }
-        } elseif ($totalAmount > $order->balanceDue() + 0.009 && !$order->allowsOverpayment()) {
-            throw new \InvalidArgumentException(
-                'Payment total exceeds balance due (RM ' . number_format($order->balanceDue(), 2) . ').'
-            );
         }
 
         $recorded = [];
@@ -372,7 +379,8 @@ class OrderService
                 $paymentData['notes'] ?? null,
                 $adminId,
                 $driverId,
-                true
+                true,
+                $ignoreBalance
             );
         }
 
