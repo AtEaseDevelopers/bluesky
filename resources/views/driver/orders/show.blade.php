@@ -208,6 +208,10 @@
                                 @endforeach
                             </tbody>
                             <tfoot>
+                                <tr id="driver-adjust-discount-row" @if ($order->discount <= 0) style="display:none;" @endif>
+                                    <td colspan="5" class="text-end">{{ __('orders.discount') }}</td>
+                                    <td class="text-end text-success" id="driver-adjust-discount">-RM {{ number_format($order->discount, 2) }}</td>
+                                </tr>
                                 <tr>
                                     <td colspan="5" class="text-end fw-bold">{{ __('driver_portal.deliveries.total_amount') }}</td>
                                     <td class="text-end fw-bold" id="driver-adjust-grand-total">RM {{ number_format($total, 2) }}</td>
@@ -238,6 +242,12 @@
                     <div class="text-muted-ink">{{ __('driver_portal.deliveries.no_items') }}</div>
                 @endforelse
 
+                @if ($order->discount > 0)
+                    <div class="d-flex justify-content-between mt-2 text-success">
+                        <div>{{ __('orders.discount') }}</div>
+                        <div>-RM {{ number_format($order->discount, 2) }}</div>
+                    </div>
+                @endif
                 <div class="d-flex justify-content-between mt-3 fw-bold" style="font-size:1.1rem;">
                     <div>{{ __('driver_portal.deliveries.total_amount') }}</div>
                     <div>RM {{ number_format($total, 2) }}</div>
@@ -387,6 +397,11 @@
     <div id="driver-section-delivery" class="driver-order-section card driver-card mb-3">
         <div class="card-body">
             <h5 class="display-font mb-3" style="font-size:1.15rem;">{{ __('driver_portal.deliveries.update_status') }}</h5>
+            @if ($order->isPaymentOnHold())
+                <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.95rem;">
+                    <i class="fa fa-pause-circle me-1"></i> {{ __('driver_portal.deliveries.on_hold_notice') }}
+                </div>
+            @endif
             @if ($deliveryStatusContext['mode'] === 'confirm' && count($deliveryStatusContext['statuses'] ?? []))
                 <p class="text-muted-ink mb-3" style="font-size:.92rem;">{{ __('driver_portal.deliveries.update_status_help') }}</p>
                 <form action="{{ route('driver.orders.update-status', $order->id) }}" method="POST" enctype="multipart/form-data" data-compress-upload>
@@ -414,23 +429,16 @@
                             </button>
                         @endforeach
                     </div>
-                </form>
-                <form action="{{ route('driver.orders.hold', $order->id) }}" method="POST" class="mt-2">
-                    @csrf
-                    <button type="submit" class="btn btn-block-tall w-100 btn-outline-hold">
-                        <i class="fa fa-pause-circle me-1"></i> {{ __('driver_portal.deliveries.hold_button') }}
-                    </button>
-                </form>
-                <p class="text-muted-ink mb-0 mt-2" style="font-size:.9rem;">{{ __('driver_portal.deliveries.hold_hint') }}</p>
-            @elseif ($deliveryStatusContext['mode'] === 'on_hold')
-                <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.95rem;">
-                    <i class="fa fa-pause-circle me-1"></i> {{ __('driver_portal.deliveries.on_hold_notice') }}
-                </div>
-                <form action="{{ route('driver.orders.resume', $order->id) }}" method="POST">
-                    @csrf
-                    <button type="submit" class="btn btn-brand btn-block-tall w-100">
-                        <i class="fa fa-play-circle me-1"></i> {{ __('driver_portal.deliveries.resume_button') }}
-                    </button>
+                    @if ($order->isCodCustomer() && !$order->isFullyPaid())
+                        {{-- Deliver the goods but flag payment on hold (uses the same proof upload). --}}
+                        <button type="submit"
+                            formaction="{{ route('driver.orders.hold', $order->id) }}"
+                            formenctype="multipart/form-data"
+                            class="btn btn-block-tall w-100 btn-outline-hold mt-2">
+                            <i class="fa fa-pause-circle me-1"></i> {{ __('driver_portal.deliveries.hold_button') }}
+                        </button>
+                        <p class="text-muted-ink mb-0 mt-2" style="font-size:.9rem;">{{ __('driver_portal.deliveries.hold_hint') }}</p>
+                    @endif
                 </form>
             @elseif ($deliveryStatusContext['mode'] === 'done_with_proof')
                 <p class="text-muted-ink mb-3" style="font-size:.92rem;">{{ __('driver_portal.deliveries.already_delivered') }}</p>
@@ -539,8 +547,21 @@
                     subtotal += lineTotal;
                 });
 
-                var grandTotal = Math.max(0, subtotal + deliveryFee + adjustment);
+                var rawTotal = Math.max(0, subtotal + deliveryFee + adjustment);
+                // Flatten the decimal: floor to whole ringgit, shaved cents show as a discount.
+                var rawCents = Math.round(rawTotal * 100);
+                var flooredCents = Math.floor(rawCents / 100) * 100;
+                var grandTotal = flooredCents / 100;
+                var discount = (rawCents - flooredCents) / 100;
+
                 document.getElementById('driver-adjust-grand-total').textContent = 'RM ' + grandTotal.toFixed(2);
+
+                var discountRow = document.getElementById('driver-adjust-discount-row');
+                var discountCell = document.getElementById('driver-adjust-discount');
+                if (discountRow && discountCell) {
+                    discountCell.textContent = '-RM ' + discount.toFixed(2);
+                    discountRow.style.display = discount > 0 ? '' : 'none';
+                }
             }
 
             document.querySelectorAll('#driver-adjust-table .line-qty, #driver-adjust-table .line-weight').forEach(function (el) {

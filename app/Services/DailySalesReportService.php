@@ -98,6 +98,13 @@ class DailySalesReportService
                 'orders.shipping_postcode',
                 'orders.shipping_state',
                 'orders.updated_at',
+                DB::raw(
+                    '(SELECT GROUP_CONCAT(DISTINCT op.payment_method)'
+                    . ' FROM order_payments op'
+                    . ' WHERE op.order_id = orders.id'
+                    . " AND op.status = '" . OrderPayment::STATUS_CONFIRMED . "'"
+                    . ') AS recorded_payment_methods'
+                ),
             )
             ->whereBetween('orders.created_at', [$startDate, $endDate . ' 23:59:59'])
             ->where('order_products.status', 'active');
@@ -192,8 +199,11 @@ class DailySalesReportService
             $methods = $this->methodsForCategory($request->input('payment_method'));
 
             if ($paymentsAlias) {
+                // Summary is already scoped to order_payments rows.
                 $query->whereIn("{$paymentsAlias}.payment_method", $methods);
             } else {
+                // Sales detail is order-based but reports on recorded payments,
+                // so keep only orders with a confirmed payment in this category.
                 $query->whereExists(function ($sub) use ($ordersAlias, $methods) {
                     $sub->select(DB::raw(1))
                         ->from('order_payments')
@@ -238,5 +248,46 @@ class DailySalesReportService
         $key = 'order.payment_methods.' . $method;
 
         return __($key) !== $key ? __($key) : ucfirst(str_replace('-', ' ', $method));
+    }
+
+    /**
+     * Label for the payment-method *category* a raw method belongs to. The
+     * report's filter dropdown and collection summary both bucket methods into
+     * these categories, so the sales-detail column uses the same vocabulary
+     * (e.g. "cash" displays as "Cash", "bank-transfer" as "Transfer").
+     */
+    public function paymentCategoryLabel(?string $method): string
+    {
+        if (!$method) {
+            return '';
+        }
+
+        $category = $this->mapPaymentMethodToCategory($method);
+
+        return $this->summaryCategoryLabels()[$category] ?? $this->paymentMethodLabel($method);
+    }
+
+    /**
+     * The recorded payment method(s) for a sales-detail row, as category
+     * labels. `$recordedMethods` is the GROUP_CONCAT of confirmed
+     * order_payments methods from salesLines(); returns a de-duplicated,
+     * comma-separated list (blank when the order has no recorded payment).
+     */
+    public function recordedPaymentLabel(?string $recordedMethods): string
+    {
+        if (!$recordedMethods) {
+            return '';
+        }
+
+        $labels = [];
+        foreach (explode(',', $recordedMethods) as $method) {
+            $method = trim($method);
+            if ($method === '') {
+                continue;
+            }
+            $labels[] = $this->paymentCategoryLabel($method);
+        }
+
+        return implode(', ', array_unique($labels));
     }
 }

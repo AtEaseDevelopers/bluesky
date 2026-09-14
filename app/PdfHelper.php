@@ -80,6 +80,7 @@ class PdfHelper extends Model
                 'products.id as product_id', 
                 'products.show_qty as show_qty',
                 'products.show_weight as show_weight',
+                'products.sku as sku',
                 'products.description as product_description',
                 "{$type}s.id as {$type}_id", 
                 "{$type}s.transfer_slip as transfer_slip", 
@@ -121,6 +122,9 @@ class PdfHelper extends Model
         return array_merge([
             'company' => config('portal.company'),
             'customer_phone' => $order->walk_in_phone ?: ($order->attn_contact ?: ($customer->attn_contact ?? '')),
+            'payment_term' => $order->preferredPaymentMethodLabel() ?: '-',
+            'customer_code' => $customer->sql_customer_code ?? '-',
+            'currency' => 'MYR',
         ], $data);
     }
 
@@ -131,6 +135,7 @@ class PdfHelper extends Model
         $data = self::invoiceViewData($order, [
             'invoice_number' => $order->invoice_number ?: ('INV-' . $order->id),
             'date' => now()->format('d/m/Y'),
+            'time' => now()->format('H:i:s'),
             'order' => $order,
             'order_items' => $order_products,
             'void' => $void,
@@ -157,6 +162,7 @@ class PdfHelper extends Model
         $data = self::invoiceViewData($order, [
             'invoice_number' => $order->invoice_number ?: ('INV-' . $order->id),
             'date' => now()->format('d/m/Y'),
+            'time' => now()->format('H:i:s'),
             'order' => $order,
             'order_items' => $order_products,
             // 'total' => $total,
@@ -184,6 +190,9 @@ class PdfHelper extends Model
             'company' => config('portal.company'),
             'customer_phone' => $order->walk_in_phone ?: ($order->attn_contact ?: ($customer->attn_contact ?? '')),
             'do_no' => $order->do_no,
+            'payment_term' => $order->preferredPaymentMethodLabel() ?: '-',
+            'customer_code' => $customer->sql_customer_code ?? '-',
+            'currency' => 'MYR',
         ], $data);
     }
 
@@ -193,7 +202,8 @@ class PdfHelper extends Model
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
         $data = self::deliveryViewData($order, [
             'invoice_number' => $order->invoice_number ?: ('INV-' . $order->id),
-            'date' => $order->created_at,
+            'date' => optional($order->created_at)->format('d/m/Y'),
+            'time' => optional($order->created_at)->format('H:i:s'),
             'order' => $order,
             'order_items' => $order_products,
             'void' => $void,
@@ -223,7 +233,8 @@ class PdfHelper extends Model
 
         $data = self::deliveryViewData($order, [
             'invoice_number' => $order->invoice_number ?: ('INV-' . $order->id),
-            'date' => $order->do_date,
+            'date' => $custom_date ? \Illuminate\Support\Carbon::parse($custom_date)->format('d/m/Y') : optional($order->do_date)->format('d/m/Y'),
+            'time' => optional($order->do_date)->format('H:i:s'),
             'order' => $order,
             'order_items' => $order_products,
             'total' => $total,

@@ -83,10 +83,24 @@ class OrderController extends Controller
             $orders->where('driver_id', $lorry);
         }
 
-        Order::applyListStatusFilter($orders, Order::listStatusFilterKey($request));
+        $listStatusFilter = Order::listStatusFilterKey($request);
+
+        // A payment-status filter should search across every fulfilment state, not
+        // just the default pending+packing view. Otherwise statuses that only exist
+        // post-delivery — e.g. "On Hold (Unpaid)" orders are always delivered —
+        // could never appear when filtered by payment status alone.
+        if ($request->filled('payment_status') && $listStatusFilter === Order::LIST_STATUS_PENDING_PACKING) {
+            $listStatusFilter = Order::LIST_STATUS_ALL;
+        }
+
+        Order::applyListStatusFilter($orders, $listStatusFilter);
 
         if ($filter_payment_status = $request->input('payment_status')) {
             $orders->where('payment_status', $filter_payment_status);
+        }
+
+        if ($filter_order_type = $request->input('order_type')) {
+            $orders->where('order_type', $filter_order_type);
         }
 
         if ($phone = trim((string) $request->input('phone'))) {
@@ -154,7 +168,6 @@ class OrderController extends Controller
         })->toArray();
 
         $drivers_arr = Driver::optionsForOrders($orders->pluck('driver_id')->all());
-        $listStatusFilter = Order::listStatusFilterKey($request);
         $listQueryParams = array_merge($request->input(), ['status' => $listStatusFilter]);
 
         return view('admin.orders.index', [
@@ -281,6 +294,55 @@ class OrderController extends Controller
         });
 
         return back()->with('success', 'Order products weight updated successfully.');
+    }
+
+    /**
+     * Inline weight + delivery-fee edit from the order summary page. Allowed on
+     * any order status (see OrderService::applyWeightAndFeeAdjustments) — only
+     * the orders.edit permission is required.
+     */
+    public function updateWeightAndFee(Request $request, Order $order)
+    {
+        $admin = Auth::guard('web_admin')->user();
+        if (!$admin || !$admin->canModule('orders', 'edit')) {
+            abort(403);
+        }
+
+        $rules = [
+            'delivery_fee' => ['nullable', 'numeric', 'min:0'],
+            'line_items' => ['nullable', 'array'],
+        ];
+
+        // Weight-sold lines must carry a positive weight; other lines may leave it blank.
+        $lines = OrderProduct::query()
+            ->select('order_products.id', 'products.sell_in')
+            ->leftJoin('products', 'products.id', '=', 'order_products.product_id')
+            ->where('order_products.order_id', $order->id)
+            ->where('order_products.status', OrderProduct::$status['active'])
+            ->get();
+
+        foreach ($lines as $line) {
+            $sellIn = Product::resolveSellInForOrderLine($line);
+            if ($sellIn === Product::SELL_IN_WEIGHT) {
+                $rules['line_items.' . $line->id . '.weight'] = ['required', 'numeric', 'min:0.001'];
+            } else {
+                $rules['line_items.' . $line->id . '.weight'] = ['nullable', 'numeric', 'min:0'];
+            }
+        }
+
+        $validated = $request->validate($rules);
+
+        app(OrderService::class)->applyWeightAndFeeAdjustments(
+            $order,
+            $validated['line_items'] ?? [],
+            isset($validated['delivery_fee']) && $validated['delivery_fee'] !== null
+                ? (float) $validated['delivery_fee']
+                : null,
+            $admin->id
+        );
+
+        return redirect(route('admin.orders.summary', $order->id))
+            ->with('success', __('orders.weight_fee_updated'));
     }
 
     public function change_order_delivery(Request $request)

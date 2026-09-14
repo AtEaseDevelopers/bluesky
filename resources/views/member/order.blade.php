@@ -95,6 +95,7 @@
                                                     'paid' => 'bg-success',
                                                     'pending' => 'bg-warning text-dark',
                                                     'partial' => 'bg-warning text-dark',
+                                                    'on_hold' => 'bg-warning text-dark',
                                                     default => 'bg-secondary',
                                                 };
                                             @endphp

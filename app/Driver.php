@@ -2,12 +2,14 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class Driver extends Authenticatable
 {
     use Notifiable;
+    use SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -65,10 +67,15 @@ class Driver extends Authenticatable
     /** @return array<int, string> */
     public static function optionsForSelect(?int $includeInactiveId = null): array
     {
+        // Raw query builder: the SoftDeletes global scope does not apply here,
+        // so deleted drivers are excluded explicitly — except the one explicitly
+        // referenced (e.g. the driver already assigned to the order being edited).
         return \Illuminate\Support\Facades\DB::table('drivers')
-            ->select('id', 'name', 'username', 'is_active')
+            ->select('id', 'name', 'username', 'is_active', 'deleted_at')
             ->where(function ($query) use ($includeInactiveId) {
-                $query->where('is_active', true);
+                $query->where(function ($q) {
+                    $q->whereNull('deleted_at')->where('is_active', true);
+                });
                 if ($includeInactiveId) {
                     $query->orWhere('id', $includeInactiveId);
                 }
@@ -79,7 +86,8 @@ class Driver extends Authenticatable
                 return [$driver->id => self::formatSelectLabel(
                     $driver->name,
                     $driver->username,
-                    (bool) $driver->is_active
+                    (bool) $driver->is_active,
+                    !is_null($driver->deleted_at)
                 )];
             })
             ->all();
@@ -104,7 +112,9 @@ class Driver extends Authenticatable
             return $options;
         }
 
-        static::query()
+        // Include trashed drivers so orders assigned to a since-deleted driver
+        // still render a name rather than a blank label.
+        static::withTrashed()
             ->whereIn('id', $missingIds)
             ->orderBy('name')
             ->get()
@@ -117,7 +127,7 @@ class Driver extends Authenticatable
 
     public function displayLabel(): string
     {
-        return self::formatSelectLabel($this->name, $this->username, (bool) $this->is_active);
+        return self::formatSelectLabel($this->name, $this->username, (bool) $this->is_active, $this->trashed());
     }
 
     public static function displayLabelForId(?int $driverId): ?string
@@ -126,23 +136,18 @@ class Driver extends Authenticatable
             return null;
         }
 
-        $driver = static::find($driverId);
+        // Include trashed so a deleted driver referenced by a past order still resolves.
+        $driver = static::withTrashed()->find($driverId);
 
         return $driver ? $driver->displayLabel() : null;
     }
 
-    public function deactivate(): void
-    {
-        $this->update([
-            'is_active' => false,
-            'api_token' => null,
-        ]);
-    }
-
-    protected static function formatSelectLabel(?string $name, ?string $username, bool $isActive): string
+    protected static function formatSelectLabel(?string $name, ?string $username, bool $isActive, bool $isDeleted = false): string
     {
         $label = $name ?: $username ?: '-';
-        if (!$isActive) {
+        if ($isDeleted) {
+            $label .= ' (' . __('drivers.status_labels.deleted') . ')';
+        } elseif (!$isActive) {
             $label .= ' (' . __('drivers.status_labels.inactive') . ')';
         }
 

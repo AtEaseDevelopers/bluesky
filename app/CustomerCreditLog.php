@@ -14,6 +14,8 @@ class CustomerCreditLog extends Model
         'balance_after',
         'order_id',
         'order_payment_id',
+        'payment_method',
+        'payment_proof',
         'notes',
         'recorded_by',
         'recorded_by_driver',

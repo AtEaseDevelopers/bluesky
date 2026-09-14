@@ -69,6 +69,7 @@
                                         'paid' => 'bg-success',
                                         'pending' => 'bg-warning text-dark',
                                         'partial' => 'bg-warning text-dark',
+                                        'on_hold' => 'bg-warning text-dark',
                                         default => 'bg-secondary',
                                     };
                                 @endphp
@@ -158,6 +159,12 @@
                                                 @endif
                                             </td>
                                             <td class="text-end">{{ number_format($order->amount_adjustment, 2) }}</td>
+                                        </tr>
+                                    @endif
+                                    @if ($order->discount > 0)
+                                        <tr>
+                                            <td colspan="4" class="text-end"><strong>{{ __('orders.discount') }}</strong></td>
+                                            <td class="text-end text-success">-{{ number_format($order->discount, 2) }}</td>
                                         </tr>
                                     @endif
                                     <tr>

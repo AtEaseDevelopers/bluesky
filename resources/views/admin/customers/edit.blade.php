@@ -551,10 +551,11 @@
                     </div>
 
                     @if ($credit_orders->isNotEmpty())
-                    <form action="{{ route('admin.customers.credit.mark-paid', encrypt($customer->id)) }}" method="POST" class="form-wrapper mb-4" id="mark-credit-paid-form">
+                    <form action="{{ route('admin.customers.credit.mark-paid', encrypt($customer->id)) }}" method="POST" enctype="multipart/form-data" class="form-wrapper mb-4" id="mark-credit-paid-form">
                         @csrf
                         <div class="alert alert-warning mb-0">
                             <p class="mb-2"><strong>{{ __('customers.mark_paid_heading') }}</strong></p>
+                            <small class="text-muted d-block mb-3">{{ __('customers.mark_paid_help') }}</small>
                             <div class="table-responsive">
                                 <table class="table table-sm align-middle mb-2">
                                     <thead>
@@ -563,25 +564,48 @@
                                                 <input type="checkbox" class="form-check-input" id="credit_orders_all" aria-label="{{ __('customers.select_all') }}">
                                             </th>
                                             <th>{{ __('customers.order') }}</th>
-                                            <th class="text-end">{{ __('customers.amount') }}</th>
+                                            <th class="text-end">{{ __('customers.outstanding') }}</th>
+                                            <th style="min-width:9rem;">{{ __('customers.payment_method') }}</th>
+                                            <th style="min-width:8rem;">{{ __('customers.amount') }} (RM)</th>
+                                            <th style="min-width:12rem;">{{ __('customers.payment_proof') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach ($credit_orders as $creditOrder)
+                                            @php $creditOutstanding = $creditOrder->creditOutstandingAmount(); @endphp
                                             <tr>
                                                 <td>
                                                     <input type="checkbox" class="form-check-input credit-order-check" name="order_ids[]" value="{{ $creditOrder->id }}" id="credit_order_{{ $creditOrder->id }}">
                                                 </td>
                                                 <td>
-                                                    <a href="{{ route('admin.orders.summary', $creditOrder->id) }}" target="_blank" rel="noopener">#{{ $creditOrder->id }}</a>
+                                                    <a href="{{ route('admin.orders.summary', $creditOrder->id) }}" target="_blank" rel="noopener">{{ $creditOrder->invoice_number ?: '#' . $creditOrder->id }}</a>
                                                 </td>
-                                                <td class="text-end">RM {{ number_format($creditOrder->creditOutstandingAmount(), 2) }}</td>
+                                                <td class="text-end">RM {{ number_format($creditOutstanding, 2) }}</td>
+                                                <td>
+                                                    <select name="payments[{{ $creditOrder->id }}][payment_method]" class="form-select form-select-sm credit-pay-input" data-order="{{ $creditOrder->id }}" disabled>
+                                                        @foreach (\App\OrderPayment::settlementMethods() as $key => $label)
+                                                            <option value="{{ $key }}">{{ \App\OrderPayment::paymentMethodLabel($key) }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <input type="number" step="0.01" min="0.01" max="{{ number_format($creditOutstanding, 2, '.', '') }}"
+                                                        name="payments[{{ $creditOrder->id }}][amount]"
+                                                        value="{{ number_format($creditOutstanding, 2, '.', '') }}"
+                                                        class="form-control form-control-sm credit-pay-input" data-order="{{ $creditOrder->id }}" disabled>
+                                                </td>
+                                                <td>
+                                                    <input type="file" name="payments[{{ $creditOrder->id }}][payment_proof]"
+                                                        class="form-control form-control-sm credit-pay-input" data-order="{{ $creditOrder->id }}"
+                                                        accept="{{ \App\OrderPayment::proofAcceptAttribute() }}"
+                                                        capture="{{ \App\OrderPayment::proofCaptureAttribute() }}" disabled>
+                                                </td>
                                             </tr>
                                         @endforeach
                                     </tbody>
                                 </table>
                             </div>
-                            <small class="text-muted d-block mb-2">{{ __('customers.mark_paid_help') }}</small>
+                            <small class="text-muted d-block mb-2">{{ \App\OrderPayment::proofHelpText() }}</small>
                             <button type="submit" class="btn btn-success btn-sm">{{ __('customers.mark_paid_button') }}</button>
                         </div>
                     </form>
@@ -622,19 +646,29 @@
                                 @forelse ($credit_logs as $log)
                                     <tr>
                                         <td>{{ $log->created_at->format('d-m-Y H:i') }}</td>
-                                        <td>{{ \App\CustomerCreditLog::$types[$log->type] ?? ucfirst(str_replace('_', ' ', $log->type)) }}</td>
+                                        <td>
+                                            {{ \App\CustomerCreditLog::$types[$log->type] ?? ucfirst(str_replace('_', ' ', $log->type)) }}
+                                            @if ($log->payment_method)
+                                                <br><small class="text-muted">{{ __('customers.settled_via', ['method' => \App\OrderPayment::paymentMethodLabel($log->payment_method)]) }}</small>
+                                            @endif
+                                        </td>
                                         <td class="{{ $log->amount >= 0 ? 'text-success' : 'text-danger' }}">
                                             {{ $log->amount >= 0 ? '+' : '' }}{{ number_format($log->amount, 2) }}
                                         </td>
                                         <td>{{ number_format($log->balance_after, 2) }}</td>
                                         <td>
                                             @if ($log->order_id)
-                                                <a href="{{ route('admin.orders.summary', $log->order_id) }}" target="_blank" rel="noopener">#{{ $log->order_id }}</a>
+                                                <a href="{{ route('admin.orders.summary', $log->order_id) }}" target="_blank" rel="noopener">{{ optional($log->order)->invoice_number ?: '#' . $log->order_id }}</a>
                                             @else
                                                 -
                                             @endif
                                         </td>
-                                        <td>{{ $log->notes ?: '-' }}</td>
+                                        <td>
+                                            {{ $log->notes ?: '-' }}
+                                            @if ($log->payment_proof && $log->order_id)
+                                                <a href="{{ route('admin.orders.payment-proof', [$log->order_id, $log->payment_proof]) }}" target="_blank" rel="noopener" class="d-inline-block">{{ __('customers.view_proof') }}</a>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
@@ -732,14 +766,36 @@
             $('#customer_type').on('change', syncPaymentTermField);
             syncPaymentTermField();
 
-            // Credit orders "mark as paid" — select-all toggles each row.
+            // Credit orders "mark as paid" — a row's payment inputs are only live
+            // (enabled + required) while its order is ticked, so unticked rows are
+            // never submitted or validated.
+            function syncCreditRow(orderId) {
+                const checked = $('#credit_order_' + orderId).prop('checked');
+                $('.credit-pay-input[data-order="' + orderId + '"]').each(function() {
+                    $(this).prop('disabled', !checked);
+                    // The file input stays optional; method + amount are required.
+                    if (!$(this).is('[type="file"]')) {
+                        $(this).prop('required', checked);
+                    }
+                });
+            }
+
+            // Select-all toggles each row.
             $('#credit_orders_all').on('change', function() {
-                $('.credit-order-check').prop('checked', $(this).prop('checked'));
+                const checked = $(this).prop('checked');
+                $('.credit-order-check').prop('checked', checked).each(function() {
+                    syncCreditRow($(this).val());
+                });
             });
             $('.credit-order-check').on('change', function() {
+                syncCreditRow($(this).val());
                 const total = $('.credit-order-check').length;
                 const checked = $('.credit-order-check:checked').length;
                 $('#credit_orders_all').prop('checked', total > 0 && checked === total);
+            });
+            // Initial sync in case the browser restored checked states.
+            $('.credit-order-check').each(function() {
+                syncCreditRow($(this).val());
             });
             $('#mark-credit-paid-form').on('submit', function(e) {
                 if ($('.credit-order-check:checked').length === 0) {

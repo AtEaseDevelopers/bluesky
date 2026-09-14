@@ -136,8 +136,14 @@ class CreditService
      * positive ledger movement tied to the order, lifting the customer's balance
      * by exactly what that order still owes. Returns null when nothing is due.
      */
-    public function settleOrderCredit(Order $order, ?int $adminId = null, ?string $notes = null): ?CustomerCreditLog
-    {
+    public function settleOrderCredit(
+        Order $order,
+        ?int $adminId = null,
+        ?string $notes = null,
+        ?float $amount = null,
+        ?string $paymentMethod = null,
+        ?string $proofPath = null
+    ): ?CustomerCreditLog {
         if (!$order->user_id) {
             return null;
         }
@@ -152,15 +158,27 @@ class CreditService
             return null;
         }
 
+        // Never settle more than this order still owes; a null amount clears it
+        // in full. Partial amounts leave the remainder on the credit account.
+        $settleAmount = $amount === null
+            ? $outstanding
+            : round(min($amount, $outstanding), 2);
+
+        if ($settleAmount <= 0.009) {
+            return null;
+        }
+
         return $this->adjustBalance(
             $customer,
-            $outstanding,
+            $settleAmount,
             'credit_settlement',
             $order->id,
             null,
             $adminId,
             null,
-            $notes ?: 'Credit balance settled for order #' . $order->id . '.'
+            $notes ?: 'Credit balance settled for order #' . $order->id . '.',
+            $paymentMethod,
+            $proofPath
         );
     }
 
@@ -252,11 +270,13 @@ class CreditService
         ?int $orderPaymentId = null,
         ?int $adminId = null,
         ?int $driverId = null,
-        ?string $notes = null
+        ?string $notes = null,
+        ?string $paymentMethod = null,
+        ?string $proofPath = null
     ): CustomerCreditLog {
         $this->assertCreditCustomer($user);
 
-        return DB::transaction(function () use ($user, $amount, $type, $orderId, $orderPaymentId, $adminId, $driverId, $notes) {
+        return DB::transaction(function () use ($user, $amount, $type, $orderId, $orderPaymentId, $adminId, $driverId, $notes, $paymentMethod, $proofPath) {
             $customer = User::lockForUpdate()->find($user->id);
             $balanceBefore = (float) $customer->credit_balance;
             $balanceAfter = round($balanceBefore + $amount, 2);
@@ -271,6 +291,8 @@ class CreditService
                 'balance_after' => $balanceAfter,
                 'order_id' => $orderId,
                 'order_payment_id' => $orderPaymentId,
+                'payment_method' => $paymentMethod,
+                'payment_proof' => $proofPath,
                 'notes' => $notes,
                 'recorded_by' => $adminId,
                 'recorded_by_driver' => $driverId,
@@ -281,7 +303,7 @@ class CreditService
     public function logsForCustomer(int $userId, int $limit = 50)
     {
         return CustomerCreditLog::where('user_id', $userId)
-            ->with(['order:id'])
+            ->with(['order:id,invoice_number'])
             ->orderByDesc('created_at')
             ->limit($limit)
             ->get();

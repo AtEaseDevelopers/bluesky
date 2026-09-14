@@ -23,6 +23,7 @@ return [
         'partial' => 'Partially Paid',
         'paid' => 'Paid',
         'payment_due' => 'Due',
+        'on_hold' => 'On Hold (Unpaid)',
     ],
     'fulfillment_types' => [
         'delivery' => 'Delivery',

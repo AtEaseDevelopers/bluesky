@@ -86,15 +86,19 @@ class DriverController extends Controller
     public function destroy($id)
     {
         $driver = Driver::findOrFail(decrypt($id));
-        $driver->deactivate();
+        // Revoke API access, then soft delete so the row is retained for past
+        // orders and reports and can be restored if needed.
+        $driver->update(['api_token' => null]);
+        $driver->delete();
 
-        return redirect(route('admin.drivers.index'))->with('success', __('drivers.deactivated_success'));
+        return redirect(route('admin.drivers.index'))->with('success', __('drivers.deleted_success'));
     }
 
     public function fetch(Request $request)
     {
         $columns = ['id', 'options', 'name', 'username', 'phone', 'is_active', 'created_at'];
-        $totalitems = DB::table('drivers')->count();
+        // Raw query builder bypasses the SoftDeletes scope, so exclude trashed explicitly.
+        $totalitems = DB::table('drivers')->whereNull('deleted_at')->count();
         $totalFiltered = $totalitems;
 
         $limit = $request->input('length') == -1 ? $totalitems : $request->input('length');
@@ -107,6 +111,7 @@ class DriverController extends Controller
         }
 
         $query = DB::table('drivers')
+            ->whereNull('deleted_at')
             ->select('id', 'name', 'username', 'phone', 'is_active', 'created_at');
 
         if (!empty($request->input('search.value'))) {

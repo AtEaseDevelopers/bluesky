@@ -126,7 +126,7 @@
                                         <td>{{ $order->quantity }}</td>
                                         <td>RM {{ number_format($order->unit_price, 2) }}</td>
                                         <td>RM {{ number_format($order->price, 2) }}</td>
-                                        <td>{{ $reportService->paymentMethodLabel($order->payment_method) }}</td>
+                                        <td>{{ $reportService->recordedPaymentLabel($order->recorded_payment_methods) }}</td>
                                         <td>{{ $order->area }}</td>
                                         <td>
                                             @if ($pre_order_id != $order->id)

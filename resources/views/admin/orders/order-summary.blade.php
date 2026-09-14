@@ -37,7 +37,11 @@
                         <div class="card-body">
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <p><strong>{{ __('orders.customer_label') }}</strong> {{ $customerName }}</p>
+                                    <p><strong>{{ __('orders.customer_label') }}</strong> {{ $customerName }}
+                                        @if ($order->isWalkInOrder())
+                                            <span class="badge bg-primary">{{ __('order.order_type.walk_in') }}</span>
+                                        @endif
+                                    </p>
                                     <p><strong>{{ __('orders.order_type') }}:</strong> {{ __('order.order_type.' . $order->order_type) }}</p>
                                     @if ($customer && ($customer->customer_type ?? 'cod') === 'credit')
                                         <p><strong>{{ __('orders.customer_type') }}:</strong> {{ __('orders.customer_type_credit') }}</p>
@@ -77,6 +81,7 @@
                                                 'paid' => 'bg-success',
                                                 'pending' => 'bg-warning text-dark',
                                                 'partial' => 'bg-warning text-dark',
+                                                'on_hold' => 'bg-warning text-dark',
                                                 default => 'bg-secondary',
                                             };
                                         @endphp
@@ -157,7 +162,10 @@
                                                     \App\Product::SELL_IN_QTY_BILL_WEIGHT => __('product.sell_in_qty_bill_weight'),
                                                 ];
                                             @endphp
-                                            <tr>
+                                            @php
+                                                $weightEditable = $canEditItems && in_array($sellIn, [\App\Product::SELL_IN_WEIGHT, \App\Product::SELL_IN_QTY_BILL_WEIGHT], true);
+                                            @endphp
+                                            <tr class="sm-line" data-unit-price="{{ $product->unit_price }}" data-sell-in="{{ $sellIn }}" data-line-price="{{ number_format($product->price, 2, '.', '') }}">
                                                 <td>
                                                     <strong>{{ \App\OrderProduct::displayName($product) }}</strong>
                                                     <br><small class="text-muted">{{ __('orders.sell_in_label') }}: {{ $sellInLabels[$sellIn] ?? $sellIn }}</small>
@@ -175,8 +183,23 @@
                                                         -
                                                     @endif
                                                 </td>
-                                                <td>{{ \App\OrderProduct::displayWeight($product) ?? '-' }}</td>
-                                                <td class="text-end">{{ number_format($product->price, 2) }}</td>
+                                                <td>
+                                                    @if ($weightEditable)
+                                                        <div class="input-group input-group-sm" style="min-width: 8.5rem;">
+                                                            <input type="number" step="0.001"
+                                                                @if ($sellIn === \App\Product::SELL_IN_WEIGHT) min="0.001" required @else min="0" placeholder="{{ __('product.optional') }}" @endif
+                                                                class="form-control sm-line-weight"
+                                                                name="line_items[{{ $product->order_product_id }}][weight]"
+                                                                form="weight-fee-form"
+                                                                value="{{ $sellIn === \App\Product::SELL_IN_WEIGHT ? ($product->weight ?? $product->product_weight) : ($product->weight ?? '') }}"
+                                                                aria-label="{{ __('orders.weight') }}">
+                                                            <span class="input-group-text">KG</span>
+                                                        </div>
+                                                    @else
+                                                        {{ \App\OrderProduct::displayWeight($product) ?? '-' }}
+                                                    @endif
+                                                </td>
+                                                <td class="text-end sm-line-total">{{ number_format($product->price, 2) }}</td>
                                                 @if ($canEditItems)
                                                     <td class="text-center">
                                                         @if (count($products) > 1)
@@ -200,11 +223,23 @@
                                         @endforeach
                                         <tr>
                                             <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.subtotal') }}</strong></td>
-                                            <td class="text-end">{{ number_format($order->subtotal, 2) }}</td>
+                                            <td class="text-end"><span id="sm-subtotal">{{ number_format($order->subtotal, 2) }}</span></td>
                                         </tr>
                                         <tr>
                                             <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.delivery_fee') }}</strong></td>
-                                            <td class="text-end">{{ number_format($order->delivery_fee, 2) }}</td>
+                                            <td class="text-end">
+                                                @if ($canEditItems)
+                                                    <div class="input-group input-group-sm" style="max-width: 10rem; margin-left: auto;">
+                                                        <span class="input-group-text">RM</span>
+                                                        <input type="number" step="0.01" min="0" class="form-control text-end"
+                                                            id="sm-delivery-fee" name="delivery_fee" form="weight-fee-form"
+                                                            value="{{ number_format($order->delivery_fee, 2, '.', '') }}"
+                                                            aria-label="{{ __('orders.delivery_fee') }}">
+                                                    </div>
+                                                @else
+                                                    {{ number_format($order->delivery_fee, 2) }}
+                                                @endif
+                                            </td>
                                         </tr>
                                         @if ($order->amount_adjustment != 0)
                                             <tr>
@@ -212,9 +247,13 @@
                                                 <td class="text-end">{{ number_format($order->amount_adjustment, 2) }}</td>
                                             </tr>
                                         @endif
+                                        <tr id="sm-discount-row" @if ($order->discount <= 0) style="display: none;" @endif>
+                                            <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.discount') }}</strong></td>
+                                            <td class="text-end text-success">-<span id="sm-discount">{{ number_format($order->discount, 2) }}</span></td>
+                                        </tr>
                                         <tr>
                                             <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.grand_total') }}</strong></td>
-                                            <td class="text-end"><strong>{{ number_format($order->total_price, 2) }}</strong></td>
+                                            <td class="text-end"><strong id="sm-grand-total">{{ number_format($order->total_price, 2) }}</strong></td>
                                         </tr>
                                         <tr>
                                             <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.paid') }}</strong></td>
@@ -228,11 +267,20 @@
                                         @endif
                                         <tr>
                                             <td colspan="{{ $summaryColspan }}" class="text-end"><strong>{{ __('orders.balance_due') }}</strong></td>
-                                            <td class="text-end text-danger"><strong>{{ number_format($order->balanceDue(), 2) }}</strong></td>
+                                            <td class="text-end text-danger"><strong id="sm-balance-due">{{ number_format($order->balanceDue(), 2) }}</strong></td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
+                            @if ($canEditItems)
+                                <form method="POST" action="{{ route('admin.orders.weight-fee', $order->id) }}" id="weight-fee-form" class="mt-2">
+                                    @csrf
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <small class="text-muted">{{ __('orders.weight_fee_hint') }}</small>
+                                        <button type="submit" class="btn btn-primary">{{ __('orders.save_weight_fee') }}</button>
+                                    </div>
+                                </form>
+                            @endif
                         </div>
                     </div>
 
@@ -429,9 +477,11 @@
                             <hr>
                             @if (count($nextStatuses))
                                 @foreach ($nextStatuses as $nextStatus)
-                                    <button type="button" class="btn btn-outline-primary w-100 mb-2 btn-change-status"
+                                    <button type="button" class="btn {{ $order->status === Order::$status['cancelled'] ? 'btn-outline-success' : 'btn-outline-primary' }} w-100 mb-2 btn-change-status"
                                         data-status="{{ $nextStatus }}">
-                                        {{ __('orders.move_to', ['status' => __('order.status.' . $nextStatus)]) }}
+                                        {{ $order->status === Order::$status['cancelled']
+                                            ? __('orders.restore_to', ['status' => __('order.status.' . $nextStatus)])
+                                            : __('orders.move_to', ['status' => __('order.status.' . $nextStatus)]) }}
                                     </button>
                                 @endforeach
                             @else
@@ -1019,5 +1069,81 @@
                 }
             });
         });
+
+        // Inline weight + delivery-fee editing on the order summary: recompute
+        // line totals, subtotal, discount, grand total and balance due live so
+        // the price reflects instantly as the admin types (any order status).
+        (function () {
+            var form = document.getElementById('weight-fee-form');
+            if (!form) return;
+
+            var amountAdjustment = {{ (float) $order->amount_adjustment }};
+            var paidAmount = {{ (float) $order->paid_amount }};
+            var baseDeliveryFee = {{ (float) $order->delivery_fee }};
+            var deliveryFeeInput = document.getElementById('sm-delivery-fee');
+
+            function setText(id, value) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = value;
+            }
+
+            function currentDeliveryFee() {
+                return deliveryFeeInput ? (parseFloat(deliveryFeeInput.value) || 0) : baseDeliveryFee;
+            }
+
+            function recalc() {
+                var subtotal = 0;
+
+                document.querySelectorAll('tr.sm-line').forEach(function (row) {
+                    var weightInput = row.querySelector('.sm-line-weight');
+                    var lineTotal;
+
+                    if (weightInput) {
+                        // Weight-sold and qty-bill-weight lines bill by weight.
+                        var unit = parseFloat(row.dataset.unitPrice) || 0;
+                        var weight = parseFloat(weightInput.value) || 0;
+                        lineTotal = unit * weight;
+                        var cell = row.querySelector('.sm-line-total');
+                        if (cell) cell.textContent = lineTotal.toFixed(2);
+                    } else {
+                        lineTotal = parseFloat(row.dataset.linePrice) || 0;
+                    }
+
+                    subtotal += lineTotal;
+                });
+
+                var raw = subtotal + currentDeliveryFee() + amountAdjustment;
+                var grand, discount;
+
+                if (raw > 0) {
+                    // Mirror Order::flattenTotalDecimal(): floor to whole ringgit,
+                    // shaved cents become the discount.
+                    var rawCents = Math.round(raw * 100);
+                    var flooredCents = Math.floor(rawCents / 100) * 100;
+                    grand = flooredCents / 100;
+                    discount = (rawCents - flooredCents) / 100;
+                } else {
+                    grand = 0;
+                    discount = 0;
+                }
+
+                setText('sm-subtotal', subtotal.toFixed(2));
+                setText('sm-grand-total', grand.toFixed(2));
+                setText('sm-balance-due', Math.max(0, grand - paidAmount).toFixed(2));
+
+                var discountRow = document.getElementById('sm-discount-row');
+                if (discountRow) {
+                    discountRow.style.display = discount > 0.0001 ? '' : 'none';
+                    setText('sm-discount', discount.toFixed(2));
+                }
+            }
+
+            document.querySelectorAll('.sm-line-weight').forEach(function (el) {
+                el.addEventListener('input', recalc);
+            });
+            if (deliveryFeeInput) deliveryFeeInput.addEventListener('input', recalc);
+
+            recalc();
+        })();
     </script>
 @endsection

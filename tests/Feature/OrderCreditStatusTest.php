@@ -243,6 +243,10 @@ class OrderCreditStatusTest extends TestCase
         $response = $this->actingAs($admin, 'web_admin')
             ->post(route('admin.customers.credit.mark-paid', encrypt($customer->id)), [
                 'order_ids' => [$orderA->id, $orderB->id],
+                'payments' => [
+                    $orderA->id => ['amount' => 30.00, 'payment_method' => 'bank-transfer'],
+                    $orderB->id => ['amount' => 30.00, 'payment_method' => 'cash'],
+                ],
             ]);
 
         $response->assertRedirect();
@@ -285,6 +289,9 @@ class OrderCreditStatusTest extends TestCase
         $this->actingAs($admin, 'web_admin')
             ->post(route('admin.customers.credit.mark-paid', encrypt($customer->id)), [
                 'order_ids' => [$orderA->id],
+                'payments' => [
+                    $orderA->id => ['amount' => 30.00, 'payment_method' => 'bank-transfer'],
+                ],
             ])
             ->assertRedirect();
 

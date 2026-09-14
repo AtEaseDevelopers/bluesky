@@ -94,6 +94,15 @@ class OrderPayment extends Model
             : self::$cod_customer_methods;
     }
 
+    /**
+     * Real-money methods available when settling an outstanding credit order.
+     * 'credit-term' is excluded — that is the owing side, not a settlement.
+     */
+    public static function settlementMethods(): array
+    {
+        return array_diff_key(self::$credit_admin_methods, ['credit-term' => null]);
+    }
+
     public static function codDeliveryPreferenceKeys(): array
     {
         return array_keys(self::$cod_delivery_preference_methods);

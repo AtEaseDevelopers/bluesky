@@ -54,12 +54,10 @@ class OrdersExport implements FromCollection, WithHeadings, WithEvents, WithColu
                         $sheet->setCellValue('J' . $no, '');
                         $sheet->setCellValue('K' . $no, '');
                         $sheet->setCellValue('L' . $no, '');
-                        $sheet->setCellValue('M' . $no, '');
                     } else {
-                        $sheet->setCellValue('J' . $no, $order->area);
-                        $sheet->setCellValue('K' . $no, $order->billing_address);
-                        $sheet->setCellValue('L' . $no, $order->shipping_address);
-                        $sheet->setCellValue('M' . $no, $order->updated_at);
+                        $sheet->setCellValue('J' . $no, $order->billing_address);
+                        $sheet->setCellValue('K' . $no, $order->shipping_address);
+                        $sheet->setCellValue('L' . $no, $order->updated_at);
                     }
 
                     $this->i++;
@@ -81,13 +79,13 @@ class OrdersExport implements FromCollection, WithHeadings, WithEvents, WithColu
                 $sheet->setCellValue('I' . $no, $total_sales);
 
                 // Make row bold
-                $event->sheet->getDelegate()->getStyle('A1:N1')->getFont()->setBold(true);
+                $event->sheet->getDelegate()->getStyle('A1:L1')->getFont()->setBold(true);
 
                 // Set BG color
-                $event->sheet->getDelegate()->getStyle('A1:N1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('dee0bb');
+                $event->sheet->getDelegate()->getStyle('A1:L1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('dee0bb');
 
                 // Set Font color
-                $event->sheet->getDelegate()->getStyle('A1:N1')->getFont()->getColor()->setARGB('000000');
+                $event->sheet->getDelegate()->getStyle('A1:L1')->getFont()->getColor()->setARGB('000000');
             }
         ];
     }
@@ -120,7 +118,6 @@ class OrdersExport implements FromCollection, WithHeadings, WithEvents, WithColu
                 'order_products.unit_price',
                 'order_products.price',
                 'orders.payment_method',
-                'orders.area',
                 DB::raw(
                     "CONCAT_WS(' ', orders.billing_address, orders.billing_city, orders.billing_postcode, orders.billing_state) AS billing_address"
                 ),
@@ -186,7 +183,6 @@ class OrdersExport implements FromCollection, WithHeadings, WithEvents, WithColu
                 'Item Unit Price',
                 'Item Total Price',
                 // 'Payment Method',
-                'Area',
                 'Billing Address',
                 'Shipping Address',
                 'Last Updated At',
@@ -208,9 +204,7 @@ class OrdersExport implements FromCollection, WithHeadings, WithEvents, WithColu
             'I' => 15,
             'J' => 15,
             'K' => 15,
-            'L' => 15,
-            'M' => 20,
-            'N' => 20,
+            'L' => 20,
         ];
     }
 }

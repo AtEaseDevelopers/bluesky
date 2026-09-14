@@ -229,6 +229,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/orders/{order}/delivery-proof/{filename}', 'OrderController@viewDeliveryProof')->name('orders.delivery-proof');
                 Route::post('/order/{order}/products', 'OrderController@addProducts')->name('orders.products.add');
                 Route::post('/order/{order}/products/{orderProduct}/remove', 'OrderController@removeProduct')->name('orders.products.remove');
+                Route::post('/order/{order}/weight-fee', 'OrderController@updateWeightAndFee')->name('orders.weight-fee');
                 Route::get('/order/edit/{order}', 'EditOrderController@showForm')->name('orders.edit');
                 Route::post('/order/edit/{order}', 'EditOrderController@editOrder')->name('orders.update');
                 Route::get('/order/get-order-info/{order}', 'EditOrderController@getOrderData')->name('orders.get-order-info');

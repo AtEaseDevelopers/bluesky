@@ -127,6 +127,19 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
+                                    <label class="mb-2" for="filterOrderType">{{ __('orders.order_type') }}</label>
+                                    <select class="form-select" name="order_type" id="filterOrderType">
+                                        <option value="">{{ __('ui.all') }}</option>
+                                        @foreach (\App\Order::$order_types as $orderTypeKey)
+                                            <option value="{{ $orderTypeKey }}" {{ ($input['order_type'] ?? '') === $orderTypeKey ? 'selected' : '' }}>
+                                                {{ __('order.order_type.' . $orderTypeKey) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-4">
                                     <label class="mb-2" for="orderby">{{ __('orders.order_by') }}</label>
                                     <select class="form-select" name="orderby" id="orderby">
                                         <option value="desc" {{ ($input['orderby'] ?? '') === 'desc'? " selected" : "" }}>{{ __('orders.latest_first') }}</option>
@@ -203,14 +216,12 @@
                                     <th>{{ __('orders.order_at') }}</th>
                                     <th>{{ __('orders.customer') }}</th>
                                     <th class="order-products-col">{{ __('orders.products') }}</th>
-                                    <th>{{ __('orders.area') }}</th>
                                     <th>{{ __('orders.shipping_address') }}</th>
                                     <th>{{ __('orders.assign_driver') }}</th>
                                     <th>{{ __('orders.delivery_schedule') }}</th>
                                     <th>{{ __('orders.status') }}</th>
-                                    <th>{{ __('orders.payment') }}</th>
-                                    <th>{{ __('orders.payment_due') }}</th>
-                                    <th>{{ __('orders.payment_due_status') }}</th>
+                                    <th>{{ __('orders.payment_method') }}</th>
+                                    <th>{{ __('orders.payment_status') }}</th>
                                     <th>{{ __('orders.invoice_sync_status') }}</th>
                                     <th>{{ __('orders.last_updated_at') }}</th>
                                 </tr>
@@ -268,6 +279,15 @@
                                                         <li>
                                                             <a class="dropdown-item btn-add-order-weight" href="javascript:void(0);" data-id="{{ encrypt($order->id) }}" data-bs-toggle="modal" data-bs-target="#add-weight">{{ __('orders.order_weight') }}</a>
                                                         </li>
+                                                        @if ($order->status === Order::$status['cancelled'])
+                                                        <li>
+                                                            <a class="dropdown-item text-success btn-restore-order" href="javascript:void(0);"
+                                                               data-order-id="{{ $order->id }}"
+                                                               data-statuses='@json(app(\App\Services\OrderStatusService::class)->nextStatuses($order))'>
+                                                                <i class="fa fa-rotate-left me-1"></i>{{ __('orders.restore_order') }}
+                                                            </a>
+                                                        </li>
+                                                        @endif
                                                     @endif
                                                 </ul>
                                             </div>
@@ -282,13 +302,15 @@
                                                 </a>
                                             @else
                                                 {{ $order->walk_in_name ?: ($order->attn_name ?: __('orders.walk_in_public')) }}
+                                                @if ($order->isWalkInOrder())
+                                                    <span class="badge bg-primary">{{ __('order.order_type.walk_in') }}</span>
+                                                @endif
                                                 @if ($order->is_general)
                                                     <span class="badge bg-info text-dark">{{ __('orders.general') }}</span>
                                                 @endif
                                             @endif
                                         </td>
                                         <td class="order-products-col">{!! $order->order_products !!}</td>
-                                        <td>{{ $order->area }}</td>
                                         <td>{!! $order->shipping_address !!}</td>
                                         <td>
                                             @if ($order->driver_id)
@@ -318,6 +340,9 @@
                                             @endif
                                         </td>
                                         <td class="text-center">
+                                            {{ \App\OrderPayment::paymentMethodLabel($order->payment_method) ?? '-' }}
+                                        </td>
+                                        <td class="text-center">
                                             @php
                                                 $paymentBadgeClass = match ($order->payment_status ?? 'unpaid') {
                                                     'unpaid' => 'bg-danger',
@@ -325,6 +350,7 @@
                                                     'paid' => 'bg-success',
                                                     'pending' => 'bg-warning text-dark',
                                                     'partial' => 'bg-warning text-dark',
+                                                    'on_hold' => 'bg-warning text-dark',
                                                     default => 'bg-secondary',
                                                 };
                                             @endphp
@@ -334,31 +360,6 @@
                                             @if ($order->deliveryPaymentPreferenceLabel())
                                                 <br><small class="text-muted">{{ __('orders.expected_cod_payment') }}: {{ $order->deliveryPaymentPreferenceLabel() }}</small>
                                             @endif
-                                        </td>
-                                        <td class="text-center">
-                                            @if ($customer && ($customer->customer_type ?? 'cod') === 'credit')
-                                                @php
-                                                    $displayPaymentDueDate = app(\App\Services\OrderService::class)->paymentDueDateForDisplay($order);
-                                                @endphp
-                                                {{ $displayPaymentDueDate ? $displayPaymentDueDate->format('d-m-Y') : '-' }}
-                                            @else
-                                                -
-                                            @endif
-                                        </td>
-                                        <td class="text-center">
-                                            @php
-                                                $paymentDueStatusKey = $order->paymentDueStatusKey();
-                                                $paymentDueStatusClass = match ($paymentDueStatusKey) {
-                                                    'paid' => 'bg-success',
-                                                    'overdue', 'due_today' => 'bg-danger',
-                                                    'not_due' => 'bg-warning text-dark',
-                                                    'not_set' => 'bg-secondary',
-                                                    default => 'bg-light text-dark',
-                                                };
-                                            @endphp
-                                            <span class="badge {{ $paymentDueStatusClass }}">
-                                                {{ __('orders.payment_due_status_labels.' . $paymentDueStatusKey) }}
-                                            </span>
                                         </td>
                                         <td class="text-center">
                                             @php
@@ -381,7 +382,7 @@
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="18">
+                                    <td colspan="16">
                                         {{ $orders->appends(request()->query())->links('pagination::bootstrap-4') }}
                                     </td>
                                 </tr>
@@ -660,6 +661,61 @@
                 });
 
                 form.submit();
+            });
+
+            @php
+                $restoreStatusLabels = [
+                    'pending' => __('order.status.pending'),
+                    'packing' => __('order.status.packing'),
+                    'in_route' => __('order.status.in_route'),
+                    'delivered' => __('order.status.delivered'),
+                ];
+            @endphp
+            var restoreStatusLabels = @json($restoreStatusLabels);
+
+            $(document).on('click', '.btn-restore-order', function () {
+                var orderId = $(this).data('order-id');
+                var statuses = $(this).data('statuses') || [];
+
+                if (!statuses.length) {
+                    Swal.fire(ordersJs.error, ordersJs.restore_no_targets, 'info');
+                    return;
+                }
+
+                var options = '';
+                statuses.forEach(function (status) {
+                    options += '<option value="' + status + '">' + (restoreStatusLabels[status] || status) + '</option>';
+                });
+
+                Swal.fire({
+                    title: ordersJs.restore_order,
+                    html: '<p class="mb-2">' + ordersJs.restore_order_prompt + '</p>'
+                        + '<select id="swal-restore-status" class="form-select">' + options + '</select>',
+                    showCancelButton: true,
+                    confirmButtonText: ordersJs.restore_confirm,
+                    focusConfirm: false,
+                    preConfirm: function () {
+                        return document.getElementById('swal-restore-status').value;
+                    }
+                }).then(function (result) {
+                    if (!result.isConfirmed || !result.value) {
+                        return;
+                    }
+
+                    $.post("{{ url('/admin/order/update-status') }}/" + orderId, {
+                        _token: "{{ csrf_token() }}",
+                        status: result.value
+                    }).done(function (response) {
+                        var data = typeof response === 'string' ? JSON.parse(response) : response;
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            Swal.fire(ordersJs.error, data.message || ordersJs.status_change_failed, 'error');
+                        }
+                    }).fail(function () {
+                        Swal.fire(ordersJs.error, ordersJs.status_change_error, 'error');
+                    });
+                });
             });
 
             $("#order_status").change(function(e){

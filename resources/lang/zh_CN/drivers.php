@@ -32,6 +32,7 @@ return [
     'status_labels' => [
         'active' => '启用',
         'inactive' => '停用',
+        'deleted' => '已删除',
     ],
 
     'delete_driver' => '删除司机',

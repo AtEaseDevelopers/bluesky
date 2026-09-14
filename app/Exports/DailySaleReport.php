@@ -61,7 +61,7 @@ class DailySaleReport implements FromCollection, WithHeadings, WithEvents, WithC
                     $sheet->setCellValue('G' . $no, $order->quantity);
                     $sheet->setCellValue('H' . $no, $order->unit_price);
                     $sheet->setCellValue('I' . $no, $order->price);
-                    $sheet->setCellValue('J' . $no, $this->reportService->paymentMethodLabel($order->payment_method));
+                    $sheet->setCellValue('J' . $no, $this->reportService->recordedPaymentLabel($order->recorded_payment_methods));
 
                     if ($preOrderId == $order->id) {
                         $sheet->setCellValue('K' . $no, '');

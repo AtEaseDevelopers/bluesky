@@ -258,27 +258,57 @@ class DriverPortalTest extends TestCase
     }
 
     /** @test */
-    public function driver_can_put_in_route_order_on_hold_without_proof()
+    public function driver_delivering_an_unpaid_cod_order_flags_payment_on_hold()
+    {
+        Storage::fake('local');
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, [
+            'status' => 'in_route',
+            'total_price' => 150.00,
+            'paid_amount' => 0,
+            'payment_status' => 'unpaid',
+        ]);
+
+        $this->actingAs($driver, 'web_driver')
+            ->post(route('driver.orders.hold', $order->id), [
+                'delivery_proof' => UploadedFile::fake()->image('proof.jpg'),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $fresh = $order->fresh();
+        // Goods are delivered; only the payment is held.
+        $this->assertSame('delivered', $fresh->status);
+        $this->assertSame('on_hold', $fresh->payment_status);
+        $this->assertNotNull($fresh->payment_held_at);
+        $this->assertSame($driver->id, (int) $fresh->payment_held_by);
+        $this->assertNotNull($fresh->delivery_proof);
+    }
+
+    /** @test */
+    public function driver_cannot_hold_without_a_delivery_proof_photo()
     {
         $driver = $this->makeDriver();
         $order = $this->makeOrder($driver, ['status' => 'in_route']);
 
         $this->actingAs($driver, 'web_driver')
             ->post(route('driver.orders.hold', $order->id))
-            ->assertRedirect()
-            ->assertSessionHas('success');
+            ->assertSessionHasErrors('delivery_proof');
 
-        $this->assertSame('on_hold', $order->fresh()->status);
+        $this->assertSame('in_route', $order->fresh()->status);
     }
 
     /** @test */
-    public function driver_cannot_put_order_on_hold_unless_in_route()
+    public function driver_cannot_hold_payment_unless_order_is_in_route()
     {
+        Storage::fake('local');
         $driver = $this->makeDriver();
         $order = $this->makeOrder($driver, ['status' => 'pending']);
 
         $this->actingAs($driver, 'web_driver')
-            ->post(route('driver.orders.hold', $order->id))
+            ->post(route('driver.orders.hold', $order->id), [
+                'delivery_proof' => UploadedFile::fake()->image('proof.jpg'),
+            ])
             ->assertRedirect()
             ->assertSessionHas('error');
 
@@ -286,39 +316,40 @@ class DriverPortalTest extends TestCase
     }
 
     /** @test */
-    public function driver_can_resume_an_on_hold_order_back_to_in_route()
+    public function recording_payment_clears_the_hold_and_marks_it_paid()
     {
         $driver = $this->makeDriver();
-        $order = $this->makeOrder($driver, ['status' => 'on_hold']);
+        $order = $this->makeOrder($driver, [
+            'status' => 'delivered',
+            'total_price' => 150.00,
+            'paid_amount' => 0,
+            'payment_status' => 'on_hold',
+            'payment_held_at' => now(),
+            'payment_held_by' => $driver->id,
+        ]);
 
         $this->actingAs($driver, 'web_driver')
-            ->post(route('driver.orders.resume', $order->id))
-            ->assertRedirect()
-            ->assertSessionHas('success');
+            ->post(route('driver.orders.record-payment', $order->id), [
+                'payment_method' => 'cash',
+                'paid_amount' => 150.00,
+            ])->assertRedirect();
 
-        $this->assertSame('in_route', $order->fresh()->status);
+        $fresh = $order->fresh();
+        $this->assertSame('paid', $fresh->payment_status);
+        $this->assertNull($fresh->payment_held_at);
+        $this->assertNull($fresh->payment_held_by);
     }
 
     /** @test */
-    public function driver_cannot_resume_an_order_that_is_not_on_hold()
+    public function in_route_shows_hold_action_and_held_order_shows_notice()
     {
         $driver = $this->makeDriver();
-        $order = $this->makeOrder($driver, ['status' => 'in_route']);
-
-        $this->actingAs($driver, 'web_driver')
-            ->post(route('driver.orders.resume', $order->id))
-            ->assertRedirect()
-            ->assertSessionHas('error');
-
-        $this->assertSame('in_route', $order->fresh()->status);
-    }
-
-    /** @test */
-    public function in_route_order_detail_shows_hold_action_and_on_hold_shows_resume()
-    {
-        $driver = $this->makeDriver();
-        $inRoute = $this->makeOrder($driver, ['status' => 'in_route']);
-        $held = $this->makeOrder($driver, ['status' => 'on_hold']);
+        $inRoute = $this->makeOrder($driver, ['status' => 'in_route', 'payment_status' => 'unpaid']);
+        $held = $this->makeOrder($driver, [
+            'status' => 'delivered',
+            'payment_status' => 'on_hold',
+            'payment_held_at' => now(),
+        ]);
 
         $this->actingAs($driver, 'web_driver')
             ->get(route('driver.orders.show', $inRoute->id))
@@ -328,7 +359,17 @@ class DriverPortalTest extends TestCase
         $this->actingAs($driver, 'web_driver')
             ->get(route('driver.orders.show', $held->id))
             ->assertOk()
-            ->assertSee(__('driver_portal.deliveries.resume_button'));
+            ->assertSee(__('driver_portal.deliveries.on_hold_notice'));
+    }
+
+    /** @test */
+    public function on_hold_is_no_longer_a_valid_delivery_status_transition()
+    {
+        $driver = $this->makeDriver();
+        $order = $this->makeOrder($driver, ['status' => 'in_route']);
+
+        $this->expectException(\InvalidArgumentException::class);
+        app(\App\Services\OrderStatusService::class)->transition($order, 'on_hold', null);
     }
 
     /** @test */

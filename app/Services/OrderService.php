@@ -46,20 +46,35 @@ class OrderService
             ->where('status', OrderPayment::STATUS_PENDING)
             ->exists();
 
+        // A payment hold (goods delivered, payment deferred) is a persisted intent
+        // on orders.payment_held_at. It derives the "on_hold" payment_status while a
+        // balance is still due, and clears automatically once the order is settled.
+        $isHeld = $order->payment_held_at !== null;
+
         if ($paid >= $total && $total > 0) {
             $status = Order::$payment_status['paid'];
+            $isHeld = false;
         } elseif ($hasPendingProof) {
             $status = Order::$payment_status['pending'];
+        } elseif ($isHeld) {
+            $status = Order::$payment_status['on_hold'];
         } elseif ($this->isPaymentOverdue($order, $paid, $total)) {
             $status = Order::$payment_status['payment_due'];
         } else {
             $status = Order::$payment_status['unpaid'];
         }
 
-        $order->update([
+        $updates = [
             'paid_amount' => $paid,
             'payment_status' => $status,
-        ]);
+        ];
+
+        if (!$isHeld && $order->payment_held_at !== null) {
+            $updates['payment_held_at'] = null;
+            $updates['payment_held_by'] = null;
+        }
+
+        $order->update($updates);
 
         $order = $order->fresh();
 
@@ -1046,6 +1061,89 @@ class OrderService
                 Order::$status['in_route'],
                 Order::$status['delivered'],
             ], true)) {
+                PdfHelper::GenerateOrderInvoice($order);
+                PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
+            }
+
+            return $order->fresh();
+        });
+    }
+
+    /**
+     * Inline weight + delivery-fee edit from the order summary page.
+     *
+     * Unlike applyReviewAdjustments()/updateDeliveryFee(), this is intentionally
+     * NOT gated by canAdminAdjustPricing(): admins may correct the billed weight
+     * or delivery fee on an order in ANY status (including completed, paid, or
+     * cancelled). Each weight-billed line's price is recomputed from the new
+     * weight, the order's totals and payment status are recalculated, and any
+     * documents the order already exposes are regenerated so stored PDFs stay in
+     * sync with the on-demand view.
+     *
+     * @param array<int|string, array{weight?: mixed}> $lineItems keyed by order_product id
+     */
+    public function applyWeightAndFeeAdjustments(Order $order, array $lineItems, ?float $deliveryFee, ?int $adminId = null): Order
+    {
+        return DB::transaction(function () use ($order, $lineItems, $deliveryFee) {
+            $orderWeight = 0.0;
+
+            $lines = OrderProduct::where('order_id', $order->id)
+                ->where('status', OrderProduct::$status['active'])
+                ->get();
+
+            foreach ($lines as $line) {
+                $item = $lineItems[$line->id] ?? null;
+                $weightInput = ($item !== null && isset($item['weight']) && $item['weight'] !== '')
+                    ? (float) $item['weight']
+                    : null;
+
+                $product = Product::find($line->product_id);
+
+                if ($product) {
+                    $sellIn = Product::resolveSellInForOrderLine($line, $product);
+                    $qtyInput = Product::lineNeedsQuantityInput($sellIn)
+                        ? ($line->quantity !== null ? (float) $line->quantity : null)
+                        : null;
+                    $weightForCalc = Product::lineNeedsWeightInput($sellIn) ? $weightInput : null;
+
+                    $calcProduct = clone $product;
+                    $calcProduct->sell_in = $sellIn;
+
+                    $resolved = $calcProduct->resolveLineInputs($qtyInput, $weightForCalc, true);
+                    $lineTotal = $calcProduct->calculateLinePrice(
+                        (float) $line->unit_price,
+                        $qtyInput,
+                        $weightForCalc,
+                        true
+                    );
+
+                    $line->update([
+                        'weight' => $resolved['weight'],
+                        'product_weight' => $resolved['product_weight'] ?? $weightForCalc,
+                        'price' => $lineTotal,
+                    ]);
+
+                    $orderWeight += $resolved['order_weight'] ?? 0;
+                } else {
+                    $quantity = (float) ($line->quantity ?? 0);
+                    $line->update([
+                        'weight' => $weightInput,
+                        'product_weight' => $weightInput,
+                        'price' => (float) $line->unit_price * $quantity,
+                    ]);
+                    $orderWeight += $weightInput ?? 0;
+                }
+            }
+
+            $updates = ['order_weight' => $orderWeight];
+            if ($deliveryFee !== null) {
+                $updates['delivery_fee'] = max(0, $deliveryFee);
+            }
+            $order->update($updates);
+
+            $order = $this->recalculateTotals($order->fresh());
+
+            if ($order->canShowInvoice() || $order->canShowDeliveryOrder()) {
                 PdfHelper::GenerateOrderInvoice($order);
                 PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
             }

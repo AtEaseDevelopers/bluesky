@@ -19,6 +19,7 @@ class Order extends Model
         'subtotal',
         'delivery_fee',
         'amount_adjustment',
+        'discount',
         'adjustment_remark',
         'attn_name',
         'attn_contact',
@@ -66,6 +67,8 @@ class Order extends Model
         'payment_proof',
         'payment_collected_at',
         'payment_collected_by',
+        'payment_held_at',
+        'payment_held_by',
     ];
 
     protected $casts = [
@@ -75,6 +78,7 @@ class Order extends Model
         'pickup_confirmed_at' => 'datetime',
         'courier_confirmed_at' => 'datetime',
         'driver_assigned_at' => 'datetime',
+        'payment_held_at' => 'datetime',
         'is_estimated' => 'boolean',
     ];
 
@@ -91,6 +95,37 @@ class Order extends Model
                 $order->driver_assigned_at = null;
             }
         });
+
+        static::saving(function (self $order) {
+            $order->flattenTotalDecimal();
+        });
+    }
+
+    /**
+     * Flatten the grand total's decimal: whenever the total changes, round it
+     * down to whole ringgit and record the shaved cents as a discount so the
+     * balance due lands on a clean amount.
+     */
+    public function flattenTotalDecimal(): void
+    {
+        if (!$this->isDirty('total_price')) {
+            return;
+        }
+
+        $raw = (float) $this->total_price;
+
+        if ($raw <= 0) {
+            $this->discount = 0;
+
+            return;
+        }
+
+        // Work in integer cents to avoid floating-point drift on the split.
+        $rawCents = (int) round($raw * 100);
+        $flooredCents = intdiv($rawCents, 100) * 100;
+
+        $this->total_price = $flooredCents / 100;
+        $this->discount = ($rawCents - $flooredCents) / 100;
     }
 
     public static $path = 'orders';
@@ -114,7 +149,6 @@ class Order extends Model
         'pending' => 'pending',
         'packing' => 'packing',
         'in_route' => 'in_route',
-        'on_hold' => 'on_hold',
         'delivered' => 'delivered',
         'credit' => 'credit',
         'completed' => 'completed',
@@ -215,6 +249,9 @@ class Order extends Model
         'partial' => 'partial',
         'paid' => 'paid',
         'payment_due' => 'payment_due',
+        // Goods delivered but payment deferred/held (COD equivalent of the
+        // credit-customer "credit" holding state). Backed by orders.payment_held_at.
+        'on_hold' => 'on_hold',
     ];
 
     public static $order_types = [
@@ -759,6 +796,12 @@ class Order extends Model
     public function paymentCollected(): bool
     {
         return (float) $this->paid_amount > 0;
+    }
+
+    /** Goods delivered but payment deferred — flagged on hold, not yet settled. */
+    public function isPaymentOnHold(): bool
+    {
+        return $this->payment_status === self::$payment_status['on_hold'];
     }
 
     public function isFullyPaid(): bool

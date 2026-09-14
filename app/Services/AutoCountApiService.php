@@ -769,6 +769,7 @@ class AutoCountApiService
                 'api_do_id' => $order->api_do_id,
                 'user_id' => $order->user_id ?? 0,
                 'total_price' => number_format((float) $order->total_price, 2, '.', ''),
+                'discount' => number_format((float) $order->discount, 2, '.', ''),
                 'billing_address' => $order->billing_address,
                 'billing_postcode' => $order->billing_postcode,
                 'billing_state' => $order->billing_state,

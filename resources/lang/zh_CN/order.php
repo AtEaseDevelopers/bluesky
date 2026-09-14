@@ -20,6 +20,7 @@ return [
         'partial' => '未付清',
         'paid' => '已付款',
         'payment_due' => '到期应付',
+        'on_hold' => '暂缓（未付款）',
     ],
     'fulfillment_types' => [
         'delivery' => '配送',

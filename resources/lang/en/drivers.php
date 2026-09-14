@@ -38,6 +38,7 @@ return [
     'status_labels' => [
         'active' => 'Active',
         'inactive' => 'Inactive',
+        'deleted' => 'Deleted',
     ],
 
     'delete_driver' => 'Delete Driver',
