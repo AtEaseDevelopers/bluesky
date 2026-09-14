@@ -145,10 +145,11 @@ class OrderRestoreFromCancelledTest extends TestCase
         $this->assertSame(Order::$status['cancelled'], $order->fresh()->status);
         $this->assertEqualsWithDelta(0.00, (float) $customer->fresh()->credit_balance, 0.001);
 
-        // Restore to delivered — a confirmed credit-term charge auto-parks it on credit.
+        // Restore to delivered — the order stays delivered, its re-confirmed
+        // credit-term charge carrying the balance on the credit account again.
         $restored = app(OrderStatusService::class)->restoreFromCancelled($order->fresh(), Order::$status['delivered'], $admin->id);
 
-        $this->assertSame(Order::$status['credit'], $restored->status);
+        $this->assertSame(Order::$status['delivered'], $restored->status);
         // Customer owes the 30 again.
         $this->assertEqualsWithDelta(-30.00, (float) $customer->fresh()->credit_balance, 0.001);
         // The reversal ledger entry is gone and the voided payment is confirmed again.

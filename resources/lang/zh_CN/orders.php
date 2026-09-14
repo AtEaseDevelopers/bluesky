@@ -239,8 +239,6 @@ return [
 
     'id' => '编号',
     'search_id' => '搜索编号',
-    'search_phone' => '电话 / 姓名 / 商品',
-    'search_phone_placeholder' => '搜索电话、客户姓名、商品名称或发票号',
     'search_address' => '地址',
     'search_address_placeholder' => '搜索账单或送货地址',
     'status' => '状态',

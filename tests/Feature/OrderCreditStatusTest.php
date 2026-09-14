@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Admin;
 use App\CustomerCreditLog;
 use App\Order;
-use App\OrderPayment;
 use App\Services\OrderService;
 use App\Services\OrderStatusService;
 use App\User;
@@ -72,13 +71,13 @@ class OrderCreditStatusTest extends TestCase
     }
 
     /** @test */
-    public function credit_is_a_registered_order_status(): void
+    public function credit_is_no_longer_a_registered_order_status(): void
     {
-        $this->assertArrayHasKey('credit', Order::$status);
+        $this->assertArrayNotHasKey('credit', Order::$status);
     }
 
     /** @test */
-    public function recording_a_credit_term_payment_on_a_delivered_order_moves_it_to_credit_status(): void
+    public function recording_a_credit_term_payment_on_a_delivered_order_leaves_it_delivered(): void
     {
         $admin = $this->makeAdmin();
         $customer = $this->makeCreditCustomer();
@@ -93,11 +92,13 @@ class OrderCreditStatusTest extends TestCase
             $admin->id
         );
 
-        $this->assertSame(Order::$status['credit'], $order->fresh()->status);
+        // No credit holding state — the order stays delivered, its unsettled
+        // credit-term charge gating completion instead.
+        $this->assertSame(Order::$status['delivered'], $order->fresh()->status);
     }
 
     /** @test */
-    public function delivering_an_order_that_already_has_a_credit_term_charge_enters_credit_status(): void
+    public function delivering_an_order_that_already_has_a_credit_term_charge_stays_delivered(): void
     {
         $admin = $this->makeAdmin();
         $customer = $this->makeCreditCustomer();
@@ -121,12 +122,11 @@ class OrderCreditStatusTest extends TestCase
         $service->transition($order->fresh(), Order::$status['in_route'], $admin->id);
         $order = $service->transition($order->fresh(), Order::$status['delivered'], $admin->id);
 
-        // Reaching delivered auto-routes into the credit holding state.
-        $this->assertSame(Order::$status['credit'], $order->fresh()->status);
+        $this->assertSame(Order::$status['delivered'], $order->fresh()->status);
     }
 
     /** @test */
-    public function a_credit_order_cannot_be_completed_while_the_customer_still_owes(): void
+    public function a_delivered_credit_term_order_cannot_be_completed_while_the_customer_still_owes(): void
     {
         $admin = $this->makeAdmin();
         $customer = $this->makeCreditCustomer();
@@ -141,7 +141,7 @@ class OrderCreditStatusTest extends TestCase
             $admin->id
         );
 
-        $this->assertSame(Order::$status['credit'], $order->fresh()->status);
+        $this->assertSame(Order::$status['delivered'], $order->fresh()->status);
 
         $this->expectException(\InvalidArgumentException::class);
         app(OrderStatusService::class)->transition(
@@ -152,7 +152,7 @@ class OrderCreditStatusTest extends TestCase
     }
 
     /** @test */
-    public function next_statuses_hides_complete_for_an_outstanding_credit_order(): void
+    public function next_statuses_hides_complete_for_an_outstanding_credit_term_order(): void
     {
         $admin = $this->makeAdmin();
         $customer = $this->makeCreditCustomer();
@@ -170,8 +170,6 @@ class OrderCreditStatusTest extends TestCase
         $next = app(OrderStatusService::class)->nextStatuses($order->fresh());
 
         $this->assertNotContains(Order::$status['completed'], $next);
-        // 'credit' is an automatic state, never offered as a manual action.
-        $this->assertNotContains(Order::$status['credit'], $next);
     }
 
     /** @test */
@@ -180,7 +178,7 @@ class OrderCreditStatusTest extends TestCase
         $admin = $this->makeAdmin();
         $customer = $this->makeCreditCustomer();
 
-        // Order A parked on credit (customer now owes 30).
+        // Order A carried on the credit account (customer now owes 30).
         $creditOrder = $this->makeOrder($customer);
         app(OrderService::class)->recordPayment(
             $creditOrder->fresh(),
@@ -212,8 +210,8 @@ class OrderCreditStatusTest extends TestCase
         );
 
         $this->assertSame(Order::$status['completed'], $completed->fresh()->status);
-        // Order A remains held on credit.
-        $this->assertSame(Order::$status['credit'], $creditOrder->fresh()->status);
+        // Order A remains delivered, still owing on the credit account.
+        $this->assertSame(Order::$status['delivered'], $creditOrder->fresh()->status);
     }
 
     /** @test */
@@ -236,8 +234,8 @@ class OrderCreditStatusTest extends TestCase
             );
         }
 
-        $this->assertSame(Order::$status['credit'], $orderA->fresh()->status);
-        $this->assertSame(Order::$status['credit'], $orderB->fresh()->status);
+        $this->assertSame(Order::$status['delivered'], $orderA->fresh()->status);
+        $this->assertSame(Order::$status['delivered'], $orderB->fresh()->status);
         $this->assertEqualsWithDelta(-60.00, (float) $customer->fresh()->credit_balance, 0.001);
 
         $response = $this->actingAs($admin, 'web_admin')
@@ -267,7 +265,7 @@ class OrderCreditStatusTest extends TestCase
     }
 
     /** @test */
-    public function marking_one_order_paid_leaves_the_other_on_credit(): void
+    public function marking_one_order_paid_leaves_the_other_delivered(): void
     {
         $admin = $this->makeAdmin();
         $customer = $this->makeCreditCustomer();
@@ -295,9 +293,9 @@ class OrderCreditStatusTest extends TestCase
             ])
             ->assertRedirect();
 
-        // Only order A settled and completed; B still owes and stays on credit.
+        // Only order A settled and completed; B still owes and stays delivered.
         $this->assertSame(Order::$status['completed'], $orderA->fresh()->status);
-        $this->assertSame(Order::$status['credit'], $orderB->fresh()->status);
+        $this->assertSame(Order::$status['delivered'], $orderB->fresh()->status);
         $this->assertEqualsWithDelta(-30.00, (float) $customer->fresh()->credit_balance, 0.001);
         $this->assertEqualsWithDelta(0.00, $orderA->fresh()->creditOutstandingAmount(), 0.001);
         $this->assertEqualsWithDelta(30.00, $orderB->fresh()->creditOutstandingAmount(), 0.001);
@@ -345,125 +343,8 @@ class OrderCreditStatusTest extends TestCase
             ->post(route('admin.customers.credit.mark-paid', encrypt($customer->id)), [])
             ->assertRedirect();
 
-        // Unchanged: still owing, still in credit status.
+        // Unchanged: still owing, still delivered.
         $this->assertEqualsWithDelta(-30.00, (float) $customer->fresh()->credit_balance, 0.001);
-        $this->assertSame(Order::$status['credit'], $order->fresh()->status);
-    }
-
-    /** A pre-feature order: completed with an unsettled credit-term charge. */
-    private function makeLegacyCompletedCreditOrder(User $customer, float $amount = 30.00): Order
-    {
-        $order = $this->makeOrder($customer, [
-            'total_price' => $amount,
-            'subtotal' => $amount,
-            'paid_amount' => $amount,
-            'status' => Order::$status['completed'],
-            'payment_status' => Order::$payment_status['paid'],
-            'completed_at' => now()->subDays(3),
-        ]);
-
-        OrderPayment::forceCreate([
-            'order_id' => $order->id,
-            'payment_method' => 'credit-term',
-            'amount' => $amount,
-            'status' => OrderPayment::STATUS_CONFIRMED,
-        ]);
-
-        return $order->fresh();
-    }
-
-    /** @test */
-    public function backfill_dry_run_reports_but_leaves_orders_completed(): void
-    {
-        $customer = $this->makeCreditCustomer();
-        $order = $this->makeLegacyCompletedCreditOrder($customer);
-
-        $this->artisan('credit:backfill-credit-status', ['--dry-run' => true])
-            ->assertExitCode(0);
-
-        $this->assertSame(Order::$status['completed'], $order->fresh()->status);
-        $this->assertNotNull($order->fresh()->completed_at);
-    }
-
-    /** @test */
-    public function backfill_moves_unsettled_completed_credit_orders_to_credit(): void
-    {
-        $customer = $this->makeCreditCustomer();
-        $order = $this->makeLegacyCompletedCreditOrder($customer);
-
-        $this->artisan('credit:backfill-credit-status')->assertExitCode(0);
-
-        $this->assertSame(Order::$status['credit'], $order->fresh()->status);
-        $this->assertNull($order->fresh()->completed_at);
-    }
-
-    /** @test */
-    public function backfill_moves_delivered_credit_orders_that_never_advanced(): void
-    {
-        $customer = $this->makeCreditCustomer();
-
-        // Delivered credit-term order that predates the auto-credit trigger.
-        $order = $this->makeOrder($customer, [
-            'status' => Order::$status['delivered'],
-            'payment_status' => Order::$payment_status['paid'],
-            'paid_amount' => 30.00,
-        ]);
-        OrderPayment::forceCreate([
-            'order_id' => $order->id,
-            'payment_method' => 'credit-term',
-            'amount' => 30.00,
-            'status' => OrderPayment::STATUS_CONFIRMED,
-        ]);
-
-        $this->artisan('credit:backfill-credit-status')->assertExitCode(0);
-
-        $this->assertSame(Order::$status['credit'], $order->fresh()->status);
-    }
-
-    /** @test */
-    public function backfill_skips_a_completed_credit_order_that_was_settled(): void
-    {
-        $admin = $this->makeAdmin();
-        $customer = $this->makeCreditCustomer();
-        $order = $this->makeLegacyCompletedCreditOrder($customer, 30.00);
-
-        // Its credit-term charge has already been cleared on the ledger.
-        CustomerCreditLog::forceCreate([
-            'user_id' => $customer->id,
-            'type' => 'credit_settlement',
-            'amount' => 30.00,
-            'balance_before' => -30.00,
-            'balance_after' => 0,
-            'order_id' => $order->id,
-            'recorded_by' => $admin->id,
-        ]);
-
-        $this->assertEqualsWithDelta(0.00, $order->fresh()->creditOutstandingAmount(), 0.001);
-
-        $this->artisan('credit:backfill-credit-status')->assertExitCode(0);
-
-        $this->assertSame(Order::$status['completed'], $order->fresh()->status);
-    }
-
-    /** @test */
-    public function backfill_ignores_completed_orders_without_a_credit_term_charge(): void
-    {
-        $customer = $this->makeCreditCustomer();
-
-        $order = $this->makeOrder($customer, [
-            'status' => Order::$status['completed'],
-            'payment_status' => Order::$payment_status['paid'],
-            'paid_amount' => 30.00,
-        ]);
-        OrderPayment::forceCreate([
-            'order_id' => $order->id,
-            'payment_method' => 'bank-transfer',
-            'amount' => 30.00,
-            'status' => OrderPayment::STATUS_CONFIRMED,
-        ]);
-
-        $this->artisan('credit:backfill-credit-status')->assertExitCode(0);
-
-        $this->assertSame(Order::$status['completed'], $order->fresh()->status);
+        $this->assertSame(Order::$status['delivered'], $order->fresh()->status);
     }
 }

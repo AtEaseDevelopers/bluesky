@@ -55,9 +55,13 @@ class PdfHelper extends Model
             return $order->customer;
         }
 
+        // Mirror Order::pdfCustomer()/OrderService::displayCustomerName(): a
+        // walk-in order stores its name in walk_in_name, so prefer that before
+        // falling back to attn_name. Otherwise the invoice/DO customer box
+        // renders blank for walk-in orders that never set attn_name.
         $fallback = new User([
-            'name' => $order->attn_name,
-            'attn_contact' => $order->attn_contact,
+            'name' => $order->walk_in_name ?: ($order->attn_name ?: 'Walk-in Customer'),
+            'attn_contact' => $order->walk_in_phone ?: $order->attn_contact,
         ]);
         // Public COD invoices should display prices; no per-customer flags exist.
         $fallback->invoice_price_permission = true;

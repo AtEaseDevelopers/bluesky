@@ -134,7 +134,7 @@ class AdminCreditMarkPaidTest extends TestCase
         // 10 of 30 cleared — balance and outstanding both reflect the remainder.
         $this->assertEqualsWithDelta(-20.00, (float) $customer->fresh()->credit_balance, 0.001);
         $this->assertEqualsWithDelta(20.00, $order->fresh()->creditOutstandingAmount(), 0.001);
-        $this->assertSame(Order::$status['credit'], $order->fresh()->status);
+        $this->assertSame(Order::$status['delivered'], $order->fresh()->status);
     }
 
     /** @test */
@@ -177,13 +177,13 @@ class AdminCreditMarkPaidTest extends TestCase
             ])
             ->assertSessionHasErrors("payments.{$order->id}.payment_method");
 
-        // Nothing settled: still owing, still on credit.
+        // Nothing settled: still owing, still delivered.
         $this->assertSame(
             0,
             CustomerCreditLog::where('order_id', $order->id)->where('type', 'credit_settlement')->count()
         );
         $this->assertEqualsWithDelta(-30.00, (float) $customer->fresh()->credit_balance, 0.001);
-        $this->assertSame(Order::$status['credit'], $order->fresh()->status);
+        $this->assertSame(Order::$status['delivered'], $order->fresh()->status);
     }
 
     /** @test */

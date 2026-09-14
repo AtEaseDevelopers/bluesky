@@ -131,6 +131,37 @@ class PdfDocumentFormatTest extends TestCase
         return $order;
     }
 
+    /** Walk-in order with a name but no registered customer and no attn_name. */
+    private function seedWalkInOrder(): Order
+    {
+        $order = Order::forceCreate([
+            'user_id' => null,
+            'order_type' => Order::$order_types['walk_in'],
+            'walk_in_name' => 'John Tan',
+            'walk_in_phone' => '0123456789',
+            'attn_name' => null,
+            'attn_contact' => null,
+            'total_price' => 583.00,
+            'subtotal' => 583.00,
+            'delivery_fee' => 0,
+            'amount_adjustment' => 0,
+            'order_weight' => 11,
+            'paid_amount' => 0,
+            'status' => 'pending',
+            'fulfillment_type' => 'delivery',
+            'payment_method' => 'cash',
+            'payment_status' => 'unpaid',
+            'invoice_number' => 'IV-2609-00736',
+            'billing_address' => "12 JALAN WALK IN\n50000 KUALA LUMPUR",
+            'billing_postcode' => '50000',
+            'billing_state' => 'WP',
+            'shipping_address' => "12 JALAN WALK IN\n50000 KUALA LUMPUR",
+        ]);
+        $this->addLine($order, $this->makeProduct('SZZ029', 'CRAYFISH (M SIZE)', 53.00), 11, 583.00);
+
+        return $order;
+    }
+
     /** @test */
     public function invoice_renders_chinese_format_with_meta_addresses_and_product_codes(): void
     {
@@ -195,6 +226,28 @@ class PdfDocumentFormatTest extends TestCase
         $this->assertStringContainsString('DO-2609-00735', $html);
         $this->assertStringContainsString('产品编号', $html);
         $this->assertStringContainsString('SZZ029', $html);
+    }
+
+    /** @test */
+    public function invoice_shows_walk_in_name_when_attn_name_is_empty(): void
+    {
+        $order = $this->seedWalkInOrder();
+        $html = view('pdf.invoice', $this->invoiceData($order))->render();
+
+        $this->assertStringContainsString('John Tan', $html);
+    }
+
+    /** @test */
+    public function delivery_order_shows_walk_in_name_when_attn_name_is_empty(): void
+    {
+        $order = $this->seedWalkInOrder();
+        $data = $this->invoiceData($order);
+        $data['do_no'] = 'DO-2609-00736';
+        $data['show_prices'] = true;
+
+        $html = view('pdf.delivery-order', $data)->render();
+
+        $this->assertStringContainsString('John Tan', $html);
     }
 
     /** @test */

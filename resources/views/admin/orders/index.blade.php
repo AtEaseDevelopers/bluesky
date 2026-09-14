@@ -55,6 +55,15 @@
                                                 {{ $cust->name }}
                                             </option>
                                         @endforeach
+                                        @if(!empty($walk_in_customers))
+                                            <optgroup label="{{ __('order.order_type.walk_in') }}">
+                                                @foreach($walk_in_customers as $walkInName)
+                                                    <option value="walk_in:{{ $walkInName }}" {{ ($input['customer'] ?? '') === 'walk_in:'.$walkInName ? 'selected' : '' }}>
+                                                        {{ $walkInName }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endif
                                     </select>
                                 </div>
                             </div>
@@ -96,12 +105,6 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group mb-4">
-                                    <label class="mb-2" for="filterPhone">{{ __('orders.search_phone') }}</label>
-                                    <input type="text" class="form-control" name="phone" id="filterPhone" value="{{ $input['phone'] ?? '' }}" placeholder="{{ __('orders.search_phone_placeholder') }}">
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -265,7 +268,7 @@
                                                             <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.invoice', $order->id) }}">{{ __('orders.view_invoice') }}</a>
                                                         </li>
                                                     @endif
-                                                    @if ($order->canShowDeliveryOrder())
+                                                    @if ($order->canAdminShowDeliveryOrder())
                                                         <li>
                                                             <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">{{ __('orders.view_do') }}</a>
                                                         </li>
@@ -333,14 +336,10 @@
                                             @endif
                                         </td>
                                         <td class="text-center">
-                                            @if ($order->status === Order::$status['credit'])
-                                                <span class="badge bg-warning text-dark">{{ __('order.status.credit') }}</span>
-                                            @else
-                                                {{ __('order.status.' . $order->status) }}
-                                            @endif
+                                            {{ __('order.status.' . $order->status) }}
                                         </td>
                                         <td class="text-center">
-                                            {{ \App\OrderPayment::paymentMethodLabel($order->payment_method) ?? '-' }}
+                                            {{ $order->recordedPaymentMethodsLabel() }}
                                         </td>
                                         <td class="text-center">
                                             @php
@@ -434,7 +433,6 @@
                             <select class="form-select" id="order_status" name="status" required>
                                 <option value="">{{ __('orders.choose') }}</option>
                                 @foreach ($statuses as $key => $value)
-                                    @continue($key === \App\Order::$status['credit'])
                                     <option value="{{ $key }}">
                                         {{ $value }}
                                     </option>

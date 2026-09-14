@@ -13,9 +13,8 @@ use InvalidArgumentException;
 class OrderStatusService
 {
     /**
-     * Active statuses a cancelled order may be restored to. `credit` is an
-     * automatic holding state and `completed` needs its own settlement flow, so
-     * neither is offered as a manual restore target.
+     * Active statuses a cancelled order may be restored to. `completed` needs its
+     * own settlement flow, so it is not offered as a manual restore target.
      */
     private const RESTORE_TARGETS = ['pending', 'packing', 'in_route', 'delivered'];
 
@@ -24,8 +23,7 @@ class OrderStatusService
         'pending' => ['packing', 'cancelled'],
         'packing' => ['in_route', 'cancelled'],
         'in_route' => ['delivered', 'cancelled'],
-        'delivered' => ['credit', 'completed', 'cancelled'],
-        'credit' => ['completed', 'cancelled'],
+        'delivered' => ['completed', 'cancelled'],
         'completed' => [],
         'cancelled' => ['pending', 'packing', 'in_route', 'delivered'],
     ];
@@ -37,8 +35,7 @@ class OrderStatusService
                 'pending' => ['packing', 'cancelled'],
                 'packing' => ['delivered', 'cancelled'],
                 'in_route' => ['delivered', 'cancelled'],
-                'delivered' => ['credit', 'completed', 'cancelled'],
-                'credit' => ['completed', 'cancelled'],
+                'delivered' => ['completed', 'cancelled'],
                 'completed' => [],
                 'cancelled' => ['pending', 'packing', 'in_route', 'delivered'],
             ];
@@ -85,11 +82,6 @@ class OrderStatusService
             && $order->isDelivery()
             && !$order->driver_id) {
             throw new InvalidArgumentException(__('orders.assign_driver_required'));
-        }
-
-        if ($newStatus === Order::$status['credit']
-            && !($order->isCreditCustomer() && $order->hasConfirmedCreditTermPayment())) {
-            throw new InvalidArgumentException(__('orders.credit_status_requires_credit_term'));
         }
 
         if ($newStatus === Order::$status['completed'] && !$order->isFullyPaid()) {
@@ -148,26 +140,7 @@ class OrderStatusService
 
         app(OrderService::class)->refreshPaymentStatus($order->fresh());
 
-        if ($newStatus === Order::$status['delivered']) {
-            return $this->maybeEnterCredit($order->fresh(), $adminId);
-        }
-
         return $order->fresh();
-    }
-
-    /**
-     * A delivered credit order carrying a "buy now, pay later" charge is parked
-     * in the credit holding state until the customer settles their balance.
-     */
-    public function maybeEnterCredit(Order $order, ?int $adminId = null): Order
-    {
-        if ($order->status === Order::$status['delivered']
-            && $order->isCreditCustomer()
-            && $order->hasConfirmedCreditTermPayment()) {
-            return $this->transition($order, Order::$status['credit'], $adminId);
-        }
-
-        return $order;
     }
 
     /**
@@ -264,10 +237,6 @@ class OrderStatusService
         PdfHelper::GenerateOrderInvoice($fresh);
         PdfHelper::GenerateOrderInvoiceWithoutPrice($fresh);
 
-        if ($targetStatus === Order::$status['delivered']) {
-            return $this->maybeEnterCredit($order->fresh(), $adminId);
-        }
-
         return $order->fresh();
     }
 
@@ -282,12 +251,6 @@ class OrderStatusService
                 fn ($status) => $status !== Order::$status['completed']
             ));
         }
-
-        // Credit is an automatic holding state, never a manual action.
-        $statuses = array_values(array_filter(
-            $statuses,
-            fn ($status) => $status !== Order::$status['credit']
-        ));
 
         if ($order->isPickup()) {
             $statuses = array_values(array_filter(

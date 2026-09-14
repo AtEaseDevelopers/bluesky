@@ -63,8 +63,23 @@ class OrderController extends Controller
             $orders->where('id', $filter_id);
         }
 
-        if ($filter_user_id = $request->input('customer')) {
-            $orders->where('user_id', $filter_user_id);
+        if ($filter_customer = $request->input('customer')) {
+            // Walk-in customers have no user account, so their options carry a
+            // "walk_in:<name>" value and filter on the stored name instead.
+            if (str_starts_with($filter_customer, 'walk_in:')) {
+                $orders->where('walk_in_name', substr($filter_customer, strlen('walk_in:')));
+            } else {
+                // A registered customer may also have walk-in orders placed
+                // under their name, so match their account orders and any
+                // walk-in order sharing the same name.
+                $customerName = DB::table('users')->where('id', $filter_customer)->value('name');
+                $orders->where(function ($query) use ($filter_customer, $customerName) {
+                    $query->where('user_id', $filter_customer);
+                    if ($customerName !== null && $customerName !== '') {
+                        $query->orWhere('walk_in_name', $customerName);
+                    }
+                });
+            }
         }
 
         if ($filter_fdate = $request->input('fdate')) {
@@ -103,10 +118,6 @@ class OrderController extends Controller
             $orders->where('order_type', $filter_order_type);
         }
 
-        if ($phone = trim((string) $request->input('phone'))) {
-            $orders->filterByContactSearch($phone);
-        }
-
         if ($address = trim((string) $request->input('address'))) {
             $orders->filterByAddressSearch($address);
         }
@@ -117,7 +128,7 @@ class OrderController extends Controller
             $orders->orderby('do_no', $request->input('orderby') === 'do_no_asc' ? 'desc' : 'asc');
         } 
 
-        $orders = $orders->orderBy('id', 'desc')->with('customer')->paginate(15);
+        $orders = $orders->orderBy('id', 'desc')->with('customer', 'payments')->paginate(15);
 
         $orderIds = $orders->pluck('id');
         $orderProductsByOrder = collect();
@@ -183,6 +194,13 @@ class OrderController extends Controller
                 'payment_status_options' => Order::$payment_status,
                 'areas' => Area::optionsForSelect(),
                 'customers_list' => DB::table('users')->select('id', 'name')->get()->toArray(),
+                'walk_in_customers' => DB::table('orders')
+                    ->whereNotNull('walk_in_name')
+                    ->where('walk_in_name', '!=', '')
+                    ->distinct()
+                    ->orderBy('walk_in_name')
+                    ->pluck('walk_in_name')
+                    ->all(),
                 'deliveryDates' => DeliverySlot::availableDates(),
                 'deliverySlotsUrl' => route('admin.delivery-slots.for-date'),
             ]

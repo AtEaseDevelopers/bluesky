@@ -15,14 +15,14 @@
                     @if ($order->canAdminAdjustPricing() && $admin->canModule('orders', 'edit'))
                         <a href="{{ route('admin.orders.review', $order->id) }}" class="btn btn-primary">{{ __('orders.adjust_order') }}</a>
                     @endif
-                    @if ($order->canShowInvoice() || $order->canShowDeliveryOrder())
+                    @if ($order->canShowInvoice() || $order->canAdminShowDeliveryOrder())
                         <div class="btn-group">
                             <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">{{ __('orders.documents') }}</button>
                             <ul class="dropdown-menu">
                                 @if ($order->canShowInvoice())
                                     <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.invoice', $order->id) }}">{{ __('orders.view_invoice') }}</a></li>
                                 @endif
-                                @if ($order->canShowDeliveryOrder())
+                                @if ($order->canAdminShowDeliveryOrder())
                                     <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">{{ __('orders.view_do') }}</a></li>
                                 @endif
                             </ul>
@@ -67,11 +67,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <p><strong>{{ __('orders.status_label') }}</strong>
-                                        @if ($order->status === Order::$status['credit'])
-                                            <span class="badge bg-warning text-dark">{{ __('order.status.credit') }}</span>
-                                        @else
-                                            {{ __('order.status.' . $order->status) }}
-                                        @endif
+                                        {{ __('order.status.' . $order->status) }}
                                     </p>
                                     <p><strong>{{ __('orders.payment_label') }}</strong>
                                         @php
@@ -1080,6 +1076,8 @@
             var amountAdjustment = {{ (float) $order->amount_adjustment }};
             var paidAmount = {{ (float) $order->paid_amount }};
             var baseDeliveryFee = {{ (float) $order->delivery_fee }};
+            // Discount flattening only applies to orders from the go-live id onward.
+            var discountActive = {{ $order->discountFlatteningActive() ? 'true' : 'false' }};
             var deliveryFeeInput = document.getElementById('sm-delivery-fee');
 
             function setText(id, value) {
@@ -1115,7 +1113,7 @@
                 var raw = subtotal + currentDeliveryFee() + amountAdjustment;
                 var grand, discount;
 
-                if (raw > 0) {
+                if (raw > 0 && discountActive) {
                     // Mirror Order::flattenTotalDecimal(): floor to whole ringgit,
                     // shaved cents become the discount.
                     var rawCents = Math.round(raw * 100);
@@ -1123,7 +1121,7 @@
                     grand = flooredCents / 100;
                     discount = (rawCents - flooredCents) / 100;
                 } else {
-                    grand = 0;
+                    grand = Math.max(0, raw);
                     discount = 0;
                 }
 

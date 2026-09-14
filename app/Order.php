@@ -102,13 +102,38 @@ class Order extends Model
     }
 
     /**
+     * First order id that participates in discount flattening. Orders with a
+     * lower id keep their original cents and never accrue a discount, even when
+     * edited later; orders from this id onward have their grand total floored to
+     * whole ringgit.
+     */
+    public const DISCOUNT_EFFECTIVE_ORDER_ID = 310;
+
+    /**
+     * Whether the discount flattening applies to this order, decided by the
+     * order's id. A brand-new, unsaved order has no id yet, so we look at the
+     * next id the table will hand out.
+     */
+    public function discountFlatteningActive(): bool
+    {
+        $id = $this->id ?: ((int) static::max('id') + 1);
+
+        return $id >= self::DISCOUNT_EFFECTIVE_ORDER_ID;
+    }
+
+    /**
      * Flatten the grand total's decimal: whenever the total changes, round it
      * down to whole ringgit and record the shaved cents as a discount so the
-     * balance due lands on a clean amount.
+     * balance due lands on a clean amount. Only active for orders from
+     * {@see self::DISCOUNT_EFFECTIVE_ORDER_ID} onward.
      */
     public function flattenTotalDecimal(): void
     {
         if (!$this->isDirty('total_price')) {
+            return;
+        }
+
+        if (!$this->discountFlatteningActive()) {
             return;
         }
 
@@ -150,7 +175,6 @@ class Order extends Model
         'packing' => 'packing',
         'in_route' => 'in_route',
         'delivered' => 'delivered',
-        'credit' => 'credit',
         'completed' => 'completed',
         'cancelled' => 'cancelled',
     ];
@@ -189,32 +213,6 @@ class Order extends Model
         }
 
         $query->where('status', $statusFilter);
-    }
-
-    public function scopeFilterByContactSearch($query, ?string $term)
-    {
-        $pattern = Helper::likePattern($term);
-        if ($pattern === null) {
-            return $query;
-        }
-
-        return $query->where(function ($query) use ($pattern) {
-            $query->where('orders.attn_contact', 'like', $pattern)
-                ->orWhere('orders.walk_in_phone', 'like', $pattern)
-                ->orWhere('orders.walk_in_name', 'like', $pattern)
-                ->orWhere('orders.attn_name', 'like', $pattern)
-                ->orWhere('orders.invoice_number', 'like', $pattern)
-                ->orWhere('orders.area', 'like', $pattern)
-                ->orWhereHas('customer', function ($customerQuery) use ($pattern) {
-                    $customerQuery->where('name', 'like', $pattern)
-                        ->orWhere('attn_name', 'like', $pattern)
-                        ->orWhere('attn_contact', 'like', $pattern);
-                })
-                ->orWhereHas('orderProducts', function ($productQuery) use ($pattern) {
-                    $productQuery->where('product_name', 'like', $pattern)
-                        ->where('status', '!=', OrderProduct::$status['removed']);
-                });
-        });
     }
 
     public function scopeFilterByAddressSearch($query, ?string $term)
@@ -318,15 +316,8 @@ class Order extends Model
     {
         return in_array($this->status, [
             self::$status['delivered'],
-            self::$status['credit'],
             self::$status['completed'],
         ], true);
-    }
-
-    /** Order is parked on the customer's credit account, awaiting settlement. */
-    public function isOnCredit(): bool
-    {
-        return $this->status === self::$status['credit'];
     }
 
     /** A confirmed "buy now, pay later" charge has been recorded on this order. */
@@ -377,18 +368,32 @@ class Order extends Model
     }
 
     /**
-     * Only an order carried on the credit account (parked in the credit state or
-     * settled by a credit-term charge) must wait for its own credit-term amount
-     * to be settled before it can complete. Each order settles independently, so
-     * other unsettled orders on the same customer do not block it.
+     * Only an order carried on the credit account (settled by a credit-term
+     * charge) must wait for its own credit-term amount to be settled before it
+     * can complete. Each order settles independently, so other unsettled orders
+     * on the same customer do not block it.
      */
     public function requiresCreditSettlementBeforeComplete(): bool
     {
-        if (!$this->isOnCredit() && !$this->hasConfirmedCreditTermPayment()) {
+        if (!$this->hasConfirmedCreditTermPayment()) {
             return false;
         }
 
         return $this->creditOutstandingAmount() > 0.009;
+    }
+
+    /**
+     * Delivered orders carrying a confirmed credit-term ("buy now, pay later")
+     * charge — the orders on a credit customer's account awaiting settlement.
+     * A full settlement completes them; unsettled ones stay delivered.
+     */
+    public function scopeCarriedOnCredit($query)
+    {
+        return $query->where('status', self::$status['delivered'])
+            ->whereHas('payments', function ($q) {
+                $q->where('status', OrderPayment::STATUS_CONFIRMED)
+                    ->where('payment_method', 'credit-term');
+            });
     }
 
     public function isCompleted(): bool
@@ -406,7 +411,6 @@ class Order extends Model
     {
         return $this->canShowFulfillmentPanel()
             && !in_array($this->status, [
-                self::$status['credit'],
                 self::$status['completed'],
                 self::$status['cancelled'],
             ], true);
@@ -522,6 +526,16 @@ class Order extends Model
 
     public function paymentBreakdown(): array
     {
+        // Use the eager-loaded relation when available (e.g. the order listing)
+        // so a page of orders doesn't trigger a query per row.
+        if ($this->relationLoaded('payments')) {
+            return $this->payments
+                ->where('status', OrderPayment::STATUS_CONFIRMED)
+                ->groupBy('payment_method')
+                ->map(fn ($group) => (float) $group->sum('amount'))
+                ->all();
+        }
+
         return $this->payments()
             ->where('status', OrderPayment::STATUS_CONFIRMED)
             ->selectRaw('payment_method, SUM(amount) as total_amount')
@@ -546,6 +560,23 @@ class Order extends Model
         }
 
         return implode(' + ', $parts);
+    }
+
+    /** Recorded (confirmed) payment methods only, no amounts — for the order listing. */
+    public function recordedPaymentMethodsLabel(): string
+    {
+        $methods = array_keys($this->paymentBreakdown());
+
+        if (empty($methods)) {
+            return '-';
+        }
+
+        $labels = array_map(
+            fn ($method) => OrderPayment::paymentMethodLabel($method) ?? $method,
+            $methods
+        );
+
+        return implode(' + ', $labels);
     }
 
     public function preferredPaymentMethodLabel(): ?string
@@ -833,8 +864,16 @@ class Order extends Model
             self::$status['packing'],
             self::$status['in_route'],
             self::$status['delivered'],
-            self::$status['credit'],
         ], true);
+    }
+
+    /**
+     * Admins may always view the delivery order regardless of status. The
+     * customer-facing gate (canShowDeliveryOrder) stays restricted.
+     */
+    public function canAdminShowDeliveryOrder(): bool
+    {
+        return true;
     }
 
     public function canSubmitPaymentProof(): bool

@@ -35,7 +35,7 @@
     <script src="{{ asset('assets/js/form-draft.js') }}?v=3"></script>
     @yield('script')
     <script src="{{ asset('assets/js/numeric-input.js') }}?v=1"></script>
-    <script src="{{ asset('assets/js/script.js') }}?v=2.5"></script>
+    <script src="{{ asset('assets/js/script.js') }}?v=2.6"></script>
 </body>
 
 </html>

@@ -79,9 +79,9 @@ class OrderCancellationCreditTest extends TestCase
         $customer = $this->makeCreditCustomer();
         $order = $this->makeOrder($customer);
 
-        // Buy-now-pay-later charge parks the order on credit; customer now owes 30.
+        // Buy-now-pay-later charge carries the order on the credit account; customer now owes 30.
         app(OrderService::class)->recordPayment($order->fresh(), 'credit-term', 30.00, null, null, $admin->id);
-        $this->assertSame(Order::$status['credit'], $order->fresh()->status);
+        $this->assertSame(Order::$status['delivered'], $order->fresh()->status);
         $this->assertEqualsWithDelta(-30.00, (float) $customer->fresh()->credit_balance, 0.001);
 
         app(OrderStatusService::class)->transition($order->fresh(), Order::$status['cancelled'], $admin->id);

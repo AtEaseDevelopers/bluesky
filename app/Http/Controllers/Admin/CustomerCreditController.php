@@ -82,7 +82,7 @@ class CustomerCreditController extends Controller
         ));
 
         $orders = Order::where('user_id', $customer->id)
-            ->where('status', Order::$status['credit'])
+            ->carriedOnCredit()
             ->whereIn('id', $orderIds)
             ->orderBy('id')
             ->get();

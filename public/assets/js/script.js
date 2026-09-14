@@ -45,6 +45,28 @@ function adminSelect2UnicodeMatcher(params, data) {
         return data;
     }
 
+    // Optgroups arrive with their options in `children`; select2 matches the
+    // group by its label only, so recurse and keep the group when any child
+    // matches — otherwise every grouped option (e.g. walk-in names) would be
+    // unsearchable.
+    if (data.children && data.children.length) {
+        var matchedChildren = [];
+        for (var i = 0; i < data.children.length; i++) {
+            var matchedChild = adminSelect2UnicodeMatcher(params, data.children[i]);
+            if (matchedChild) {
+                matchedChildren.push(matchedChild);
+            }
+        }
+
+        if (matchedChildren.length) {
+            var matchedGroup = $.extend({}, data, true);
+            matchedGroup.children = matchedChildren;
+            return matchedGroup;
+        }
+
+        return null;
+    }
+
     if (typeof data.text === 'undefined') {
         return null;
     }

@@ -66,7 +66,7 @@ class OrderPdfController extends Controller
 
     private function assertCanViewDeliveryOrder(Order $order): void
     {
-        if (!$order->canShowDeliveryOrder()) {
+        if (!$order->canAdminShowDeliveryOrder()) {
             abort(403, 'Delivery order is available once the order is in route for delivery.');
         }
     }

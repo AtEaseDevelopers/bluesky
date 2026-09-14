@@ -87,7 +87,7 @@ class DeliveryOrderController extends Controller
             ->orderByRaw("CASE status
                 WHEN 'in_route' THEN 0 WHEN 'delivering' THEN 0
                 WHEN 'packing' THEN 1 WHEN 'pending' THEN 1 WHEN 'processing' THEN 1
-                WHEN 'delivered' THEN 2 WHEN 'credit' THEN 2 WHEN 'completed' THEN 2
+                WHEN 'delivered' THEN 2 WHEN 'completed' THEN 2
                 ELSE 4 END")
             ->orderByDesc('id')
             ->paginate(20)
@@ -413,7 +413,7 @@ class DeliveryOrderController extends Controller
         return match ($filter) {
             'processing' => ['pending', 'packing', 'processing'],
             'in_route', 'delivering' => ['in_route', 'delivering'],
-            'delivered', 'completed' => ['delivered', 'credit', 'completed'],
+            'delivered', 'completed' => ['delivered', 'completed'],
             default => [],
         };
     }
@@ -478,7 +478,7 @@ class DeliveryOrderController extends Controller
 
         $canonical = self::$legacy_status_map[$order->status] ?? $order->status;
 
-        if (in_array($canonical, [Order::$status['delivered'], Order::$status['credit'], Order::$status['completed']], true)) {
+        if (in_array($canonical, [Order::$status['delivered'], Order::$status['completed']], true)) {
             return [
                 'mode' => $order->delivery_proof ? 'done_with_proof' : 'done_no_proof',
                 'canonical' => $canonical,

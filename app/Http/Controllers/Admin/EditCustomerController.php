@@ -63,9 +63,11 @@ class EditCustomerController extends Controller
                     : collect(),
                 'credit_orders' => $customer->isCreditCustomer()
                     ? \App\Order::where('user_id', $customer->id)
-                        ->where('status', \App\Order::$status['credit'])
+                        ->carriedOnCredit()
                         ->orderBy('id')
                         ->get()
+                        ->filter(fn ($order) => $order->creditOutstandingAmount() > 0.009)
+                        ->values()
                     : collect(),
             ]
         );

@@ -47,9 +47,15 @@ class OrderDiscountFlattenTest extends TestCase
         ]);
     }
 
+    /**
+     * Create an order. Orders default to an id at/after the flattening go-live
+     * so the common cases exercise the flattening; tests that probe the id
+     * gating pass an explicit lower id.
+     */
     private function makeOrder(User $customer, array $attrs = []): Order
     {
         return Order::forceCreate(array_merge([
+            'id' => Order::DISCOUNT_EFFECTIVE_ORDER_ID,
             'user_id' => $customer->id,
             'order_type' => 'registered',
             'total_price' => 0,
@@ -135,5 +141,52 @@ class OrderDiscountFlattenTest extends TestCase
 
         $this->assertEquals(99.00, (float) $order->total_price);
         $this->assertEquals(0.90, round((float) $order->discount, 2));
+    }
+
+    /** @test */
+    public function an_order_below_the_effective_id_is_not_flattened(): void
+    {
+        $customer = $this->makeCustomer();
+        $order = $this->makeOrder($customer, [
+            'id' => Order::DISCOUNT_EFFECTIVE_ORDER_ID - 1,
+            'total_price' => 123.45,
+            'subtotal' => 123.45,
+        ]);
+        $order->refresh();
+
+        // Total keeps its cents and no discount is recorded.
+        $this->assertEquals(123.45, (float) $order->total_price);
+        $this->assertEquals(0.00, (float) $order->discount);
+    }
+
+    /** @test */
+    public function an_order_at_the_effective_id_is_flattened(): void
+    {
+        $customer = $this->makeCustomer();
+        $order = $this->makeOrder($customer, [
+            'id' => Order::DISCOUNT_EFFECTIVE_ORDER_ID,
+            'total_price' => 123.45,
+            'subtotal' => 123.45,
+        ]);
+        $order->refresh();
+
+        $this->assertEquals(123.00, (float) $order->total_price);
+        $this->assertEquals(0.45, round((float) $order->discount, 2));
+    }
+
+    /** @test */
+    public function a_below_effective_order_edited_later_is_still_not_flattened(): void
+    {
+        $customer = $this->makeCustomer();
+        // created below the go-live id, total 0
+        $order = $this->makeOrder($customer, ['id' => Order::DISCOUNT_EFFECTIVE_ORDER_ID - 1]);
+
+        // Later the total changes — but eligibility is decided by the id, so it
+        // must not flatten.
+        $order->update(['total_price' => 150.45, 'subtotal' => 150.45]);
+        $order->refresh();
+
+        $this->assertEquals(150.45, (float) $order->total_price);
+        $this->assertEquals(0.00, (float) $order->discount);
     }
 }

@@ -7,7 +7,6 @@ return [
         'in_route' => 'In Route',
         'on_hold' => 'On Hold',
         'delivered' => 'Delivered',
-        'credit' => 'Credit',
         'completed' => 'Completed',
         'cancelled' => 'Cancelled',
         // Legacy status alias for old records.

@@ -342,10 +342,6 @@ class OrderService
 
         $this->refreshPaymentStatus($order->fresh());
 
-        if ($method === 'credit-term') {
-            app(OrderStatusService::class)->maybeEnterCredit($order->fresh(), $adminId);
-        }
-
         return $payment;
     }
 
@@ -607,10 +603,6 @@ class OrderService
 
             $this->refreshPaymentStatus($order->fresh());
 
-            if ($payment->payment_method === 'credit-term') {
-                app(OrderStatusService::class)->maybeEnterCredit($order->fresh(), $adminId);
-            }
-
             return $payment->fresh();
         });
     }
@@ -713,17 +705,13 @@ class OrderService
             $payment->update($attributes);
 
             // Credit-term settles the order on account: mirror it onto the
-            // customer credit ledger and move the order into credit status,
-            // matching a freshly recorded credit-term payment.
+            // customer credit ledger, matching a freshly recorded credit-term
+            // payment.
             if ($method === 'credit-term') {
                 $this->postCreditTermCharge($order->fresh(), $payment->fresh(), $amount, $adminId, null);
             }
 
             $this->refreshPaymentStatus($order->fresh());
-
-            if ($method === 'credit-term') {
-                app(OrderStatusService::class)->maybeEnterCredit($order->fresh(), $adminId);
-            }
 
             return $payment->fresh();
         });
