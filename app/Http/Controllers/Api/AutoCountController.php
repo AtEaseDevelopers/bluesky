@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\AutoCountApiService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class AutoCountController extends Controller
 {
@@ -179,10 +180,28 @@ class AutoCountController extends Controller
         if ($token !== '') {
             $header = (string) $request->header('X-AutoCount-Token', '');
             if (!hash_equals($token, $header)) {
+                $this->traceRejected($request, 'token mismatch');
                 return false;
             }
         }
 
-        return $this->service->validateBranch($request);
+        if (!$this->service->validateBranch($request)) {
+            $this->traceRejected($request, 'branch mismatch');
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function traceRejected(Request $request, string $reason): void
+    {
+        Log::channel(config('autocount.log_channel', 'autocount'))->warning(
+            'AutoCount request rejected: ' . $reason,
+            [
+                'path' => $request->path(),
+                'branch_id' => $request->query('branch_id'),
+                'ip' => $request->ip(),
+            ]
+        );
     }
 }

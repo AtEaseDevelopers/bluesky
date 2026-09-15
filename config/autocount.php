@@ -2,6 +2,8 @@
 
 return [
     'api_token' => env('AUTOCOUNT_API_TOKEN', ''),
+    // Log channel used to trace the sync lifecycle (see config/logging.php).
+    'log_channel' => env('AUTOCOUNT_LOG_CHANNEL', 'autocount'),
     'branch_email' => env('AUTOCOUNT_BRANCH_EMAIL', env('PORTAL_COMPANY_EMAIL', '')),
     // AutoCount stock location assigned to every DO/invoice line. AutoCount
     // rejects the document ("Every item need to be assigned a location") when

@@ -16,6 +16,17 @@ use Illuminate\Support\Facades\Log;
 
 class AutoCountApiService
 {
+    /**
+     * Write a line to the dedicated AutoCount sync trace so the whole
+     * order/customer lifecycle can be followed in storage/logs/autocount.log.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    protected function trace(string $level, string $message, array $context = []): void
+    {
+        Log::channel(config('autocount.log_channel', 'autocount'))->{$level}($message, $context);
+    }
+
     public function validateBranch(Request $request): bool
     {
         $branchId = (string) $request->query('branch_id', '');
@@ -36,6 +47,13 @@ class AutoCountApiService
             ->orderBy('id')
             ->first();
 
+        if ($order) {
+            $this->trace('info', 'Handing pending order to AutoCount (create SO+DO)', [
+                'order_id' => $order->id,
+                'invoice_number' => $order->invoice_number,
+            ]);
+        }
+
         return $order ? $this->toSyncPayload($order, 'pending') : null;
     }
 
@@ -47,6 +65,15 @@ class AutoCountApiService
             ->whereNull('api_invoice_id')
             ->orderBy('id')
             ->first();
+
+        if ($order) {
+            $this->trace('info', 'Handing order to AutoCount (create invoice/cash sale)', [
+                'order_id' => $order->id,
+                'invoice_number' => $order->invoice_number,
+                'api_do_id' => $order->api_do_id,
+                'payment_method' => $this->mapPaymentMethod($order),
+            ]);
+        }
 
         return $order ? $this->toSyncPayload($order, 'process') : null;
     }
@@ -62,6 +89,14 @@ class AutoCountApiService
             ->orderBy('id')
             ->first();
 
+        if ($order) {
+            $this->trace('info', 'Handing credit order to AutoCount for payment sync', [
+                'order_id' => $order->id,
+                'invoice_number' => $order->invoice_number,
+                'api_invoice_id' => $order->api_invoice_id,
+            ]);
+        }
+
         return $order ? $this->toSyncPayload($order, 'paid') : null;
     }
 
@@ -73,8 +108,19 @@ class AutoCountApiService
 
         $order = Order::find($orderId);
         if (!$order) {
+            $this->trace('warning', 'Document write-back for unknown order ignored', [
+                'order_id' => $orderId,
+                'type' => $type,
+                'number' => $number,
+            ]);
             throw new \InvalidArgumentException('Order not found.');
         }
+
+        $this->trace('info', 'AutoCount document write-back received', [
+            'order_id' => $order->id,
+            'type' => $type,
+            'number' => $number,
+        ]);
 
         if ($type === 'DO') {
             $order->api_do_id = $number;
@@ -92,6 +138,12 @@ class AutoCountApiService
             $order->api_invoice_id = $number;
             $order->autocount_sync_status = 'synced';
             $order->autocount_synced_at = now();
+        } else {
+            $this->trace('warning', 'AutoCount write-back with unrecognised document type', [
+                'order_id' => $order->id,
+                'type' => $type,
+                'number' => $number,
+            ]);
         }
 
         $order->save();
@@ -109,8 +161,25 @@ class AutoCountApiService
         $order = Order::find($orderId);
 
         if (!$order) {
+            $this->trace('warning', 'Paid write-back for unknown order ignored', [
+                'order_id' => $orderId,
+                'number' => $payload['number'] ?? '',
+            ]);
             throw new \InvalidArgumentException('Order not found.');
         }
+
+        $reference = (string) ($payload['number'] ?? '');
+        if ($reference === '') {
+            $this->trace('warning', 'AutoCount payment confirmed without a knock-off reference', [
+                'order_id' => $order->id,
+                'api_invoice_id' => $order->api_invoice_id,
+            ]);
+        }
+
+        $this->trace('info', 'AutoCount payment write-back received', [
+            'order_id' => $order->id,
+            'reference' => $reference,
+        ]);
 
         $order->autocount_sync_status = 'paid_synced';
         $order->save();
@@ -118,7 +187,7 @@ class AutoCountApiService
         app(AutoCountSyncService::class)->log(
             $order,
             'paid_synced',
-            'AutoCount payment confirmed. Ref: ' . ($payload['number'] ?? '')
+            'AutoCount payment confirmed. Ref: ' . $reference
         );
     }
 
@@ -128,7 +197,10 @@ class AutoCountApiService
         $orderId = (int) data_get($payload, 'model.order.id', 0);
         $order = $orderId ? Order::find($orderId) : null;
 
-        Log::error('AutoCount plugin error', ['message' => $message, 'order_id' => $orderId]);
+        $this->trace('error', 'AutoCount plugin reported an error', [
+            'message' => $message,
+            'order_id' => $orderId,
+        ]);
 
         if ($order) {
             $order->autocount_sync_status = 'sync_error';
