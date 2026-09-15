@@ -467,6 +467,7 @@
                     </div>
                     @endif
 
+                    @if ($admin->canModule('orders', 'edit'))
                     <div class="card shadow no-border mb-4">
                         <div class="card-body">
                             <h5 class="card-title">{{ __('orders.status_actions') }}</h5>
@@ -496,6 +497,7 @@
                             @endif
                         </div>
                     </div>
+                    @endif
 
                     @if ($admin->canModule('orders', 'edit') && $order->balanceDue() > 0)
                     <div class="card shadow no-border mb-4">

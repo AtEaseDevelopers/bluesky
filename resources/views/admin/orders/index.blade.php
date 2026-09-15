@@ -171,12 +171,14 @@
                             <i class="fa fa-plus" aria-hidden="true"></i> {{ __('orders.add') }}
                         </a>
                     @endif
+                    @if ($admin->canModule('orders', 'edit'))
                     <button type="button" class="btn btn-primary d-none" id="change-order-statuses" data-bs-toggle="modal" data-bs-target="#order-statuses">
                         {{ __('orders.change_order_status') }}
                     </button>
                     <button type="button" class="btn btn-primary d-none" id="change-order-lorry" data-bs-toggle="modal" data-bs-target="#assign-lorry">
                         {{ __('orders.change_lorry') }}
                     </button>
+                    @endif
                 </div>
                 <div class="d-flex">
                     @if ($admin->canModule('orders', 'edit'))
