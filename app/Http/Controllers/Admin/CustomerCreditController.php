@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Order;
 use App\OrderPayment;
 use App\Services\CreditService;
+use App\Services\OrderService;
 use App\Services\OrderStatusService;
 use App\User;
 use Illuminate\Http\Request;
@@ -118,6 +119,9 @@ class CustomerCreditController extends Controller
 
             if ($log) {
                 $settled++;
+                // Re-derive the order's payment status now the ledger moved:
+                // full settlement reads as paid, a partial one as partially paid.
+                app(OrderService::class)->refreshPaymentStatus($order->fresh());
             }
 
             try {

@@ -128,6 +128,7 @@ class PdfHelper extends Model
             'customer_phone' => $order->walk_in_phone ?: ($order->attn_contact ?: ($customer->attn_contact ?? '')),
             'payment_term' => $order->preferredPaymentMethodLabel() ?: '-',
             'customer_code' => $customer->sql_customer_code ?? '-',
+            'fulfillment' => $order->fulfillmentTypeLabel(),
             'currency' => 'MYR',
         ], $data);
     }
@@ -196,6 +197,7 @@ class PdfHelper extends Model
             'do_no' => $order->do_no,
             'payment_term' => $order->preferredPaymentMethodLabel() ?: '-',
             'customer_code' => $customer->sql_customer_code ?? '-',
+            'fulfillment' => $order->fulfillmentTypeLabel(),
             'currency' => 'MYR',
         ], $data);
     }

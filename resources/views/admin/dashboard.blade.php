@@ -197,7 +197,7 @@
                                             @endif
                                         </td>
                                         <td align="right">{{ $order->total_price }}</td>
-                                        <td>{{ $order->payment_method ? __('user.payment_method.' . $order->payment_method) : '' }}
+                                        <td>{{ $order->recordedPaymentMethodsLabel() }}
                                         </td>
                                         <td>{{ __('order.status.' . $order->status) }}</td>
                                         <td>{{ $order->updated_at }}</td>

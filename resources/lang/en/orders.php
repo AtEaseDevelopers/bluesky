@@ -88,7 +88,7 @@ return [
     'fulfillment_type' => 'Fulfillment',
     'fulfillment_delivery' => 'Delivery (assign driver)',
     'fulfillment_pickup' => 'Pickup',
-    'fulfillment_courier' => 'Courier',
+    'fulfillment_courier' => 'Lalamove',
     'delivery_scheduling_optional' => 'Delivery & scheduling',
     'delivery_scheduling_optional_help' => 'Optional — delivery date, time slot, driver',
     'delivery_assignment_updated' => 'Delivery assignment updated successfully.',

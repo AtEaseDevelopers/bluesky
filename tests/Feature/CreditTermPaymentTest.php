@@ -107,6 +107,30 @@ class CreditTermPaymentTest extends TestCase
     }
 
     /** @test */
+    public function a_credit_term_charge_does_not_mark_the_order_as_paid(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCreditCustomer();
+        $order = $this->makeOrder($customer);
+
+        app(OrderService::class)->recordPayment(
+            $order->fresh(),
+            'credit-term',
+            30.00,
+            null,
+            null,
+            $admin->id
+        );
+
+        $fresh = $order->fresh();
+
+        // The charge is carried on the customer's credit account, not received
+        // as money — the order must NOT display as paid while it is outstanding.
+        $this->assertSame(Order::$payment_status['unpaid'], $fresh->payment_status);
+        $this->assertGreaterThan(0.009, $fresh->creditOutstandingAmount());
+    }
+
+    /** @test */
     public function a_non_credit_term_payment_does_not_touch_the_credit_ledger(): void
     {
         $admin = $this->makeAdmin();

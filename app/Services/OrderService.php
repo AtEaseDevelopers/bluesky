@@ -51,7 +51,25 @@ class OrderService
         // balance is still due, and clears automatically once the order is settled.
         $isHeld = $order->payment_held_at !== null;
 
-        if ($paid >= $total && $total > 0) {
+        // Amount still owed on the customer's credit account for this order. A
+        // credit-term charge covers the order's balance at the order level, but
+        // the money is not received until it is settled on the ledger — so an
+        // order carrying outstanding credit must never read as "paid".
+        $creditOutstanding = $order->creditOutstandingAmount();
+
+        if ($creditOutstanding > 0.009) {
+            $isHeld = false;
+            if ($order->creditSettledAmount() > 0.009) {
+                $status = Order::$payment_status['partial'];
+            } elseif (
+                $order->payment_due_date
+                && $order->payment_due_date->toDateString() <= now()->toDateString()
+            ) {
+                $status = Order::$payment_status['payment_due'];
+            } else {
+                $status = Order::$payment_status['unpaid'];
+            }
+        } elseif ($paid >= $total && $total > 0) {
             $status = Order::$payment_status['paid'];
             $isHeld = false;
         } elseif ($hasPendingProof) {

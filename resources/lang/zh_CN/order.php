@@ -25,7 +25,7 @@ return [
     'fulfillment_types' => [
         'delivery' => '配送',
         'pickup' => '自提',
-        'courier' => '快递',
+        'courier' => 'Lalamove',
     ],
     'order_type' => [
         'registered' => '注册客户',

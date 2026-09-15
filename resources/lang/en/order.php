@@ -27,7 +27,7 @@ return [
     'fulfillment_types' => [
         'delivery' => 'Delivery',
         'pickup' => 'Pickup',
-        'courier' => 'Courier',
+        'courier' => 'Lalamove',
     ],
     'order_type' => [
         'registered' => 'Registered Customer',

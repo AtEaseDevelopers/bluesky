@@ -178,6 +178,10 @@ class PdfDocumentFormatTest extends TestCase
         $this->assertStringContainsString('客户代码', $html);
         $this->assertStringContainsString('3000-T527', $html);
 
+        // Fulfillment row (under 客户代码)
+        $this->assertStringContainsString('送货方式', $html);
+        $this->assertStringContainsString($order->fulfillmentTypeLabel(), $html);
+
         // Address boxes
         $this->assertStringContainsString('账单地址', $html);
         $this->assertStringContainsString('送货地址', $html);
@@ -226,6 +230,28 @@ class PdfDocumentFormatTest extends TestCase
         $this->assertStringContainsString('DO-2609-00735', $html);
         $this->assertStringContainsString('产品编号', $html);
         $this->assertStringContainsString('SZZ029', $html);
+        // Fulfillment row (under 客户代码)
+        $this->assertStringContainsString('送货方式', $html);
+        $this->assertStringContainsString($order->fulfillmentTypeLabel(), $html);
+    }
+
+    /** @test */
+    public function documents_show_lalamove_fulfillment_for_courier_orders(): void
+    {
+        $order = $this->seedOrder();
+        $order->update(['fulfillment_type' => 'courier']);
+        $order->refresh();
+
+        $invoiceHtml = view('pdf.invoice', $this->invoiceData($order))->render();
+        $this->assertStringContainsString('送货方式', $invoiceHtml);
+        $this->assertStringContainsString('Lalamove', $invoiceHtml);
+
+        $doData = $this->invoiceData($order);
+        $doData['do_no'] = 'DO-2609-00737';
+        $doData['show_prices'] = true;
+        $doHtml = view('pdf.delivery-order', $doData)->render();
+        $this->assertStringContainsString('送货方式', $doHtml);
+        $this->assertStringContainsString('Lalamove', $doHtml);
     }
 
     /** @test */

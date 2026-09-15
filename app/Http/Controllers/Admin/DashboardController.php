@@ -68,7 +68,7 @@ class DashboardController extends Controller
             ->whereDay('created_at', $currentDay)
             ->whereMonth('created_at', $currentMonth)
             ->whereYear('created_at', $currentYear)
-            ->with('customer')
+            ->with('customer', 'payments')
             ->get();
 
         // Fetch daily sales data from the Order model

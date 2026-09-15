@@ -83,7 +83,7 @@ return [
     'fulfillment_type' => '配送方式',
     'fulfillment_delivery' => '配送（分配司机）',
     'fulfillment_pickup' => '自提',
-    'fulfillment_courier' => '快递',
+    'fulfillment_courier' => 'Lalamove',
     'delivery_scheduling_optional' => '配送与排程',
     'delivery_scheduling_optional_help' => '可选 — 配送日期、时段、司机',
     'delivery_assignment_updated' => '配送安排已成功更新。',

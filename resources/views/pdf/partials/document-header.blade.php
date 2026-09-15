@@ -9,6 +9,7 @@
     $metaTerm = $payment_term ?? '-';
     $metaCurrency = $currency ?? 'MYR';
     $metaCustomerCode = $customer_code ?? '-';
+    $metaFulfillment = $fulfillment ?? (isset($order) ? $order->fulfillmentTypeLabel() : null);
 @endphp
 <!-- Document title -->
 <table style="width: 100%; border-collapse: collapse; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif;">
@@ -69,6 +70,13 @@
                     <td style="font-size: 12px;">:</td>
                     <td style="font-size: 12px;">{{ $metaCustomerCode }}</td>
                 </tr>
+                @if (!empty($metaFulfillment))
+                    <tr>
+                        <td style="font-size: 12px; padding: 1px 0;">送货方式</td>
+                        <td style="font-size: 12px;">:</td>
+                        <td style="font-size: 12px;">{{ $metaFulfillment }}</td>
+                    </tr>
+                @endif
             </table>
         </td>
     </tr>

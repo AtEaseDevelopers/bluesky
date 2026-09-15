@@ -113,6 +113,8 @@ class AdminCreditMarkPaidTest extends TestCase
         $this->assertEqualsWithDelta(0.00, (float) $customer->fresh()->credit_balance, 0.001);
         $this->assertEqualsWithDelta(0.00, $order->fresh()->creditOutstandingAmount(), 0.001);
         $this->assertSame(Order::$status['completed'], $order->fresh()->status);
+        // Only now — once the credit is actually settled — does it read as paid.
+        $this->assertSame(Order::$payment_status['paid'], $order->fresh()->payment_status);
     }
 
     /** @test */
@@ -135,6 +137,8 @@ class AdminCreditMarkPaidTest extends TestCase
         $this->assertEqualsWithDelta(-20.00, (float) $customer->fresh()->credit_balance, 0.001);
         $this->assertEqualsWithDelta(20.00, $order->fresh()->creditOutstandingAmount(), 0.001);
         $this->assertSame(Order::$status['delivered'], $order->fresh()->status);
+        // Part-settled credit orders read as partially paid, never fully paid.
+        $this->assertSame(Order::$payment_status['partial'], $order->fresh()->payment_status);
     }
 
     /** @test */
