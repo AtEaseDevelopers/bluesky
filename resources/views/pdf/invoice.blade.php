@@ -9,7 +9,7 @@
 </head>
 <body>
     @include('pdf.partials.document-header', [
-        'doc_title' => '发票',
+        'doc_title' => '发票 Invoice',
         'number_label' => '发票编号',
         'number_value' => $invoice_number,
     ])

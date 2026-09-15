@@ -119,7 +119,7 @@ class AutoCountSyncService
 
         $order->update([
             'autocount_sync_status' => $status,
-            'autocount_synced_at' => in_array($status, ['synced', 'synced_successfully'], true) ? now() : null,
+            'autocount_synced_at' => in_array($status, ['synced', 'synced_successfully', 'paid_synced'], true) ? now() : null,
         ]);
 
         return $log;

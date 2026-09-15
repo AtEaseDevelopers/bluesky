@@ -12,7 +12,7 @@
         $doShowPrices = ($show_prices ?? false) && ($order->pdfCustomer()->invoice_price_permission ?? true);
     @endphp
     @include('pdf.partials.document-header', [
-        'doc_title' => '送货单',
+        'doc_title' => '送货单 Delivery Order',
         'number_label' => '送货单号',
         'number_value' => $do_no,
     ])

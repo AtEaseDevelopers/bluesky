@@ -79,7 +79,16 @@ class AutoCountApiService
         if ($type === 'DO') {
             $order->api_do_id = $number;
             $order->autocount_sync_status = 'do_created';
-        } elseif (in_array($type, ['INV', 'CS'], true)) {
+        } elseif ($type === 'CS') {
+            // A Cash Sale is settled the moment it is created, so a COD/walk-in
+            // order is fully paid here. The paid-sync endpoint is credit-only,
+            // so it would otherwise never advance past 'synced'.
+            $order->api_invoice_id = $number;
+            $order->autocount_sync_status = 'paid_synced';
+            $order->autocount_synced_at = now();
+        } elseif ($type === 'INV') {
+            // An Invoice carries an outstanding AR balance; the credit payment
+            // knock-off is confirmed later via the paid-sync endpoint.
             $order->api_invoice_id = $number;
             $order->autocount_sync_status = 'synced';
             $order->autocount_synced_at = now();
