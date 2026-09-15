@@ -567,6 +567,47 @@
                         {!! __('orders.cod_record_when_html') !!}
                     </div>
                     @endif
+
+                    @if ($admin->canModule('orders', 'edit') && $isCreditCustomer && $order->requiresCreditSettlementBeforeComplete())
+                        @php $creditOutstanding = $order->creditOutstandingAmount(); @endphp
+                        <div class="card shadow no-border mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ __('orders.settle_credit') }}</h5>
+                                <p class="text-muted small mb-3">{{ __('orders.settle_credit_help') }}</p>
+                                <hr>
+                                <p class="mb-3">
+                                    <strong>{{ __('orders.credit_outstanding') }}:</strong>
+                                    <span class="text-danger">RM {{ number_format($creditOutstanding, 2) }}</span>
+                                </p>
+                                <form action="{{ route('admin.orders.credit.mark-paid', $order->id) }}" method="POST" enctype="multipart/form-data" id="settle-credit-form">
+                                    @csrf
+                                    <div class="mb-3">
+                                        <label class="mb-1" for="settle-credit-method">{{ __('orders.method') }}</label>
+                                        <select name="payment_method" id="settle-credit-method" class="form-select" required>
+                                            @foreach (\App\OrderPayment::settlementMethods() as $key => $label)
+                                                <option value="{{ $key }}">{{ \App\OrderPayment::paymentMethodLabel($key) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="mb-1" for="settle-credit-amount">{{ __('orders.amount_rm') }}</label>
+                                        <input type="number" step="0.01" min="0.01" max="{{ number_format($creditOutstanding, 2, '.', '') }}"
+                                            name="amount" id="settle-credit-amount" class="form-control"
+                                            value="{{ number_format($creditOutstanding, 2, '.', '') }}" required>
+                                        <small class="text-muted">{{ __('orders.settle_credit_amount_help') }}</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="mb-1" for="settle-credit-proof">{{ __('orders.proof') }}</label>
+                                        <input type="file" name="payment_proof" id="settle-credit-proof" class="form-control"
+                                            accept="{{ \App\OrderPayment::proofAcceptAttribute() }}"
+                                            capture="{{ \App\OrderPayment::proofCaptureAttribute() }}">
+                                        <small class="text-muted">{{ \App\OrderPayment::proofHelpText() }}</small>
+                                    </div>
+                                    <button type="submit" class="btn btn-success w-100">{{ __('orders.mark_credit_paid') }}</button>
+                                </form>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
 

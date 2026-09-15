@@ -160,6 +160,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::post('/get-products-for-category', 'AddCustomerController@getProductsForCategory');
                 Route::post('/customer/{customer}/credit-adjust', 'CustomerCreditController@adjust')->name('customers.credit.adjust');
                 Route::post('/customer/{customer}/credit-mark-paid', 'CustomerCreditController@markPaid')->name('customers.credit.mark-paid');
+                Route::post('/order/{order}/mark-credit-paid', 'CustomerCreditController@markOrderPaid')->name('orders.credit.mark-paid');
 
                 Route::resource('customer-categories', CustomerCategoryController::class);
                 Route::controller(CustomerCategoryController::class)->group(

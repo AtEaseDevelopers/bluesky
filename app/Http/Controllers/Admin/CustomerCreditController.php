@@ -140,6 +140,68 @@ class CustomerCreditController extends Controller
         return back()->with('success', "{$settled} credit order(s) settled, {$completed} marked as completed.");
     }
 
+    /**
+     * Settle the outstanding credit on a single order straight from its summary
+     * page — the single-order counterpart to markPaid(). Records how much the
+     * customer paid, by which method, and an optional proof; a full settlement
+     * completes the order, a partial one leaves the remainder on credit.
+     */
+    public function markOrderPaid(Request $request, $order)
+    {
+        $order = Order::with('customer')->findOrFail($order);
+
+        if (!$order->isCreditCustomer()) {
+            return back()->with('error', 'Settling balances applies to credit customers only.');
+        }
+
+        if ($order->creditOutstandingAmount() <= 0.009) {
+            return back()->with('error', 'This order has no outstanding credit to settle.');
+        }
+
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'payment_method' => ['required', Rule::in(array_keys(OrderPayment::settlementMethods()))],
+            'payment_proof' => OrderPayment::proofRules(false),
+        ], OrderPayment::proofValidationMessages('payment_proof'));
+
+        $adminId = Auth::guard('web_admin')->id();
+        $proofPath = $this->storeSettlementProof($order, $request->file('payment_proof'));
+
+        $log = app(CreditService::class)->settleOrderCredit(
+            $order->fresh(),
+            $adminId,
+            null,
+            (float) $data['amount'],
+            $data['payment_method'],
+            $proofPath
+        );
+
+        if (!$log) {
+            return back()->with('error', 'No outstanding credit to settle.');
+        }
+
+        // Re-derive the order's payment status now the ledger moved: a full
+        // settlement reads as paid, a partial one as partially paid.
+        app(OrderService::class)->refreshPaymentStatus($order->fresh());
+
+        $completed = false;
+        try {
+            app(OrderStatusService::class)->transition(
+                $order->fresh(),
+                Order::$status['completed'],
+                $adminId
+            );
+            $completed = true;
+        } catch (\InvalidArgumentException $e) {
+            // A partial payment leaves an outstanding balance — the ledger
+            // settlement stands, but the order stays delivered.
+        }
+
+        return back()->with('success', $completed
+            ? 'Credit settled — order marked as completed.'
+            : 'Credit payment recorded.');
+    }
+
     /** Persist an uploaded settlement proof under the order's payments folder. */
     private function storeSettlementProof(Order $order, $proof): ?string
     {
