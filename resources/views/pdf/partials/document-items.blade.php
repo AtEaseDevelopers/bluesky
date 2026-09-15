@@ -13,7 +13,8 @@
     }
     $deliveryFee = (float) ($order->delivery_fee ?? 0);
     $adjustment = (float) ($order->amount_adjustment ?? 0);
-    $grandTotal = $lineSubtotal + $deliveryFee + $adjustment;
+    $discount = (float) ($order->discount ?? 0);
+    $grandTotal = $lineSubtotal + $deliveryFee + $adjustment - $discount;
 
     $currency = $currency ?? 'MYR';
     $money = fn ($v) => $currency . ' ' . number_format((float) $v, 2);
@@ -85,6 +86,12 @@
                         <tr>
                             <td style="font-size: 12px; text-align: left; padding: 3px 0;">调整 :</td>
                             <td style="font-size: 12px; text-align: right; padding: 3px 0;">{{ $money($adjustment) }}</td>
+                        </tr>
+                    @endif
+                    @if ($discount != 0)
+                        <tr>
+                            <td style="font-size: 12px; text-align: left; padding: 3px 0;">折扣 :</td>
+                            <td style="font-size: 12px; text-align: right; padding: 3px 0;">- {{ $money($discount) }}</td>
                         </tr>
                     @endif
                     <tr>
