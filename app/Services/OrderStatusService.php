@@ -120,7 +120,7 @@ class OrderStatusService
                 app(OrderService::class)->generateInvoiceNumber($order);
             }
 
-            if ($order->canSyncToAutoCount()) {
+            if (config('autocount.auto_sync_enabled') && $order->canSyncToAutoCount()) {
                 app(AutoCountSyncService::class)->syncIfEligible($order->fresh(), $adminId);
             }
         }

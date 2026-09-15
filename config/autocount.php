@@ -2,6 +2,9 @@
 
 return [
     'api_token' => env('AUTOCOUNT_API_TOKEN', ''),
+    // When false, orders are NOT auto-queued for AutoCount sync on completion.
+    // Manual sync (admin UI / console command) is unaffected.
+    'auto_sync_enabled' => env('AUTOCOUNT_AUTO_SYNC_ENABLED', false),
     // Log channel used to trace the sync lifecycle (see config/logging.php).
     'log_channel' => env('AUTOCOUNT_LOG_CHANNEL', 'autocount'),
     'branch_email' => env('AUTOCOUNT_BRANCH_EMAIL', env('PORTAL_COMPANY_EMAIL', '')),
