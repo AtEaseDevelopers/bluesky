@@ -28,6 +28,9 @@
                 @if (!empty($company['registration_no']))
                     <tr><td style="font-size: 12px; font-weight: 700; padding: 1px 0;">REG No: {{ $company['registration_no'] }}</td></tr>
                 @endif
+                @if (!empty($company['tin_no']))
+                    <tr><td style="font-size: 12px; font-weight: 700; padding: 1px 0;">TIN No: {{ $company['tin_no'] }}</td></tr>
+                @endif
                 @foreach ($addressLines as $line)
                     <tr><td style="font-size: 12px; padding: 1px 0;">{{ $line }}</td></tr>
                 @endforeach

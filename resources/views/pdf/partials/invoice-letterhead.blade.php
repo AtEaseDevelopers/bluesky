@@ -21,6 +21,9 @@
             @if (!empty($company['registration_no']))
                 <span style="font-size: 12px;">({{ $company['registration_no'] }})</span><br>
             @endif
+            @if (!empty($company['tin_no']))
+                <span style="font-size: 12px;">TIN No: {{ $company['tin_no'] }}</span><br>
+            @endif
             @foreach ($addressLines as $line)
                 <span style="font-size: 16px;">{{ $line }}</span><br>
             @endforeach

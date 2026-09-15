@@ -3,11 +3,12 @@
 return [
 
     'company' => [
-        'name' => env('PORTAL_COMPANY_NAME', env('APP_NAME', 'Bluesky Live Seafood')),
-        'registration_no' => env('PORTAL_COMPANY_REG', '1130071.K'),
-        'phone' => env('PORTAL_COMPANY_PHONE', ''),
+        'name' => env('PORTAL_COMPANY_NAME', 'Bluesky Live Seafood Supply Sdn Bhd'),
+        'registration_no' => env('PORTAL_COMPANY_REG', '202401023120 (1568969-H)'),
+        'tin_no' => env('PORTAL_COMPANY_TIN', 'C58775522090'),
+        'phone' => env('PORTAL_COMPANY_PHONE', '013-3897233'),
         'email' => env('PORTAL_COMPANY_EMAIL', ''),
-        'address' => env('PORTAL_COMPANY_ADDRESS', 'Jln 11, Kampung Baru Ampang, 68000 Ampang, Selangor.'),
+        'address' => env('PORTAL_COMPANY_ADDRESS', 'Lot 1242, Kawasan Kilang, Jalan 11, Kg Baru Ampang, 68000 Ampang, Selangor.'),
         'logo' => 'assets/images/logo.png',
     ],
 
