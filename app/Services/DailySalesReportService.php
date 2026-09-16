@@ -20,6 +20,20 @@ class DailySalesReportService
         'payment-gateway',
     ];
 
+    /**
+     * Categories that represent real money actually collected, and so feed the
+     * "Total Collected" grand total. 'credit-term' is deliberately excluded: a
+     * credit-term payment is a "buy now, pay later" charge booked to the
+     * customer's credit ledger (an IOU / receivable), not cash in hand, so it
+     * would overstate collections. It still shows as its own reference row.
+     */
+    public const COLLECTED_CATEGORY_KEYS = [
+        'cash',
+        'qr',
+        'transfer',
+        'payment-gateway',
+    ];
+
     public function summaryCategoryLabels(): array
     {
         $labels = [];
@@ -118,6 +132,58 @@ class DailySalesReportService
             ->get();
     }
 
+    /**
+     * Overall sales totals for the selected date range: the number of distinct
+     * orders, the total quantity sold, and the total sales amount.
+     *
+     * "Total Sales" mirrors the admin dashboard's "Today Total Sales" figure —
+     * SUM(orders.total_price) (i.e. the final order total, incl. delivery fee and
+     * adjustments) over non-cancelled orders — so the two views tie out. Order
+     * count and quantity use the same non-cancelled scope for coherence. The
+     * cancelled orders are only excluded when the report isn't already filtered
+     * to a specific status.
+     */
+    public function salesSummary(Request $request): array
+    {
+        [$startDate, $endDate] = $this->dateRange($request);
+
+        // Order count + quantity from active line items.
+        $lineQuery = DB::table('order_products')
+            ->join('orders', 'orders.id', '=', 'order_products.order_id')
+            ->whereBetween('orders.created_at', [$startDate, $endDate . ' 23:59:59'])
+            ->where('order_products.status', 'active');
+        $this->applyOrderFilters($lineQuery, $request);
+        $this->excludeCancelledOrders($lineQuery, $request);
+
+        $lineRow = $lineQuery->select(
+            DB::raw('COUNT(DISTINCT orders.id) AS total_orders'),
+            DB::raw('COALESCE(SUM(order_products.quantity), 0) AS total_quantity')
+        )->first();
+
+        // Total sales at the order level, matching the dashboard.
+        $salesQuery = DB::table('orders')
+            ->whereBetween('orders.created_at', [$startDate, $endDate . ' 23:59:59']);
+        $this->applyOrderFilters($salesQuery, $request);
+        $this->excludeCancelledOrders($salesQuery, $request);
+
+        return [
+            'total_orders' => (int) ($lineRow->total_orders ?? 0),
+            'total_quantity' => (float) ($lineRow->total_quantity ?? 0),
+            'total_sales' => (float) $salesQuery->sum('orders.total_price'),
+        ];
+    }
+
+    /**
+     * Exclude cancelled orders (as the dashboard does), unless the report is
+     * already scoped to an explicit status — in which case that filter wins.
+     */
+    private function excludeCancelledOrders(Builder $query, Request $request, string $ordersAlias = 'orders'): void
+    {
+        if (!$request->filled('status')) {
+            $query->where("{$ordersAlias}.status", '!=', Order::$status['cancelled']);
+        }
+    }
+
     public function paymentCollectionSummary(Request $request): array
     {
         [$startDate, $endDate] = $this->dateRange($request);
@@ -157,10 +223,13 @@ class DailySalesReportService
             $summary[$category]['count'] += (int) $row->payment_count;
         }
 
+        // The grand total is "Total Collected", so it sums only the real-money
+        // categories — credit-term receivables are shown but never counted here.
+        $collected = collect($summary)->only(self::COLLECTED_CATEGORY_KEYS);
         $summary['grand_total'] = [
             'label' => __('ui.reports.grand_total'),
-            'total' => collect($summary)->sum('total'),
-            'count' => collect($summary)->sum('count'),
+            'total' => $collected->sum('total'),
+            'count' => $collected->sum('count'),
         ];
 
         return $summary;

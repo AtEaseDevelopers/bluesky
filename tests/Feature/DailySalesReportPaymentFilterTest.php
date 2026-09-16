@@ -174,6 +174,113 @@ class DailySalesReportPaymentFilterTest extends TestCase
     }
 
     /** @test */
+    public function sales_summary_totals_orders_quantity_and_amount(): void
+    {
+        $customer = $this->makeCustomer();
+
+        // Two orders, each with one line: qty 1, price 45.00.
+        $this->makeOrder($customer, 'cod');
+        $this->makeOrder($customer, 'cod');
+
+        $summary = app(DailySalesReportService::class)
+            ->salesSummary(Request::create('/', 'GET', []));
+
+        $this->assertSame(2, $summary['total_orders']);
+        $this->assertSame(2.0, $summary['total_quantity']);
+        $this->assertSame(90.0, $summary['total_sales']);
+    }
+
+    /** @test */
+    public function sales_summary_total_sales_matches_the_dashboard_definition(): void
+    {
+        $customer = $this->makeCustomer();
+
+        // A completed order counts; a cancelled one is excluded (dashboard parity).
+        $this->makeOrder($customer, 'cod');
+        $cancelled = $this->makeOrder($customer, 'cod');
+        $cancelled->update(['status' => Order::$status['cancelled']]);
+
+        $summary = app(DailySalesReportService::class)
+            ->salesSummary(Request::create('/', 'GET', []));
+
+        $this->assertSame(1, $summary['total_orders']);
+        // total_price of the single non-cancelled order.
+        $this->assertSame(45.0, $summary['total_sales']);
+    }
+
+    /** @test */
+    public function sales_summary_respects_the_payment_method_filter(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $cashPaid = $this->makeOrder($customer, 'cod');
+        $this->recordPayment($cashPaid, 'cash');
+
+        $qrPaid = $this->makeOrder($customer, 'cod');
+        $this->recordPayment($qrPaid, 'qr');
+
+        $summary = app(DailySalesReportService::class)
+            ->salesSummary(Request::create('/', 'GET', ['payment_method' => 'cash']));
+
+        // Only the cash-paid order is counted.
+        $this->assertSame(1, $summary['total_orders']);
+        $this->assertSame(45.0, $summary['total_sales']);
+    }
+
+    /** @test */
+    public function payment_collection_summary_buckets_confirmed_payments_by_category(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $cash = $this->makeOrder($customer, 'cod');
+        $this->recordPayment($cash, 'cash');                 // -> cash
+
+        $qr = $this->makeOrder($customer, 'cod');
+        $this->recordPayment($qr, 'qr');                     // -> qr
+
+        $transfer = $this->makeOrder($customer, 'cod');
+        $this->recordPayment($transfer, 'bank-transfer');    // -> transfer
+
+        // Pending payments are not collections and must be ignored.
+        $pending = $this->makeOrder($customer, 'cod');
+        $this->recordPayment($pending, 'cash', OrderPayment::STATUS_PENDING);
+
+        $summary = app(DailySalesReportService::class)
+            ->paymentCollectionSummary(Request::create('/', 'GET', []));
+
+        $this->assertSame(45.0, $summary['cash']['total']);
+        $this->assertSame(1, $summary['cash']['count']);
+        $this->assertSame(45.0, $summary['qr']['total']);
+        $this->assertSame(45.0, $summary['transfer']['total']);
+    }
+
+    /** @test */
+    public function payment_collection_grand_total_excludes_credit_term(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $cash = $this->makeOrder($customer, 'cod');
+        $this->recordPayment($cash, 'cash');                 // real money: 45.00
+
+        // A credit-term "buy now, pay later" charge is booked as a confirmed
+        // payment, but it is an IOU — not money collected — so it must stay out
+        // of the "Total Collected" grand total (while still showing as a row).
+        $credit = $this->makeOrder($customer, 'term');
+        $this->recordPayment($credit, 'credit-term');        // receivable: 45.00
+
+        $summary = app(DailySalesReportService::class)
+            ->paymentCollectionSummary(Request::create('/', 'GET', []));
+
+        // The credit-term row is still reported for reference.
+        $this->assertSame(45.0, $summary['credit-term']['total']);
+        $this->assertSame(1, $summary['credit-term']['count']);
+
+        // ...but the grand total reflects only real money collected.
+        $this->assertSame(45.0, $summary['grand_total']['total']);
+        $this->assertSame(1, $summary['grand_total']['count']);
+    }
+
+    /** @test */
     public function recorded_payment_label_buckets_and_dedupes_methods(): void
     {
         $service = app(DailySalesReportService::class);

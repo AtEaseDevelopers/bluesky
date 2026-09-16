@@ -29,7 +29,12 @@
                             <tbody>
                                 @foreach ($reportService->summaryCategoryLabels() as $key => $label)
                                     <tr>
-                                        <td>{{ $label }}</td>
+                                        <td>
+                                            {{ $label }}
+                                            @if ($key === 'credit-term')
+                                                <span class="badge bg-secondary ms-1">{{ __('ui.reports.credit_term_excluded_hint') }}</span>
+                                            @endif
+                                        </td>
                                         <td class="text-end">{{ $paymentSummary[$key]['count'] ?? 0 }}</td>
                                         <td class="text-end">{{ number_format($paymentSummary[$key]['total'] ?? 0, 2) }}</td>
                                     </tr>
@@ -46,6 +51,37 @@
                     </div>
                     <small class="text-muted d-block mt-2">
                         {{ __('ui.reports.payment_summary_note') }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-md-12">
+            <h4 class="mb-4">{{ __('ui.reports.sales_summary') }}</h4>
+            <div class="card shadow no-border mb-4">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0">
+                            <tbody>
+                                <tr>
+                                    <th>{{ __('ui.reports.total_orders_label') }}</th>
+                                    <td class="text-end">{{ number_format($salesSummary['total_orders']) }}</td>
+                                </tr>
+                                <tr>
+                                    <th>{{ __('ui.reports.total_quantity_label') }}</th>
+                                    <td class="text-end">{{ $salesSummary['total_quantity'] + 0 }}</td>
+                                </tr>
+                                <tr class="fw-bold">
+                                    <th>{{ __('ui.reports.total_sales_label') }}</th>
+                                    <td class="text-end">RM {{ number_format($salesSummary['total_sales'], 2) }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        {{ __('ui.reports.sales_summary_note') }}
                     </small>
                 </div>
             </div>

@@ -31,6 +31,7 @@ class ReportsController extends Controller
         $data['endDate'] = $endDate;
         $data['orders'] = $reportService->salesLines($request);
         $data['paymentSummary'] = $reportService->paymentCollectionSummary($request);
+        $data['salesSummary'] = $reportService->salesSummary($request);
         $data['reportService'] = $reportService;
 
         return view('admin.reports.daily_sales_report', $data);

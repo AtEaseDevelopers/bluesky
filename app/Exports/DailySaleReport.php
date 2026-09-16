@@ -108,6 +108,9 @@ class DailySaleReport implements FromCollection, WithHeadings, WithEvents, WithC
                 $no++;
 
                 foreach ($this->reportService->summaryCategoryLabels() as $key => $label) {
+                    if ($key === 'credit-term') {
+                        $label .= ' (' . __('ui.reports.credit_term_excluded_hint') . ')';
+                    }
                     $sheet->setCellValue('A' . $no, $label);
                     $sheet->setCellValue('B' . $no, $this->paymentSummary[$key]['count'] ?? 0);
                     $sheet->setCellValue('C' . $no, number_format($this->paymentSummary[$key]['total'] ?? 0, 2, '.', ''));
