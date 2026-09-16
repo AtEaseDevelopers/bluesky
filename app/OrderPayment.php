@@ -237,6 +237,25 @@ class OrderPayment extends Model
         return $this->belongsTo(User::class, 'submitted_by_user_id');
     }
 
+    /** Driver who collected/recorded this payment from the driver portal. */
+    public function recorderDriver()
+    {
+        return $this->belongsTo(Driver::class, 'recorded_by_driver');
+    }
+
+    /**
+     * Human name to attribute this payment to in the payment history: the admin
+     * recorder, else the driver who collected it, else the customer submitter,
+     * else "System" for automated/legacy records.
+     */
+    public function recorderName(): string
+    {
+        return $this->recorder->name
+            ?? $this->recorderDriver->name
+            ?? $this->submitter->name
+            ?? __('orders.system');
+    }
+
     public function bulkPayment()
     {
         return $this->belongsTo(BulkPayment::class);

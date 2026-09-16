@@ -8,18 +8,22 @@
     @include('pdf.partials.font-styles')
 </head>
 <body>
-    @php $locale = $locale ?? 'zh_CN'; @endphp
-    @include('pdf.partials.document-header', [
-        'doc_title' => __('pdf.doc.invoice_title', [], $locale),
-        'number_label' => __('pdf.meta.invoice_no', [], $locale),
-        'number_value' => $invoice_number,
-    ])
-    @include('pdf.partials.address-boxes')
-    @include('pdf.partials.document-items', [
-        'show_price_columns' => true,
-        'has_price_permission' => $user->invoice_price_permission,
-        'footer_mode' => 'full',
-    ])
-    @include('pdf.partials.bank-details')
+    @foreach (($locales ?? ['zh_CN', 'en']) as $loopIndex => $locale)
+        @if ($loopIndex > 0)
+            <div style="page-break-before: always;"></div>
+        @endif
+        @include('pdf.partials.document-header', [
+            'doc_title' => __('pdf.doc.invoice_title', [], $locale),
+            'number_label' => __('pdf.meta.invoice_no', [], $locale),
+            'number_value' => $invoice_number,
+        ])
+        @include('pdf.partials.address-boxes')
+        @include('pdf.partials.document-items', [
+            'show_price_columns' => true,
+            'has_price_permission' => $user->invoice_price_permission,
+            'footer_mode' => 'full',
+        ])
+        @include('pdf.partials.bank-details')
+    @endforeach
 </body>
 </html>

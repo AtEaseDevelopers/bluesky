@@ -77,7 +77,7 @@ class ResetAutoCountSyncCommandTest extends TestCase
         $this->artisan('orders:reset-autocount-sync')->assertExitCode(0);
 
         $order->refresh();
-        $this->assertSame('pending_sync', $order->autocount_sync_status);
+        $this->assertSame('pending', $order->autocount_sync_status);
         $this->assertNull($order->autocount_synced_at);
     }
 
@@ -109,7 +109,7 @@ class ResetAutoCountSyncCommandTest extends TestCase
         $this->artisan('orders:reset-autocount-sync --force')->assertExitCode(0);
 
         $order->refresh();
-        $this->assertSame('pending_sync', $order->autocount_sync_status);
+        $this->assertSame('pending', $order->autocount_sync_status);
         $this->assertNull($order->api_do_id);
         $this->assertNull($order->api_invoice_id);
         $this->assertNull($order->autocount_synced_at);
@@ -135,6 +135,65 @@ class ResetAutoCountSyncCommandTest extends TestCase
 
         $this->assertSame('sync_error', $notCompleted->fresh()->autocount_sync_status);
         $this->assertSame('sync_error', $notPaid->fresh()->autocount_sync_status);
+    }
+
+    /** @test */
+    public function any_status_requeues_orders_regardless_of_payment_and_completion(): void
+    {
+        $notCompleted = $this->makeOrder([
+            'status' => 'pending',
+            'autocount_sync_status' => 'sync_error',
+            'api_do_id' => null,
+            'api_invoice_id' => null,
+        ]);
+        $notPaid = $this->makeOrder([
+            'payment_status' => 'unpaid',
+            'autocount_sync_status' => 'sync_error',
+            'api_do_id' => null,
+            'api_invoice_id' => null,
+        ]);
+
+        $this->artisan('orders:reset-autocount-sync --any-status')->assertExitCode(0);
+
+        $this->assertSame('pending', $notCompleted->fresh()->autocount_sync_status);
+        $this->assertSame('pending', $notPaid->fresh()->autocount_sync_status);
+    }
+
+    /** @test */
+    public function any_status_with_force_clears_document_refs_on_any_order(): void
+    {
+        // Mirrors a delivered-but-unpaid order that still holds stale AutoCount
+        // document refs after the AutoCount DB was wiped.
+        $order = $this->makeOrder([
+            'status' => 'delivered',
+            'payment_status' => 'unpaid',
+            'autocount_sync_status' => 'do_created',
+            'api_do_id' => 'DO-000002',
+            'api_invoice_id' => 'INV-000002',
+        ]);
+
+        $this->artisan('orders:reset-autocount-sync --any-status --force')->assertExitCode(0);
+
+        $order->refresh();
+        $this->assertSame('pending', $order->autocount_sync_status);
+        $this->assertNull($order->api_do_id);
+        $this->assertNull($order->api_invoice_id);
+    }
+
+    /** @test */
+    public function any_status_dry_run_changes_nothing(): void
+    {
+        $order = $this->makeOrder([
+            'status' => 'pending',
+            'payment_status' => 'unpaid',
+            'autocount_sync_status' => 'do_created',
+            'api_do_id' => 'DO-000002',
+        ]);
+
+        $this->artisan('orders:reset-autocount-sync --any-status --force --dry-run')->assertExitCode(0);
+
+        $this->assertSame('do_created', $order->fresh()->autocount_sync_status);
+        $this->assertSame('DO-000002', $order->fresh()->api_do_id);
     }
 
     /** @test */
@@ -196,7 +255,7 @@ class ResetAutoCountSyncCommandTest extends TestCase
 
         $this->artisan('orders:reset-autocount-sync --id=' . $target->id)->assertExitCode(0);
 
-        $this->assertSame('pending_sync', $target->fresh()->autocount_sync_status);
+        $this->assertSame('pending', $target->fresh()->autocount_sync_status);
         $this->assertSame('sync_error', $other->fresh()->autocount_sync_status);
     }
 }

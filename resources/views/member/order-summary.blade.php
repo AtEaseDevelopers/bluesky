@@ -12,10 +12,7 @@
                     </a>
                     @if ($order->canShowInvoiceToCustomer($customer))
                         <a href="{{ $invoice_url }}" class="btn btn-primary view-pdf mb-1">
-                            <i class="fa fa-eye"></i> {{ __('order.file.invoice') }} (中文)
-                        </a>
-                        <a href="{{ $invoice_url_en }}" class="btn btn-primary view-pdf mb-1">
-                            <i class="fa fa-eye"></i> {{ __('order.file.invoice') }} (English)
+                            <i class="fa fa-eye"></i> {{ __('order.file.invoice') }}
                         </a>
                     @elseif ($customer->invoice_visibility && !$order->isFullyPaid() && $order->status !== \App\Order::$status['cancelled'])
                         <span class="btn btn-outline-secondary mb-1 disabled" title="{{ __('orders.member.invoice_after_paid') }}">
@@ -24,10 +21,7 @@
                     @endif
                     @if ($order->canShowDeliveryOrder())
                         <a href="{{ $delivery_order_url }}#toolbar=0" data-url="{{ $delivery_order_download_url }}" class="btn btn-primary mb-1 view-pdf">
-                            <i class="fa fa-car"></i> {{ __('order.file.delivery-order') }} (中文)
-                        </a>
-                        <a href="{{ $delivery_order_url_en }}#toolbar=0" data-url="{{ $delivery_order_download_url_en }}" class="btn btn-primary mb-1 view-pdf">
-                            <i class="fa fa-car"></i> {{ __('order.file.delivery-order') }} (English)
+                            <i class="fa fa-car"></i> {{ __('order.file.delivery-order') }}
                         </a>
                     @endif
                 </div>

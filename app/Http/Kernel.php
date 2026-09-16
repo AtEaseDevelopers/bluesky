@@ -61,6 +61,7 @@ class Kernel extends HttpKernel
     protected $routeMiddleware = [
         'auth' => \App\Http\Middleware\Authenticate::class,
         'auth_admin' => \App\Http\Middleware\AdminAuthenticate::class,
+        'no_double_submit' => \App\Http\Middleware\PreventDuplicateSubmit::class,
         'admin_role_check' => \App\Http\Middleware\AdminRoleCheck::class,
         'admin_bootstrap' => \App\Http\Middleware\AdminBootstrap::class,
         'auth_driver' => \App\Http\Middleware\DriverAuthenticate::class,

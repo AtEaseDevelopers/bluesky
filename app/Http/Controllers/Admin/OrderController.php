@@ -568,7 +568,7 @@ class OrderController extends Controller
                 'total' => number_format($total, 2, '.', ''),
                 'customer' => $order->customer,
                 'customerName' => app(OrderService::class)->displayCustomerName($order),
-                'payments' => $order->payments()->with(['recorder', 'submitter'])->orderByDesc('id')->get(),
+                'payments' => $order->payments()->with(['recorder', 'recorderDriver', 'submitter'])->orderByDesc('id')->get(),
                 'paymentMethods' => $order->allowedAdminPaymentMethods(),
                 'allPaymentMethods' => OrderPayment::$payment_methods,
                 'paymentStatusLabels' => OrderPayment::$status_labels,

@@ -142,7 +142,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                     Route::get('/checkout', 'checkout')->name('checkout');
                     Route::post('/checkout', 'submitCheckout')->name('checkout.submit');
                     Route::get('/payment/{order}', 'payment')->name('payment');
-                    Route::post('/payment/{order}', 'recordPayment')->name('payment.store');
+                    Route::post('/payment/{order}', 'recordPayment')->middleware('no_double_submit')->name('payment.store');
                 });
                 Route::get('/customer/add', 'AddCustomerController@showForm')->name('customers.create');
                 Route::post('/customer/add', 'AddCustomerController@addCustomer')->name('customers.store');
@@ -180,7 +180,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 });
 
                 Route::controller('OrderPaymentController')->group(function () {
-                    Route::post('/order/{id}/payments', 'store')->name('orders.payments.store');
+                    Route::post('/order/{id}/payments', 'store')->middleware('no_double_submit')->name('orders.payments.store');
                     Route::post('/order/{orderId}/payments/{paymentId}/update', 'update')->name('orders.payments.update');
                     Route::post('/order/{orderId}/payments/{paymentId}/delete', 'destroy')->name('orders.payments.destroy');
                     Route::post('/order/{orderId}/payments/{paymentId}/confirm', 'confirm')->name('orders.payments.confirm');

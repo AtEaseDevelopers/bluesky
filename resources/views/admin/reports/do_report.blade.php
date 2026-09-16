@@ -76,14 +76,9 @@
                                             @endphp
                                             @if ($orderModel && $orderModel->canShowDeliveryOrder())
                                                 <a class="btn btn-sm btn-outline-primary view-pdf"
-                                                   href="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'cn']) }}#toolbar=0"
-                                                   data-url="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'cn']) }}">
-                                                    {{ __('orders.view_do') }} (中文)
-                                                </a>
-                                                <a class="btn btn-sm btn-outline-primary view-pdf"
-                                                   href="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'en']) }}#toolbar=0"
-                                                   data-url="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'en']) }}">
-                                                    {{ __('orders.view_do') }} (English)
+                                                   href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0"
+                                                   data-url="{{ route('admin.order.delivery-order', $order->id) }}">
+                                                    {{ __('orders.view_do') }}
                                                 </a>
                                             @else
                                                 -

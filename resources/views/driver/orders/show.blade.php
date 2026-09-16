@@ -300,6 +300,8 @@
                     <div id="driver-payment-record" @if (!$showRecordPanelInitially) style="display:none;" @endif>
                         <form action="{{ route('driver.orders.record-payment', $order->id) }}" method="POST" enctype="multipart/form-data" id="driver-record-payment-form" data-compress-upload>
                             @csrf
+                            <input type="hidden" name="_submit_token" value="{{ \Illuminate\Support\Str::uuid() }}">
+
                             @if ($order->isCreditCustomer())
                                 @php $defaultPaymentTiming = old('payment_timing', 'pay_now'); @endphp
                                 <div class="mb-3">

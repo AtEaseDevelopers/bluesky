@@ -151,9 +151,7 @@ class BuyAgainController extends Controller
             'member.order-summary', [
             'order' => $order,
             'invoice_url' => url('/') . '/'.Order::$path.'/'.$order->id.'/invoice-' . $order->id . '.pdf',
-            'invoice_url_en' => url('/') . '/'.Order::$path.'/'.$order->id.'/invoice-' . $order->id . '-en.pdf',
             'delivery_order_url' => url('/') . '/'.Order::$path.'/'.$order->id.'/delivery-order-' . $order->id . '.pdf',
-            'delivery_order_url_en' => url('/') . '/'.Order::$path.'/'.$order->id.'/delivery-order-' . $order->id . '-en.pdf',
             'products' => $order_products,
             'total' => number_format($total, 2, '.', ''),
             'customer' => $user

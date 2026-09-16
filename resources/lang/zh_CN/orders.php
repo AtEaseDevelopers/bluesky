@@ -288,6 +288,8 @@ return [
     'view' => '查看',
     'by' => '由',
     'system' => '系统',
+    'driver_tag' => '司机',
+    'duplicate_submit_ignored' => '此表单已提交，重复的请求已被忽略。',
     'balance_due_rm' => '应付余额：RM',
     'payment_n' => '付款 :n',
     'remove' => '移除',

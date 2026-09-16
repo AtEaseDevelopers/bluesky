@@ -293,6 +293,8 @@ return [
     'view' => 'View',
     'by' => 'By',
     'system' => 'System',
+    'driver_tag' => 'Driver',
+    'duplicate_submit_ignored' => 'This form was already submitted — the duplicate request was ignored.',
     'balance_due_rm' => 'Balance due: RM',
     'payment_n' => 'Payment :n',
     'remove' => 'Remove',

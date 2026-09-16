@@ -23,61 +23,26 @@ class PdfHelper extends Model
     }
 
     /**
-     * The INV/DO documents ship in two versions — English and Chinese.
-     * Both files are always written to storage on every generation; the
-     * requested language is the one streamed/downloaded back to the caller.
+     * Render a bilingual INV/DO document (the blade emits the Chinese version,
+     * then a page break, then the English version — both in one PDF), store it,
+     * and stream/download it or return its storage path.
      */
-    private static $locales = ['zh_CN', 'en'];
-
-    /** Map a caller-supplied language ('cn'/'en'/locale) to a supported locale. */
-    private static function normalizeLocale($lang): string
+    private static function renderBilingual(string $view, array $data, string $filename, Order $order, $returnPdf)
     {
-        return $lang === 'en' ? 'en' : 'zh_CN';
-    }
+        $pdf = self::configurePdf(PDF::loadView($view, $data));
+        $pdf->setPaper('a4', 'portrait');
 
-    /** Filename suffix per locale (Chinese keeps the original name for backward compatibility). */
-    private static function localeSuffix(string $locale): string
-    {
-        return $locale === 'en' ? '-en' : '';
-    }
-
-    private static function localeFilename(string $prefix, $id, string $locale): string
-    {
-        return $prefix . '-' . $id . self::localeSuffix($locale) . '.pdf';
-    }
-
-    /**
-     * Render the given blade view once per language, store every version, and
-     * return the requested language for stream/download (or its storage path).
-     */
-    private static function renderBothLocales(string $view, array $data, string $prefix, Order $order, $returnPdf, $lang)
-    {
-        $requested = self::normalizeLocale($lang);
-        $requestedPdf = null;
-        $requestedFilename = null;
-
-        foreach (self::$locales as $locale) {
-            $pdf = self::configurePdf(PDF::loadView($view, array_merge($data, ['locale' => $locale])));
-            $pdf->setPaper('a4', 'portrait');
-
-            $filename = self::localeFilename($prefix, $order->id, $locale);
-            Storage::disk('local')->put(Order::$path . '/' . $order->id . '/' . $filename, $pdf->output());
-
-            if ($locale === $requested) {
-                $requestedPdf = $pdf;
-                $requestedFilename = $filename;
-            }
-        }
+        Storage::disk('local')->put(Order::$path . '/' . $order->id . '/' . $filename, $pdf->output());
 
         if ($returnPdf === 'stream') {
-            return $requestedPdf->stream($requestedFilename);
+            return $pdf->stream($filename);
         }
 
         if ($returnPdf === 'download') {
-            return $requestedPdf->download($requestedFilename);
+            return $pdf->download($filename);
         }
 
-        return Order::$path . '/' . $order->id . '/' . $requestedFilename;
+        return Order::$path . '/' . $order->id . '/' . $filename;
     }
 
     /**
@@ -171,7 +136,7 @@ class PdfHelper extends Model
     }
 
     // Order specific methods (keep original structure but use common helpers)
-    public static function GenerateOrderInvoice(Order $order, $void = false, $returnPdf = false, $lang = 'zh_CN')
+    public static function GenerateOrderInvoice(Order $order, $void = false, $returnPdf = false)
     {
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
         $data = self::invoiceViewData($order, [
@@ -190,10 +155,10 @@ class PdfHelper extends Model
             'payment_method_labels' => OrderPayment::$payment_methods,
         ]);
 
-        return self::renderBothLocales('pdf.invoice', $data, 'invoice', $order, $returnPdf, $lang);
+        return self::renderBilingual('pdf.invoice', $data, 'invoice-' . $order->id . '.pdf', $order, $returnPdf);
     }
 
-    public static function GenerateOrderInvoiceWithoutPrice(Order $order, $void = false, $returnPdf = false, $lang = 'zh_CN')
+    public static function GenerateOrderInvoiceWithoutPrice(Order $order, $void = false, $returnPdf = false)
     {
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
         $data = self::invoiceViewData($order, [
@@ -208,7 +173,7 @@ class PdfHelper extends Model
             'type' => 'order',
         ]);
 
-        return self::renderBothLocales('pdf.invoicewithoutprice', $data, 'invoice2', $order, $returnPdf, $lang);
+        return self::renderBilingual('pdf.invoicewithoutprice', $data, 'invoice2-' . $order->id . '.pdf', $order, $returnPdf);
     }
 
     private static function deliveryViewData(Order $order, array $data = []): array
@@ -229,7 +194,7 @@ class PdfHelper extends Model
         ], $data);
     }
 
-    public static function GenerateDeliveryOrder(Order $order, $void = false, $returnPdf = false, $lang = 'zh_CN')
+    public static function GenerateDeliveryOrder(Order $order, $void = false, $returnPdf = false)
     {
         self::resolveCustomer($order);
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
@@ -248,7 +213,7 @@ class PdfHelper extends Model
             'payment_method_labels' => OrderPayment::$payment_methods,
         ]);
 
-        return self::renderBothLocales('pdf.delivery-order', $data, 'delivery-order', $order, $returnPdf, $lang);
+        return self::renderBilingual('pdf.delivery-order', $data, 'delivery-order-' . $order->id . '.pdf', $order, $returnPdf);
     }
 
     public static function UpdateDeliveryOrder(Order $order, $void = false, $custom_date = null)
@@ -270,6 +235,6 @@ class PdfHelper extends Model
             'show_prices' => OrderFieldSetting::deliveryOrderShowsPrices(),
         ]);
 
-        self::renderBothLocales('pdf.delivery-order2', $data, 'delivery-order', $order, false, 'zh_CN');
+        self::renderBilingual('pdf.delivery-order2', $data, 'delivery-order-' . $order->id . '.pdf', $order, false);
     }
 }

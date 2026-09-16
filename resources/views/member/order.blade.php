@@ -114,11 +114,8 @@
                                             </a>
                                         @endif
                                         @if ($order->canShowInvoiceToCustomer($user))
-                                            <a href="{{ $order->invoice_url }}" class="btn btn-sm btn-primary m-1 view-pdf" title="{{ __('orders.member.view_invoice') }} (中文)">
-                                                <i class="fa fa-file-text-o"></i> 中
-                                            </a>
-                                            <a href="{{ $order->invoice_url_en }}" class="btn btn-sm btn-primary m-1 view-pdf" title="{{ __('orders.member.view_invoice') }} (English)">
-                                                <i class="fa fa-file-text-o"></i> EN
+                                            <a href="{{ $order->invoice_url }}" class="btn btn-sm btn-primary m-1 view-pdf" title="{{ __('orders.member.view_invoice') }}">
+                                                <i class="fa fa-file-text-o"></i>
                                             </a>
                                         @endif
                                     </div>

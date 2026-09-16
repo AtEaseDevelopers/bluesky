@@ -108,55 +108,46 @@ class PdfLanguageTest extends TestCase
     }
 
     /** @test */
-    public function english_invoice_renders_english_labels_and_no_chinese(): void
+    public function invoice_pdf_merges_english_and_chinese_into_one_document(): void
     {
         $order = $this->seedOrder();
-        $html = view('pdf.invoice', array_merge($this->invoiceData($order), ['locale' => 'en']))->render();
+        $html = view('pdf.invoice', $this->invoiceData($order))->render();
 
-        $this->assertStringContainsString('Invoice', $html);
-        $this->assertStringContainsString('Description', $html);
-        $this->assertStringContainsString('Product Code', $html);
-        $this->assertStringContainsString('Total Amount', $html);
-        $this->assertStringContainsString('Payment Term', $html);
-        // Dynamic data is untouched
-        $this->assertStringContainsString('SZZ029', $html);
-        $this->assertStringContainsString('IV-2609-00735', $html);
-        // Chinese labels must be gone in the English version
-        $this->assertStringNotContainsString('产品描述', $html);
-        $this->assertStringNotContainsString('总金额', $html);
-        $this->assertStringNotContainsString('付款条件', $html);
-    }
-
-    /** @test */
-    public function chinese_invoice_still_renders_chinese_labels(): void
-    {
-        $order = $this->seedOrder();
-        $html = view('pdf.invoice', array_merge($this->invoiceData($order), ['locale' => 'zh_CN']))->render();
-
+        // Chinese version
         $this->assertStringContainsString('产品描述', $html);
         $this->assertStringContainsString('总金额', $html);
-        $this->assertStringNotContainsString('Description', $html);
+        $this->assertStringContainsString('付款条件', $html);
+        // English version, in the SAME document
+        $this->assertStringContainsString('Description', $html);
+        $this->assertStringContainsString('Total Amount', $html);
+        $this->assertStringContainsString('Payment Term', $html);
+        // The two language versions are separated by a page break
+        $this->assertStringContainsString('page-break-before', $html);
+        // Dynamic data is untouched (appears once per language)
+        $this->assertStringContainsString('SZZ029', $html);
+        $this->assertStringContainsString('IV-2609-00735', $html);
     }
 
     /** @test */
-    public function english_delivery_order_renders_english_title(): void
+    public function delivery_order_pdf_merges_english_and_chinese_into_one_document(): void
     {
         $order = $this->seedOrder();
         $data = array_merge($this->invoiceData($order), [
-            'locale' => 'en',
             'do_no' => 'DO-2609-00735',
             'show_prices' => true,
         ]);
 
         $html = view('pdf.delivery-order', $data)->render();
 
-        $this->assertStringContainsString('Delivery Order', $html);
+        $this->assertStringContainsString('送货单', $html);       // Chinese title
+        $this->assertStringContainsString('Delivery Order', $html); // English title
+        $this->assertStringContainsString('送货单号', $html);
         $this->assertStringContainsString('DO No.', $html);
-        $this->assertStringNotContainsString('送货单', $html);
+        $this->assertStringContainsString('page-break-before', $html);
     }
 
     /** @test */
-    public function generate_invoice_writes_both_language_files(): void
+    public function generate_invoice_writes_single_merged_file(): void
     {
         Storage::fake('local');
         $order = $this->seedOrder();
@@ -164,11 +155,12 @@ class PdfLanguageTest extends TestCase
         PdfHelper::GenerateOrderInvoice($order);
 
         Storage::disk('local')->assertExists(Order::$path . '/' . $order->id . '/invoice-' . $order->id . '.pdf');
-        Storage::disk('local')->assertExists(Order::$path . '/' . $order->id . '/invoice-' . $order->id . '-en.pdf');
+        // No separate per-language file — both languages live in the one PDF
+        Storage::disk('local')->assertMissing(Order::$path . '/' . $order->id . '/invoice-' . $order->id . '-en.pdf');
     }
 
     /** @test */
-    public function generate_delivery_order_writes_both_language_files(): void
+    public function generate_delivery_order_writes_single_merged_file(): void
     {
         Storage::fake('local');
         $order = $this->seedOrder();
@@ -176,23 +168,11 @@ class PdfLanguageTest extends TestCase
         PdfHelper::GenerateDeliveryOrder($order);
 
         Storage::disk('local')->assertExists(Order::$path . '/' . $order->id . '/delivery-order-' . $order->id . '.pdf');
-        Storage::disk('local')->assertExists(Order::$path . '/' . $order->id . '/delivery-order-' . $order->id . '-en.pdf');
+        Storage::disk('local')->assertMissing(Order::$path . '/' . $order->id . '/delivery-order-' . $order->id . '-en.pdf');
     }
 
     /** @test */
-    public function generate_invoice_without_price_writes_both_language_files(): void
-    {
-        Storage::fake('local');
-        $order = $this->seedOrder();
-
-        PdfHelper::GenerateOrderInvoiceWithoutPrice($order);
-
-        Storage::disk('local')->assertExists(Order::$path . '/' . $order->id . '/invoice2-' . $order->id . '.pdf');
-        Storage::disk('local')->assertExists(Order::$path . '/' . $order->id . '/invoice2-' . $order->id . '-en.pdf');
-    }
-
-    /** @test */
-    public function admin_invoice_route_downloads_requested_language_file(): void
+    public function admin_invoice_route_downloads_the_merged_pdf(): void
     {
         Storage::fake('local');
         $admin = Admin::forceCreate([
@@ -207,14 +187,9 @@ class PdfLanguageTest extends TestCase
         $order->update(['paid_amount' => 583.00]); // canShowInvoice() needs a collected payment
 
         $this->actingAs($admin, 'web_admin')
-            ->get(route('admin.order.invoice.download', ['id' => $order->id, 'lang' => 'en']))
+            ->get(route('admin.order.invoice.download', $order->id))
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf')
-            ->assertDownload('invoice-' . $order->id . '-en.pdf');
-
-        $this->actingAs($admin, 'web_admin')
-            ->get(route('admin.order.invoice.download', ['id' => $order->id, 'lang' => 'cn']))
-            ->assertOk()
             ->assertDownload('invoice-' . $order->id . '.pdf');
     }
 }

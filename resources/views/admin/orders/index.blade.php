@@ -282,18 +282,12 @@
                                                     @endif
                                                     @if ($order->canShowInvoice())
                                                         <li>
-                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'cn']) }}#toolbar=0" data-url="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'cn']) }}">{{ __('orders.view_invoice') }} (中文)</a>
-                                                        </li>
-                                                        <li>
-                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'en']) }}#toolbar=0" data-url="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'en']) }}">{{ __('orders.view_invoice') }} (English)</a>
+                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.invoice', $order->id) }}">{{ __('orders.view_invoice') }}</a>
                                                         </li>
                                                     @endif
                                                     @if ($order->canAdminShowDeliveryOrder())
                                                         <li>
-                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'cn']) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'cn']) }}">{{ __('orders.view_do') }} (中文)</a>
-                                                        </li>
-                                                        <li>
-                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'en']) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'en']) }}">{{ __('orders.view_do') }} (English)</a>
+                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">{{ __('orders.view_do') }}</a>
                                                         </li>
                                                     @endif
                                                     @if ($admin->canModule('orders', 'edit'))
@@ -399,6 +393,22 @@
                                             <span class="badge {{ $syncStatusClass }}">
                                                 {{ __('orders.autocount_sync_status.' . $syncStatusKey) }}
                                             </span>
+                                            @if (in_array($syncStatusKey, ['synced', 'synced_successfully', 'paid_synced'], true))
+                                                @php
+                                                    $syncedDoNo = $order->api_do_id ?: $order->do_no;
+                                                    $syncedInvNo = $order->api_invoice_id ?: $order->invoice_number;
+                                                @endphp
+                                                @if ($syncedDoNo || $syncedInvNo)
+                                                    <div class="small text-muted mt-1">
+                                                        @if ($syncedDoNo)
+                                                            <div>{{ __('orders.do_no') }}: {{ $syncedDoNo }}</div>
+                                                        @endif
+                                                        @if ($syncedInvNo)
+                                                            <div>{{ __('orders.invoice_no') }}: {{ $syncedInvNo }}</div>
+                                                        @endif
+                                                    </div>
+                                                @endif
+                                            @endif
                                         </td>
                                         <td>{{ $order->updated_at }}</td>
                                     </tr>

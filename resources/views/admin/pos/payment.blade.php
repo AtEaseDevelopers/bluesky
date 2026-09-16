@@ -13,6 +13,7 @@
 
                     <form action="{{ route('admin.pos.payment.store', $order->id) }}" method="POST" enctype="multipart/form-data">
                         @csrf
+                        <input type="hidden" name="_submit_token" value="{{ \Illuminate\Support\Str::uuid() }}">
                         <div class="row g-3 align-items-end payment-line">
                             <div class="col-md-4">
                                 <label class="mb-2">{{ __('orders.method') }}</label>

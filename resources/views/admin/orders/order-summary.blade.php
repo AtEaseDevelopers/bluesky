@@ -20,12 +20,10 @@
                             <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">{{ __('orders.documents') }}</button>
                             <ul class="dropdown-menu">
                                 @if ($order->canShowInvoice())
-                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'cn']) }}#toolbar=0" data-url="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'cn']) }}">{{ __('orders.view_invoice') }} (中文)</a></li>
-                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'en']) }}#toolbar=0" data-url="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'en']) }}">{{ __('orders.view_invoice') }} (English)</a></li>
+                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.invoice', $order->id) }}">{{ __('orders.view_invoice') }}</a></li>
                                 @endif
                                 @if ($order->canAdminShowDeliveryOrder())
-                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'cn']) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'cn']) }}">{{ __('orders.view_do') }} (中文)</a></li>
-                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'en']) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'en']) }}">{{ __('orders.view_do') }} (English)</a></li>
+                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">{{ __('orders.view_do') }}</a></li>
                                 @endif
                             </ul>
                         </div>
@@ -515,6 +513,8 @@
                             <hr>
                             <form action="{{ route('admin.orders.payments.store', $order->id) }}" method="POST" enctype="multipart/form-data" id="split-payment-form">
                                 @csrf
+                                <input type="hidden" name="_submit_token" value="{{ \Illuminate\Support\Str::uuid() }}">
+
                                 <div id="payment-lines">
                                     <div class="payment-line border rounded p-3 mb-3" data-index="0">
                                         <div class="row g-2">
@@ -661,7 +661,12 @@
                                                     <br><small class="text-muted">{{ __('orders.by') }} {{ $payment->submitter->name }}</small>
                                                 @endif
                                             </td>
-                                            <td>{{ $payment->recorder->name ?? ($payment->submitter->name ?? __('orders.system')) }}</td>
+                                            <td>
+                                                {{ $payment->recorderName() }}
+                                                @if (!$payment->recorder && $payment->recorderDriver)
+                                                    <span class="badge bg-info text-dark">{{ __('orders.driver_tag') }}</span>
+                                                @endif
+                                            </td>
                                             <td>{{ $payment->notes ?: '-' }}</td>
                                             <td>
                                                 @if ($payment->payment_proof)
