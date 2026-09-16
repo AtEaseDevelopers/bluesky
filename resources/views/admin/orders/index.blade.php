@@ -346,6 +346,8 @@
                                                 {!! $driverLabel ? e($driverLabel) : '<span class="text-danger">' . e(__('orders.lorry_deleted')) . '</span>' !!}
                                             @elseif ($order->isCourier())
                                                 <span class="badge bg-info text-dark">{{ __('orders.fulfillment_courier') }}</span>
+                                            @elseif ($order->isPickup())
+                                                <span class="badge bg-warning text-dark">{{ __('orders.fulfillment_pickup') }}</span>
                                             @else
                                                 -
                                             @endif
