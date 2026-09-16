@@ -108,28 +108,25 @@ class PdfLanguageTest extends TestCase
     }
 
     /** @test */
-    public function invoice_pdf_merges_english_and_chinese_into_one_document(): void
+    public function invoice_labels_are_bilingual_on_one_page(): void
     {
         $order = $this->seedOrder();
         $html = view('pdf.invoice', $this->invoiceData($order))->render();
 
-        // Chinese version
-        $this->assertStringContainsString('产品描述', $html);
-        $this->assertStringContainsString('总金额', $html);
-        $this->assertStringContainsString('付款条件', $html);
-        // English version, in the SAME document
-        $this->assertStringContainsString('Description', $html);
-        $this->assertStringContainsString('Total Amount', $html);
-        $this->assertStringContainsString('Payment Term', $html);
-        // The two language versions are separated by a page break
-        $this->assertStringContainsString('page-break-before', $html);
-        // Dynamic data is untouched (appears once per language)
+        // Each label shows Chinese + English together (mixed on the same page)
+        $this->assertStringContainsString('发票 Invoice', $html);
+        $this->assertStringContainsString('产品描述 Description', $html);
+        $this->assertStringContainsString('总金额 Total Amount', $html);
+        $this->assertStringContainsString('付款条件 Payment Term', $html);
+        // NOT split into two language pages
+        $this->assertStringNotContainsString('page-break-before', $html);
+        // Dynamic data is untouched
         $this->assertStringContainsString('SZZ029', $html);
         $this->assertStringContainsString('IV-2609-00735', $html);
     }
 
     /** @test */
-    public function delivery_order_pdf_merges_english_and_chinese_into_one_document(): void
+    public function delivery_order_labels_are_bilingual_on_one_page(): void
     {
         $order = $this->seedOrder();
         $data = array_merge($this->invoiceData($order), [
@@ -139,11 +136,10 @@ class PdfLanguageTest extends TestCase
 
         $html = view('pdf.delivery-order', $data)->render();
 
-        $this->assertStringContainsString('送货单', $html);       // Chinese title
-        $this->assertStringContainsString('Delivery Order', $html); // English title
-        $this->assertStringContainsString('送货单号', $html);
-        $this->assertStringContainsString('DO No.', $html);
-        $this->assertStringContainsString('page-break-before', $html);
+        $this->assertStringContainsString('送货单 Delivery Order', $html);
+        $this->assertStringContainsString('送货单号 DO No.', $html);
+        $this->assertStringContainsString('产品描述 Description', $html);
+        $this->assertStringNotContainsString('page-break-before', $html);
     }
 
     /** @test */

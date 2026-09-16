@@ -281,6 +281,28 @@ class DailySalesReportPaymentFilterTest extends TestCase
     }
 
     /** @test */
+    public function payment_collection_summary_excludes_cancelled_orders_like_sales(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $live = $this->makeOrder($customer, 'cod');
+        $this->recordPayment($live, 'cash');                 // counts: 45.00
+
+        // A payment on a cancelled order must not inflate collections — the
+        // sales side already drops cancelled orders, so collections follow suit.
+        $cancelled = $this->makeOrder($customer, 'cod');
+        $this->recordPayment($cancelled, 'cash');
+        $cancelled->update(['status' => Order::$status['cancelled']]);
+
+        $summary = app(DailySalesReportService::class)
+            ->paymentCollectionSummary(Request::create('/', 'GET', []));
+
+        $this->assertSame(45.0, $summary['cash']['total']);
+        $this->assertSame(1, $summary['cash']['count']);
+        $this->assertSame(45.0, $summary['grand_total']['total']);
+    }
+
+    /** @test */
     public function recorded_payment_label_buckets_and_dedupes_methods(): void
     {
         $service = app(DailySalesReportService::class);

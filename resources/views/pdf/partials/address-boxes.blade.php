@@ -1,5 +1,4 @@
 @php
-    $locale = $locale ?? 'zh_CN';
     $pdfCustomer = $order->pdfCustomer();
     $addressLines = static function ($value) {
         return array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) $value)), static function ($line) {
@@ -18,7 +17,7 @@
         <td style="width: 49%; vertical-align: top; border: 1px solid #9a9a9a;">
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <td style="background-color: #e6e6e6; padding: 5px 8px; font-size: 12px; font-weight: 700; border-bottom: 1px solid #9a9a9a;">{{ __('pdf.addr.billing', [], $locale) }}</td>
+                    <td style="background-color: #e6e6e6; padding: 5px 8px; font-size: 12px; font-weight: 700; border-bottom: 1px solid #9a9a9a;">{{ \App\PdfHelper::bilingual('pdf.addr.billing') }}</td>
                 </tr>
                 <tr>
                     <td style="padding: 8px; font-size: 12px;">
@@ -34,7 +33,7 @@
         <td style="width: 49%; vertical-align: top; border: 1px solid #9a9a9a;">
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <td style="background-color: #e6e6e6; padding: 5px 8px; font-size: 12px; font-weight: 700; border-bottom: 1px solid #9a9a9a;">{{ __('pdf.addr.shipping', [], $locale) }}</td>
+                    <td style="background-color: #e6e6e6; padding: 5px 8px; font-size: 12px; font-weight: 700; border-bottom: 1px solid #9a9a9a;">{{ \App\PdfHelper::bilingual('pdf.addr.shipping') }}</td>
                 </tr>
                 <tr>
                     <td style="padding: 8px; font-size: 12px;">
@@ -51,7 +50,7 @@
 <table style="width: 100%; border-collapse: collapse; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif; margin: 8px 0 0 0;">
     <tr>
         <td style="font-size: 12px;">
-            <span style="font-weight: 700;">{{ __('pdf.addr.tel', [], $locale) }} :</span> {{ $customer_phone ?: '-' }}
+            <span style="font-weight: 700;">{{ \App\PdfHelper::bilingual('pdf.addr.tel') }} :</span> {{ $customer_phone ?: '-' }}
         </td>
     </tr>
 </table>

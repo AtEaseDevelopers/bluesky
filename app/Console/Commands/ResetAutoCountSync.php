@@ -10,15 +10,17 @@ class ResetAutoCountSync extends Command
     protected $signature = 'orders:reset-autocount-sync
                             {--dry-run : Preview the orders that would change; write nothing}
                             {--force : Also re-queue orders already sent to AutoCount and clear their DO/invoice refs (may create duplicate documents)}
+                            {--any-status : Reset regardless of payment/completion status (pair with --force to clear stale refs on every order)}
                             {--unqueue : Reverse: set queued (pending_sync) and errored (sync_error) orders back to pending so the plugin ignores them}
                             {--id=* : Restrict to specific order id(s)}';
 
-    protected $description = 'Re-queue paid & completed orders for AutoCount sync (autocount_sync_status = pending_sync), or --unqueue to reverse.';
+    protected $description = 'Reset paid & completed orders for AutoCount sync (autocount_sync_status = pending), or --unqueue to reverse.';
 
     public function handle(): int
     {
         $dryRun = (bool) $this->option('dry-run');
         $force = (bool) $this->option('force');
+        $anyStatus = (bool) $this->option('any-status');
         $unqueue = (bool) $this->option('unqueue');
         $ids = array_filter((array) $this->option('id'), fn ($id) => $id !== null && $id !== '');
 
@@ -26,11 +28,15 @@ class ResetAutoCountSync extends Command
             return $this->unqueue($ids, $dryRun);
         }
 
-        // Only paid + completed orders are eligible to sync (mirrors
-        // AutoCountApiService::baseOrderQuery).
-        $query = Order::query()
-            ->where('payment_status', Order::$payment_status['paid'])
-            ->where('status', Order::$status['completed']);
+        $query = Order::query();
+
+        // By default only paid + completed orders are eligible to sync (mirrors
+        // AutoCountApiService::baseOrderQuery). --any-status drops that gate so a
+        // wiped AutoCount DB can be reconciled against every order's stale refs.
+        if (!$anyStatus) {
+            $query->where('payment_status', Order::$payment_status['paid'])
+                ->where('status', Order::$status['completed']);
+        }
 
         if (!empty($ids)) {
             $query->whereIn('id', $ids);
@@ -51,7 +57,7 @@ class ResetAutoCountSync extends Command
         }
 
         $this->info(($dryRun ? '[DRY RUN] ' : '')
-            . $orders->count() . ' order(s) will be set to pending_sync'
+            . $orders->count() . ' order(s) will be set to pending'
             . ($force ? ' (DO/invoice refs cleared)' : '') . ':');
 
         $this->table(
@@ -78,7 +84,7 @@ class ResetAutoCountSync extends Command
         }
 
         $payload = [
-            'autocount_sync_status' => 'pending_sync',
+            'autocount_sync_status' => 'pending',
             'autocount_synced_at' => null,
         ];
 
@@ -90,7 +96,7 @@ class ResetAutoCountSync extends Command
         $updated = $query->update($payload);
 
         $this->newLine();
-        $this->info("Done — {$updated} order(s) re-queued for AutoCount sync.");
+        $this->info("Done — {$updated} order(s) reset to pending.");
 
         return 0;
     }

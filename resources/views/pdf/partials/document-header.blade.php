@@ -1,9 +1,8 @@
 @php
-    $locale = $locale ?? 'zh_CN';
     $company = $company ?? config('portal.company');
     $addressLines = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $company['address'] ?? '')));
 
-    $metaNumberLabel = $number_label ?? __('pdf.meta.invoice_no', [], $locale);
+    $metaNumberLabel = $number_label ?? \App\PdfHelper::bilingual('pdf.meta.invoice_no');
     $metaNumber = $number_value ?? '';
     $metaDate = $date ?? '';
     $metaTime = $time ?? '';
@@ -16,7 +15,7 @@
 <table style="width: 100%; border-collapse: collapse; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif;">
     <tr>
         <td style="text-align: center; padding-bottom: 14px;">
-            <span style="font-size: 24px; font-weight: 700; letter-spacing: 6px;">{{ $doc_title ?? __('pdf.doc.invoice_title', [], $locale) }}</span>
+            <span style="font-size: 24px; font-weight: 700; letter-spacing: 6px;">{{ $doc_title ?? \App\PdfHelper::bilingual('pdf.doc.invoice_title') }}</span>
         </td>
     </tr>
 </table>
@@ -48,35 +47,35 @@
                     <td style="font-size: 12px; font-weight: 700;">{{ $metaNumber }}</td>
                 </tr>
                 <tr>
-                    <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.date', [], $locale) }}</td>
+                    <td style="font-size: 12px; padding: 1px 0;">{{ \App\PdfHelper::bilingual('pdf.meta.date') }}</td>
                     <td style="font-size: 12px;">:</td>
                     <td style="font-size: 12px;">{{ $metaDate }}</td>
                 </tr>
                 @if ($metaTime !== '' && $metaTime !== null)
                     <tr>
-                        <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.time', [], $locale) }}</td>
+                        <td style="font-size: 12px; padding: 1px 0;">{{ \App\PdfHelper::bilingual('pdf.meta.time') }}</td>
                         <td style="font-size: 12px;">:</td>
                         <td style="font-size: 12px;">{{ $metaTime }}</td>
                     </tr>
                 @endif
                 <tr>
-                    <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.payment_term', [], $locale) }}</td>
+                    <td style="font-size: 12px; padding: 1px 0;">{{ \App\PdfHelper::bilingual('pdf.meta.payment_term') }}</td>
                     <td style="font-size: 12px;">:</td>
                     <td style="font-size: 12px;">{{ $metaTerm }}</td>
                 </tr>
                 <tr>
-                    <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.currency', [], $locale) }}</td>
+                    <td style="font-size: 12px; padding: 1px 0;">{{ \App\PdfHelper::bilingual('pdf.meta.currency') }}</td>
                     <td style="font-size: 12px;">:</td>
                     <td style="font-size: 12px;">{{ $metaCurrency }}</td>
                 </tr>
                 <tr>
-                    <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.customer_code', [], $locale) }}</td>
+                    <td style="font-size: 12px; padding: 1px 0;">{{ \App\PdfHelper::bilingual('pdf.meta.customer_code') }}</td>
                     <td style="font-size: 12px;">:</td>
                     <td style="font-size: 12px;">{{ $metaCustomerCode }}</td>
                 </tr>
                 @if (!empty($metaFulfillment))
                     <tr>
-                        <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.fulfillment', [], $locale) }}</td>
+                        <td style="font-size: 12px; padding: 1px 0;">{{ \App\PdfHelper::bilingual('pdf.meta.fulfillment') }}</td>
                         <td style="font-size: 12px;">:</td>
                         <td style="font-size: 12px;">{{ $metaFulfillment }}</td>
                     </tr>

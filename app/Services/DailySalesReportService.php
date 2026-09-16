@@ -196,9 +196,13 @@ class DailySalesReportService
                 DB::raw('COUNT(*) AS payment_count')
             )
             ->where('order_payments.status', OrderPayment::STATUS_CONFIRMED)
-            ->whereBetween('order_payments.created_at', [$startDate, $endDate . ' 23:59:59']);
+            // Anchor on the order date and drop cancelled orders, exactly like
+            // salesSummary(), so "Total Collected" reconciles against "Total
+            // Sales" instead of drifting on payment date / cancelled orders.
+            ->whereBetween('orders.created_at', [$startDate, $endDate . ' 23:59:59']);
 
         $this->applyOrderFilters($query, $request, 'orders', 'order_payments');
+        $this->excludeCancelledOrders($query, $request);
 
         $rows = $query
             ->groupBy('order_payments.payment_method')

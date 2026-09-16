@@ -1,9 +1,8 @@
 @php
-    $locale = $locale ?? 'zh_CN';
     $showCols = $show_price_columns ?? false;
     $hasPerm = $has_price_permission ?? true;
     $footerMode = $footer_mode ?? ($showCols ? 'full' : 'weight');
-    $remarkNote = $remark_note ?? __('pdf.totals.remark_note', [], $locale);
+    $remarkNote = $remark_note ?? \App\PdfHelper::bilingual('pdf.totals.remark_note');
 
     $total_weight = 0;
     $lineSubtotal = 0;
@@ -22,14 +21,14 @@
 @endphp
 <table style="width: 100%; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif; border-collapse: collapse; margin: 16px 0 0 0;">
     <tr>
-        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '6%' : '7%' }};">{{ __('pdf.items.no', [], $locale) }}</td>
-        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '13%' : '16%' }};">{{ __('pdf.items.sku', [], $locale) }}</td>
-        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '31%' : '45%' }};">{{ __('pdf.items.description', [], $locale) }}</td>
-        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '10%' : '14%' }}; text-align: center;">{{ __('pdf.items.qty', [], $locale) }}</td>
-        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '12%' : '18%' }}; text-align: center;">{{ __('pdf.items.weight', [], $locale) }}</td>
+        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '6%' : '7%' }};">{{ \App\PdfHelper::bilingual('pdf.items.no') }}</td>
+        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '13%' : '16%' }};">{{ \App\PdfHelper::bilingual('pdf.items.sku') }}</td>
+        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '31%' : '45%' }};">{{ \App\PdfHelper::bilingual('pdf.items.description') }}</td>
+        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '10%' : '14%' }}; text-align: center;">{{ \App\PdfHelper::bilingual('pdf.items.qty') }}</td>
+        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '12%' : '18%' }}; text-align: center;">{{ \App\PdfHelper::bilingual('pdf.items.weight') }}</td>
         @if ($showCols)
-            <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: 14%; text-align: right;">{{ __('pdf.items.unit_price', [], $locale) }}</td>
-            <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: 14%; text-align: right;">{{ __('pdf.items.subtotal', [], $locale) }}</td>
+            <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: 14%; text-align: right;">{{ \App\PdfHelper::bilingual('pdf.items.unit_price') }}</td>
+            <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: 14%; text-align: right;">{{ \App\PdfHelper::bilingual('pdf.items.subtotal') }}</td>
         @endif
     </tr>
     @foreach ($order_items as $key => $prod)
@@ -63,45 +62,45 @@
 <table style="width: 100%; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif; border-collapse: collapse; margin: 20px 0 0 0;">
     <tr>
         <td style="width: 55%; vertical-align: top;">
-            <span style="font-size: 12px; font-weight: 700;">{{ __('pdf.totals.remark', [], $locale) }} :</span><br>
+            <span style="font-size: 12px; font-weight: 700;">{{ \App\PdfHelper::bilingual('pdf.totals.remark') }} :</span><br>
             <span style="font-size: 12px;">{{ $remarkNote }}</span>
         </td>
         <td style="width: 45%; vertical-align: top;">
             <table style="width: 100%; border-collapse: collapse;">
                 @if ($footerMode === 'full')
                     <tr>
-                        <td style="font-size: 12px; text-align: left; padding: 3px 0;">{{ __('pdf.totals.total_weight', [], $locale) }} :</td>
+                        <td style="font-size: 12px; text-align: left; padding: 3px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.total_weight') }} :</td>
                         <td style="font-size: 12px; text-align: right; padding: 3px 0;">{{ $total_weight ?? 0 }} KG</td>
                     </tr>
                     <tr>
-                        <td style="font-size: 12px; text-align: left; padding: 3px 0;">{{ __('pdf.items.subtotal', [], $locale) }} :</td>
+                        <td style="font-size: 12px; text-align: left; padding: 3px 0;">{{ \App\PdfHelper::bilingual('pdf.items.subtotal') }} :</td>
                         <td style="font-size: 12px; text-align: right; padding: 3px 0;">{{ $money($lineSubtotal) }}</td>
                     </tr>
                     @if ($deliveryFee != 0)
                         <tr>
-                            <td style="font-size: 12px; text-align: left; padding: 3px 0;">{{ __('pdf.totals.delivery_fee', [], $locale) }} :</td>
+                            <td style="font-size: 12px; text-align: left; padding: 3px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.delivery_fee') }} :</td>
                             <td style="font-size: 12px; text-align: right; padding: 3px 0;">{{ $money($deliveryFee) }}</td>
                         </tr>
                     @endif
                     @if ($adjustment != 0)
                         <tr>
-                            <td style="font-size: 12px; text-align: left; padding: 3px 0;">{{ __('pdf.totals.adjustment', [], $locale) }} :</td>
+                            <td style="font-size: 12px; text-align: left; padding: 3px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.adjustment') }} :</td>
                             <td style="font-size: 12px; text-align: right; padding: 3px 0;">{{ $money($adjustment) }}</td>
                         </tr>
                     @endif
                     @if ($discount != 0)
                         <tr>
-                            <td style="font-size: 12px; text-align: left; padding: 3px 0;">{{ __('pdf.totals.discount', [], $locale) }} :</td>
+                            <td style="font-size: 12px; text-align: left; padding: 3px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.discount') }} :</td>
                             <td style="font-size: 12px; text-align: right; padding: 3px 0;">- {{ $money($discount) }}</td>
                         </tr>
                     @endif
                     <tr>
-                        <td style="font-size: 14px; font-weight: 700; text-align: left; padding: 8px 0 4px 0; border-top: 1px solid #000;">{{ __('pdf.totals.total_amount', [], $locale) }} :</td>
+                        <td style="font-size: 14px; font-weight: 700; text-align: left; padding: 8px 0 4px 0; border-top: 1px solid #000;">{{ \App\PdfHelper::bilingual('pdf.totals.total_amount') }} :</td>
                         <td style="font-size: 14px; font-weight: 700; text-align: right; padding: 8px 0 4px 0; border-top: 1px solid #000;">{{ $money($grandTotal) }}</td>
                     </tr>
                 @else
                     <tr>
-                        <td style="font-size: 14px; font-weight: 700; text-align: left; padding: 8px 0 4px 0; border-top: 1px solid #000;">{{ __('pdf.totals.total_weight', [], $locale) }} :</td>
+                        <td style="font-size: 14px; font-weight: 700; text-align: left; padding: 8px 0 4px 0; border-top: 1px solid #000;">{{ \App\PdfHelper::bilingual('pdf.totals.total_weight') }} :</td>
                         <td style="font-size: 14px; font-weight: 700; text-align: right; padding: 8px 0 4px 0; border-top: 1px solid #000;">{{ $total_weight ?? 0 }} KG</td>
                     </tr>
                 @endif
@@ -119,7 +118,7 @@
             <td style="width: 45%;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
-                        <td colspan="2" style="font-size: 12px; font-weight: 700; padding: 6px 0 2px 0;">{{ __('pdf.totals.payments_received', [], $locale) }}</td>
+                        <td colspan="2" style="font-size: 12px; font-weight: 700; padding: 6px 0 2px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.payments_received') }}</td>
                     </tr>
                     @foreach ($payments as $payment)
                         <tr>
@@ -128,12 +127,12 @@
                         </tr>
                     @endforeach
                     <tr>
-                        <td style="font-size: 12px; font-weight: 700; text-align: left; padding: 4px 0;">{{ __('pdf.totals.total_paid', [], $locale) }} :</td>
+                        <td style="font-size: 12px; font-weight: 700; text-align: left; padding: 4px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.total_paid') }} :</td>
                         <td style="font-size: 12px; font-weight: 700; text-align: right; padding: 4px 0;">{{ $money($paidTotal) }}</td>
                     </tr>
                     @if ($paidTotal < $grandTotal)
                         <tr>
-                            <td style="font-size: 12px; font-weight: 700; text-align: left; padding: 4px 0;">{{ __('pdf.totals.balance_due', [], $locale) }} :</td>
+                            <td style="font-size: 12px; font-weight: 700; text-align: left; padding: 4px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.balance_due') }} :</td>
                             <td style="font-size: 12px; font-weight: 700; text-align: right; padding: 4px 0;">{{ $money($grandTotal - $paidTotal) }}</td>
                         </tr>
                     @endif

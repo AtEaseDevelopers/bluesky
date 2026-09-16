@@ -23,9 +23,22 @@ class PdfHelper extends Model
     }
 
     /**
-     * Render a bilingual INV/DO document (the blade emits the Chinese version,
-     * then a page break, then the English version — both in one PDF), store it,
-     * and stream/download it or return its storage path.
+     * A bilingual label for the INV/DO PDFs: the Chinese and English versions of
+     * a `pdf.*` translation key rendered together on one line (used by the blade
+     * templates so every label shows both languages on the same page).
+     */
+    public static function bilingual(string $key, string $separator = ' '): string
+    {
+        $zh = __($key, [], 'zh_CN');
+        $en = __($key, [], 'en');
+
+        return $zh === $en ? $zh : $zh . $separator . $en;
+    }
+
+    /**
+     * Render a bilingual INV/DO document (each label shows both Chinese and
+     * English on the same page), store it, and stream/download it or return its
+     * storage path.
      */
     private static function renderBilingual(string $view, array $data, string $filename, Order $order, $returnPdf)
     {

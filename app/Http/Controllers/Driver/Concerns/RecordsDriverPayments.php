@@ -73,6 +73,24 @@ trait RecordsDriverPayments
             ]);
 
             if ($timingData['payment_timing'] === 'pay_later') {
+                // "Pay on credit terms": record a credit-term payment for the
+                // outstanding balance so the order-summary payment table shows it
+                // (and the charge lands on the customer's credit ledger). It is
+                // attributed to the driver, mirroring an admin credit-term entry.
+                try {
+                    app(OrderService::class)->recordPayment(
+                        $order,
+                        'credit-term',
+                        (float) $order->balanceDue(),
+                        null,
+                        null,
+                        null,
+                        Auth::guard('web_driver')->id()
+                    );
+                } catch (\InvalidArgumentException $e) {
+                    return back()->withInput()->with('error', $e->getMessage());
+                }
+
                 return back()->with('success', __('driver_portal.payment.pay_later_noted'));
             }
 

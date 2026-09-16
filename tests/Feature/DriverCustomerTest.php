@@ -422,8 +422,15 @@ class DriverCustomerTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $this->assertEquals(0.0, (float) $order->fresh()->paid_amount);
-        $this->assertDatabaseMissing('order_payments', ['order_id' => $order->id]);
+        // Recording "pay on credit terms" now creates a credit-term payment
+        // attributed to the driver (appears in the order-summary payment table).
+        $this->assertDatabaseHas('order_payments', [
+            'order_id' => $order->id,
+            'payment_method' => 'credit-term',
+            'recorded_by_driver' => $driver->id,
+            'status' => \App\OrderPayment::STATUS_CONFIRMED,
+        ]);
+        $this->assertEquals(150.0, (float) $order->fresh()->paid_amount);
     }
 
     /** @test */
