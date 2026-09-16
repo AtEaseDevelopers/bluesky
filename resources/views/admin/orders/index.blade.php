@@ -120,6 +120,12 @@
                                     <label class="mb-2" for="lorry">{{ __('orders.select_lorry') }}</label>
                                     <select class="form-select" id="lorry" name="lorry">
                                         <option value="">{{ __('orders.choose') }}</option>
+                                        <option value="{{ \App\Order::$fulfillment_types['courier'] }}" {{ ($input['lorry'] ?? '') === \App\Order::$fulfillment_types['courier'] ? 'selected' : '' }}>
+                                            {{ __('orders.fulfillment_courier') }}
+                                        </option>
+                                        <option value="{{ \App\Order::$fulfillment_types['pickup'] }}" {{ ($input['lorry'] ?? '') === \App\Order::$fulfillment_types['pickup'] ? 'selected' : '' }}>
+                                            {{ __('orders.fulfillment_pickup') }}
+                                        </option>
                                         @foreach ($drivers as $id => $lorry)
                                             <option value="{{ $id }}" {{ ($input['lorry'] ?? '') == $id ? 'selected' : '' }}>
                                                 {{ $lorry }}

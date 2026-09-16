@@ -95,7 +95,14 @@ class OrderController extends Controller
         }
 
         if ($lorry = $request->input('lorry')) {
-            $orders->where('driver_id', $lorry);
+            // The driver dropdown also exposes the non-delivery fulfilment types
+            // (Lalamove / Pickup), which have no driver_id — filter on the
+            // fulfilment type for those, otherwise on the assigned driver.
+            if (in_array($lorry, [Order::$fulfillment_types['courier'], Order::$fulfillment_types['pickup']], true)) {
+                $orders->where('fulfillment_type', $lorry);
+            } else {
+                $orders->where('driver_id', $lorry);
+            }
         }
 
         $listStatusFilter = Order::listStatusFilterKey($request);
