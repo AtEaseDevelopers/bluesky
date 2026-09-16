@@ -11,6 +11,7 @@ use App\ProductStock;
 use App\Uom;
 use App\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
@@ -41,13 +42,27 @@ class AutoCountApiService
 
     public function nextPendingOrder(): ?array
     {
-        $order = $this->baseOrderQuery()
+        // A drafted Sales Order parks on AutoCount's human approval gate for as
+        // long as it takes, and the draft never writes back — so a stuck order
+        // stays pending_sync + api_do_id NULL, looking identical to a brand new
+        // one. A plain orderBy('id')->first() would hand the same stuck head to
+        // every poll and starve newer orders of their own SO. Rotate through the
+        // pending set instead: each poll advances past the last-served id and
+        // wraps at the end, so a stuck order costs one poll per cycle rather
+        // than monopolising the queue, and every order still gets its turn.
+        $pending = fn () => $this->baseOrderQuery()
             ->where('autocount_sync_status', 'pending_sync')
-            ->whereNull('api_do_id')
-            ->orderBy('id')
-            ->first();
+            ->whereNull('api_do_id');
+
+        $cursorKey = $this->pendingCursorKey();
+        $lastId = (int) Cache::get($cursorKey, 0);
+
+        $order = $pending()->where('id', '>', $lastId)->orderBy('id')->first()
+            ?? $pending()->orderBy('id')->first();
 
         if ($order) {
+            Cache::put($cursorKey, $order->id, now()->addHours(6));
+
             $this->trace('info', 'Handing pending order to AutoCount (create SO+DO)', [
                 'order_id' => $order->id,
                 'invoice_number' => $order->invoice_number,
@@ -55,6 +70,17 @@ class AutoCountApiService
         }
 
         return $order ? $this->toSyncPayload($order, 'pending') : null;
+    }
+
+    /**
+     * Cache key for the pending-queue rotation cursor, scoped per branch so a
+     * multi-branch deployment does not share one cursor across companies.
+     */
+    protected function pendingCursorKey(): string
+    {
+        $branch = (string) config('autocount.branch_email', '');
+
+        return 'autocount:pending_cursor:' . ($branch !== '' ? $branch : 'default');
     }
 
     public function nextProcessOrder(): ?array
@@ -809,9 +835,6 @@ class AutoCountApiService
             ->where('status', OrderProduct::$status['active'])
             ->get();
 
-        $productIds = $lines->pluck('product_id')->filter()->unique();
-        $products = \App\Product::with('uom')->whereIn('id', $productIds)->get()->keyBy('id');
-
         // AutoCount rejects the DO ("Every item need to be assigned a location")
         // when any line has a blank location, so stamp every line with the
         // configured stock location.
@@ -819,16 +842,18 @@ class AutoCountApiService
 
         $details = [];
         foreach ($lines as $line) {
-            $product = $products->get($line->product_id);
             $qty = (float) ($line->weight > 0 ? $line->weight : $line->quantity);
             $unitPrice = (float) $line->unit_price;
             // Item codes are not maintained in AutoCount's stock master, so every
             // line syncs without an ItemCode (description-only line). This avoids
             // the "item code not exist, save aborted" rejection; the product name
             // is still carried in Description and the value in the amount fields.
+            // The UOM must be blank too: AutoCount validates the (ItemCode, UOM)
+            // pair against the item master, so a blank Item with a real UOM fails
+            // with "ItemCode and UOM ... does not exist in its master file".
             $details[] = [
                 'Item' => '',
-                'UOM' => $product && $product->uom ? $product->uom->uom_name : 'KG',
+                'UOM' => '',
                 'Qty' => $qty,
                 'UnitPrice' => number_format($unitPrice, 2, '.', ''),
                 'Description' => $line->product_name,

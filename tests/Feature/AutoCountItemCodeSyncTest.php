@@ -95,6 +95,11 @@ class AutoCountItemCodeSyncTest extends TestCase
         // No item code is sent, so AutoCount does not abort on a missing code.
         $this->assertSame('', $line['Item']);
 
+        // A description-only line (blank Item) must also carry a blank UOM,
+        // otherwise AutoCount validates the (ItemCode, UOM) pair against its
+        // item master and rejects with "ItemCode and UOM ... does not exist".
+        $this->assertSame('', $line['UOM']);
+
         // The name and value must still post so the invoice total stays correct.
         $this->assertSame('Non-stock Item', $line['Description']);
         $this->assertSame('10.00', $line['UnitPrice']);
