@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>发票 Invoice</title>
+    <title>{{ __('pdf.doc.invoice_title', [], $locale ?? 'zh_CN') }}</title>
     @include('pdf.partials.font-styles')
 </head>
 <body>
+    @php $locale = $locale ?? 'zh_CN'; @endphp
     @include('pdf.partials.document-header', [
-        'doc_title' => '发票 Invoice',
-        'number_label' => '发票编号',
+        'doc_title' => __('pdf.doc.invoice_title', [], $locale),
+        'number_label' => __('pdf.meta.invoice_no', [], $locale),
         'number_value' => $invoice_number,
     ])
     @include('pdf.partials.address-boxes')

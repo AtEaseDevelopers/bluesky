@@ -149,9 +149,25 @@ class AutoCountApiService
         ]);
 
         if ($type === 'DO') {
+            // AutoCount's DO running-number restarts at 000001 after a book
+            // reset, so a fresh sync can be handed a DO number another order
+            // already owns. Overwriting it would point two orders at the same
+            // DO and break the later cash-sale transfer, so reject the clash.
+            if ($this->documentNumberOwnedByAnotherOrder('api_do_id', $number, $order->id)) {
+                $this->flagDocumentCollision($order, 'DO', $number);
+
+                return;
+            }
+
             $order->api_do_id = $number;
             $order->autocount_sync_status = 'do_created';
         } elseif ($type === 'CS') {
+            if ($this->documentNumberOwnedByAnotherOrder('api_invoice_id', $number, $order->id)) {
+                $this->flagDocumentCollision($order, 'CS', $number);
+
+                return;
+            }
+
             // A Cash Sale is settled the moment it is created, so a COD/walk-in
             // order is fully paid here. The paid-sync endpoint is credit-only,
             // so it would otherwise never advance past 'synced'.
@@ -159,6 +175,12 @@ class AutoCountApiService
             $order->autocount_sync_status = 'paid_synced';
             $order->autocount_synced_at = now();
         } elseif ($type === 'INV') {
+            if ($this->documentNumberOwnedByAnotherOrder('api_invoice_id', $number, $order->id)) {
+                $this->flagDocumentCollision($order, 'INV', $number);
+
+                return;
+            }
+
             // An Invoice carries an outstanding AR balance; the credit payment
             // knock-off is confirmed later via the paid-sync endpoint.
             $order->api_invoice_id = $number;
@@ -229,11 +251,64 @@ class AutoCountApiService
         ]);
 
         if ($order) {
-            $order->autocount_sync_status = 'sync_error';
-            $order->save();
-
-            app(AutoCountSyncService::class)->log($order, 'sync_error', null, $message);
+            app(AutoCountSyncService::class)->log(
+                $order,
+                'sync_error',
+                null,
+                $this->describePluginError($message)
+            );
         }
+    }
+
+    /**
+     * Whether an AutoCount document number is already recorded against a
+     * different order — i.e. reusing it now would collide.
+     */
+    protected function documentNumberOwnedByAnotherOrder(string $column, string $number, int $orderId): bool
+    {
+        if ($number === '') {
+            return false;
+        }
+
+        return Order::query()
+            ->where($column, $number)
+            ->where('id', '!=', $orderId)
+            ->exists();
+    }
+
+    /**
+     * Reject a document write-back that would overwrite a number already owned
+     * by another order, recording a clear, diagnosable sync_error instead of
+     * silently corrupting the existing mapping.
+     */
+    protected function flagDocumentCollision(Order $order, string $type, string $number): void
+    {
+        $this->trace('error', 'AutoCount document-number collision rejected', [
+            'order_id' => $order->id,
+            'type' => $type,
+            'number' => $number,
+        ]);
+
+        $message = "Document-number collision: {$type} {$number} is already assigned to another order. "
+            . 'Write-back rejected to avoid corrupting the existing mapping '
+            . '(usually an AutoCount running-number reset).';
+
+        app(AutoCountSyncService::class)->log($order, 'sync_error', null, $message);
+    }
+
+    /**
+     * Turn a raw AutoCount plugin error into a clearer diagnostic for known
+     * failure modes, keeping the original message so nothing is lost.
+     */
+    protected function describePluginError(string $message): string
+    {
+        if (stripos($message, 'has been transferred to other document') !== false) {
+            return 'Document-number collision: the source DO was already transferred to another '
+                . 'document in AutoCount (usually an AutoCount running-number reset), so the '
+                . 'cash-sale/invoice transfer was refused. Original: ' . $message;
+        }
+
+        return $message;
     }
 
     public function pendingCustomers(): array
@@ -835,6 +910,16 @@ class AutoCountApiService
             ->where('status', OrderProduct::$status['active'])
             ->get();
 
+        // AutoCount validates the (ItemCode, UOM) pair on every stock-document
+        // line against the item master and rejects an unknown/blank pair with
+        // "ItemCode and UOM ... does not exist in its master file". Each line
+        // therefore carries its product's own SKU (the AutoCount item code) and
+        // that product's UOM, which are maintained to match the item master.
+        $products = Product::with('uom')
+            ->whereIn('id', $lines->pluck('product_id')->filter()->unique())
+            ->get()
+            ->keyBy('id');
+
         // AutoCount rejects the DO ("Every item need to be assigned a location")
         // when any line has a blank location, so stamp every line with the
         // configured stock location.
@@ -842,18 +927,12 @@ class AutoCountApiService
 
         $details = [];
         foreach ($lines as $line) {
+            $product = $products->get($line->product_id);
             $qty = (float) ($line->weight > 0 ? $line->weight : $line->quantity);
             $unitPrice = (float) $line->unit_price;
-            // Item codes are not maintained in AutoCount's stock master, so every
-            // line syncs without an ItemCode (description-only line). This avoids
-            // the "item code not exist, save aborted" rejection; the product name
-            // is still carried in Description and the value in the amount fields.
-            // The UOM must be blank too: AutoCount validates the (ItemCode, UOM)
-            // pair against the item master, so a blank Item with a real UOM fails
-            // with "ItemCode and UOM ... does not exist in its master file".
             $details[] = [
-                'Item' => '',
-                'UOM' => '',
+                'Item' => (string) ($product->sku ?? ''),
+                'UOM' => (string) ($product && $product->uom ? $product->uom->uom_name : ''),
                 'Qty' => $qty,
                 'UnitPrice' => number_format($unitPrice, 2, '.', ''),
                 'Description' => $line->product_name,

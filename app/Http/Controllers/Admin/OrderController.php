@@ -118,6 +118,20 @@ class OrderController extends Controller
             $orders->where('order_type', $filter_order_type);
         }
 
+        if ($filter_sync_status = $request->input('autocount_sync_status')) {
+            // "pending" is the default state and may be stored as NULL/'' on
+            // older orders, so treat those as pending too.
+            if ($filter_sync_status === 'pending') {
+                $orders->where(function ($query) {
+                    $query->whereNull('autocount_sync_status')
+                        ->orWhere('autocount_sync_status', '')
+                        ->orWhere('autocount_sync_status', 'pending');
+                });
+            } else {
+                $orders->where('autocount_sync_status', $filter_sync_status);
+            }
+        }
+
         if ($address = trim((string) $request->input('address'))) {
             $orders->filterByAddressSearch($address);
         }
@@ -192,6 +206,7 @@ class OrderController extends Controller
                 'shipping_state_options' => System::$country_state['MY'],
                 'status_options' => Order::$status,
                 'payment_status_options' => Order::$payment_status,
+                'sync_status_options' => Order::$autocount_sync_statuses,
                 'areas' => Area::optionsForSelect(),
                 'customers_list' => DB::table('users')->select('id', 'name')->get()->toArray(),
                 'walk_in_customers' => DB::table('orders')

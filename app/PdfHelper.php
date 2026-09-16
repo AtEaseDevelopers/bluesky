@@ -23,24 +23,61 @@ class PdfHelper extends Model
     }
 
     /**
-     * Common method to handle PDF return options
+     * The INV/DO documents ship in two versions — English and Chinese.
+     * Both files are always written to storage on every generation; the
+     * requested language is the one streamed/downloaded back to the caller.
      */
-    private static function handlePdfReturn($pdf, $filename, $path, $id, $returnPdf)
-    {
-        // Always save to storage
-        Storage::disk('local')->put($path . '/' . $id . '/' . $filename, $pdf->output());
+    private static $locales = ['zh_CN', 'en'];
 
-        // Handle return behavior
+    /** Map a caller-supplied language ('cn'/'en'/locale) to a supported locale. */
+    private static function normalizeLocale($lang): string
+    {
+        return $lang === 'en' ? 'en' : 'zh_CN';
+    }
+
+    /** Filename suffix per locale (Chinese keeps the original name for backward compatibility). */
+    private static function localeSuffix(string $locale): string
+    {
+        return $locale === 'en' ? '-en' : '';
+    }
+
+    private static function localeFilename(string $prefix, $id, string $locale): string
+    {
+        return $prefix . '-' . $id . self::localeSuffix($locale) . '.pdf';
+    }
+
+    /**
+     * Render the given blade view once per language, store every version, and
+     * return the requested language for stream/download (or its storage path).
+     */
+    private static function renderBothLocales(string $view, array $data, string $prefix, Order $order, $returnPdf, $lang)
+    {
+        $requested = self::normalizeLocale($lang);
+        $requestedPdf = null;
+        $requestedFilename = null;
+
+        foreach (self::$locales as $locale) {
+            $pdf = self::configurePdf(PDF::loadView($view, array_merge($data, ['locale' => $locale])));
+            $pdf->setPaper('a4', 'portrait');
+
+            $filename = self::localeFilename($prefix, $order->id, $locale);
+            Storage::disk('local')->put(Order::$path . '/' . $order->id . '/' . $filename, $pdf->output());
+
+            if ($locale === $requested) {
+                $requestedPdf = $pdf;
+                $requestedFilename = $filename;
+            }
+        }
+
         if ($returnPdf === 'stream') {
-            return $pdf->stream($filename);
+            return $requestedPdf->stream($requestedFilename);
         }
 
         if ($returnPdf === 'download') {
-            return $pdf->download($filename);
+            return $requestedPdf->download($requestedFilename);
         }
 
-        // Default return path
-        return $path . '/' . $id . '/' . $filename;
+        return Order::$path . '/' . $order->id . '/' . $requestedFilename;
     }
 
     /**
@@ -134,7 +171,7 @@ class PdfHelper extends Model
     }
 
     // Order specific methods (keep original structure but use common helpers)
-    public static function GenerateOrderInvoice(Order $order, $void = false, $returnPdf = false)
+    public static function GenerateOrderInvoice(Order $order, $void = false, $returnPdf = false, $lang = 'zh_CN')
     {
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
         $data = self::invoiceViewData($order, [
@@ -153,15 +190,10 @@ class PdfHelper extends Model
             'payment_method_labels' => OrderPayment::$payment_methods,
         ]);
 
-        $pdf = self::configurePdf(PDF::loadView('pdf.invoice', $data));
-        $pdf->setPaper('a4', 'portrait');
-
-        $invoiceFilename = 'invoice-' . $order->id . '.pdf';
-
-        return self::handlePdfReturn($pdf, $invoiceFilename, Order::$path, $order->id, $returnPdf);
+        return self::renderBothLocales('pdf.invoice', $data, 'invoice', $order, $returnPdf, $lang);
     }
 
-    public static function GenerateOrderInvoiceWithoutPrice(Order $order, $void = false, $returnPdf = false)
+    public static function GenerateOrderInvoiceWithoutPrice(Order $order, $void = false, $returnPdf = false, $lang = 'zh_CN')
     {
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
         $data = self::invoiceViewData($order, [
@@ -176,12 +208,7 @@ class PdfHelper extends Model
             'type' => 'order',
         ]);
 
-        $pdf = self::configurePdf(PDF::loadView('pdf.invoicewithoutprice', $data));
-        $pdf->setPaper('a4', 'portrait');
-
-        $invoiceFilename = 'invoice2-' . $order->id . '.pdf';
-
-        return self::handlePdfReturn($pdf, $invoiceFilename, Order::$path, $order->id, $returnPdf);
+        return self::renderBothLocales('pdf.invoicewithoutprice', $data, 'invoice2', $order, $returnPdf, $lang);
     }
 
     private static function deliveryViewData(Order $order, array $data = []): array
@@ -202,7 +229,7 @@ class PdfHelper extends Model
         ], $data);
     }
 
-    public static function GenerateDeliveryOrder(Order $order, $void = false, $returnPdf = false)
+    public static function GenerateDeliveryOrder(Order $order, $void = false, $returnPdf = false, $lang = 'zh_CN')
     {
         self::resolveCustomer($order);
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
@@ -221,14 +248,9 @@ class PdfHelper extends Model
             'payment_method_labels' => OrderPayment::$payment_methods,
         ]);
 
-        $pdf = self::configurePdf(PDF::loadView('pdf.delivery-order', $data));
-        $pdf->setPaper('a4', 'portrait');
-
-        $invoiceFilename = 'delivery-order-' . $order->id . '.pdf';
-
-        return self::handlePdfReturn($pdf, $invoiceFilename, Order::$path, $order->id, $returnPdf);
+        return self::renderBothLocales('pdf.delivery-order', $data, 'delivery-order', $order, $returnPdf, $lang);
     }
-  
+
     public static function UpdateDeliveryOrder(Order $order, $void = false, $custom_date = null)
     {
         $order_products = self::getProductsData('order', $order->id, OrderProduct::class);
@@ -248,11 +270,6 @@ class PdfHelper extends Model
             'show_prices' => OrderFieldSetting::deliveryOrderShowsPrices(),
         ]);
 
-        $pdf = self::configurePdf(PDF::loadView('pdf.delivery-order2', $data));
-        $pdf->setPaper('a4', 'portrait'); // A4 size in portrait mode
-    
-        $invoiceFilename = 'delivery-order-' . $order->id . '.pdf';
-    
-        Storage::disk('local')->put(Order::$path.'/'.$order->id.'/'.$invoiceFilename, $pdf->output());
+        self::renderBothLocales('pdf.delivery-order2', $data, 'delivery-order', $order, false, 'zh_CN');
     }
 }

@@ -143,6 +143,21 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-4">
+                                    <label class="mb-2" for="filterSyncStatus">{{ __('orders.invoice_sync_status') }}</label>
+                                    <select class="form-select" name="autocount_sync_status" id="filterSyncStatus">
+                                        <option value="">{{ __('ui.all') }}</option>
+                                        @foreach ($sync_status_options as $syncStatus)
+                                            <option value="{{ $syncStatus }}" {{ ($input['autocount_sync_status'] ?? '') === $syncStatus ? 'selected' : '' }}>
+                                                {{ __('orders.autocount_sync_status.' . $syncStatus) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-4">
                                     <label class="mb-2" for="orderby">{{ __('orders.order_by') }}</label>
                                     <select class="form-select" name="orderby" id="orderby">
                                         <option value="desc" {{ ($input['orderby'] ?? '') === 'desc'? " selected" : "" }}>{{ __('orders.latest_first') }}</option>
@@ -267,12 +282,18 @@
                                                     @endif
                                                     @if ($order->canShowInvoice())
                                                         <li>
-                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.invoice', $order->id) }}">{{ __('orders.view_invoice') }}</a>
+                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'cn']) }}#toolbar=0" data-url="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'cn']) }}">{{ __('orders.view_invoice') }} (中文)</a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'en']) }}#toolbar=0" data-url="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'en']) }}">{{ __('orders.view_invoice') }} (English)</a>
                                                         </li>
                                                     @endif
                                                     @if ($order->canAdminShowDeliveryOrder())
                                                         <li>
-                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">{{ __('orders.view_do') }}</a>
+                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'cn']) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'cn']) }}">{{ __('orders.view_do') }} (中文)</a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'en']) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'en']) }}">{{ __('orders.view_do') }} (English)</a>
                                                         </li>
                                                     @endif
                                                     @if ($admin->canModule('orders', 'edit'))
@@ -323,6 +344,8 @@
                                                     $driverLabel = $drivers[$order->driver_id] ?? \App\Driver::displayLabelForId((int) $order->driver_id);
                                                 @endphp
                                                 {!! $driverLabel ? e($driverLabel) : '<span class="text-danger">' . e(__('orders.lorry_deleted')) . '</span>' !!}
+                                            @elseif ($order->isCourier())
+                                                <span class="badge bg-info text-dark">{{ __('orders.fulfillment_courier') }}</span>
                                             @else
                                                 -
                                             @endif

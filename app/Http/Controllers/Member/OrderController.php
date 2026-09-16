@@ -63,6 +63,7 @@ class OrderController extends Controller
 
         foreach ($orders as $key => $value) {
             $orders[$key]->invoice_url = url('/') . '/' . Order::$path . '/' . $value->id . '/invoice-' . $value->id . '.pdf';
+            $orders[$key]->invoice_url_en = url('/') . '/' . Order::$path . '/' . $value->id . '/invoice-' . $value->id . '-en.pdf';
         }
 
         return view(
@@ -126,8 +127,11 @@ class OrderController extends Controller
             'order' => $order,
             'encryptedId' => $id,
             'invoice_url' => url('/') . '/' . Order::$path . '/' . $order->id . '/invoice-' . $order->id . '.pdf',
+            'invoice_url_en' => url('/') . '/' . Order::$path . '/' . $order->id . '/invoice-' . $order->id . '-en.pdf',
             'delivery_order_url' => url('/') . '/' . Order::$path . '/' . $order->id . '/delivery-order-' . $order->id . '.pdf',
+            'delivery_order_url_en' => url('/') . '/' . Order::$path . '/' . $order->id . '/delivery-order-' . $order->id . '-en.pdf',
             'delivery_order_download_url' => url('download/') . Order::$path . '/' . $order->id . '/delivery-order-' . $order->id . '.pdf',
+            'delivery_order_download_url_en' => url('download/') . Order::$path . '/' . $order->id . '/delivery-order-' . $order->id . '-en.pdf',
             'products' => $order_products,
             'customer' => $user,
             'payments' => $payments,

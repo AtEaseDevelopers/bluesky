@@ -5,56 +5,63 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Order;
 use App\PdfHelper;
+use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class OrderPdfController extends Controller
 {
-    public function invoice($id)
+    /** Resolve the requested PDF language ('cn'/'en') to a supported locale. */
+    private function lang(Request $request): string
+    {
+        return $request->query('lang') === 'en' ? 'en' : 'zh_CN';
+    }
+
+    public function invoice(Request $request, $id)
     {
         $order = Order::findOrFail($id);
         $this->assertCanViewInvoice($order);
 
-        return PdfHelper::GenerateOrderInvoice($order, false, 'stream');
+        return PdfHelper::GenerateOrderInvoice($order, false, 'stream', $this->lang($request));
     }
 
-    public function invoiceWithoutPrice($id)
+    public function invoiceWithoutPrice(Request $request, $id)
     {
         $order = Order::findOrFail($id);
         $this->assertCanViewInvoice($order);
 
-        return PdfHelper::GenerateOrderInvoiceWithoutPrice($order, false, 'stream');
+        return PdfHelper::GenerateOrderInvoiceWithoutPrice($order, false, 'stream', $this->lang($request));
     }
 
-    public function deliveryOrder($id)
+    public function deliveryOrder(Request $request, $id)
     {
         $order = Order::findOrFail($id);
         $this->assertCanViewDeliveryOrder($order);
 
-        return PdfHelper::GenerateDeliveryOrder($order, false, 'stream');
+        return PdfHelper::GenerateDeliveryOrder($order, false, 'stream', $this->lang($request));
     }
 
-    public function downloadInvoice($id)
+    public function downloadInvoice(Request $request, $id)
     {
         $order = Order::findOrFail($id);
         $this->assertCanViewInvoice($order);
 
-        return PdfHelper::GenerateOrderInvoice($order, false, 'download');
+        return PdfHelper::GenerateOrderInvoice($order, false, 'download', $this->lang($request));
     }
 
-    public function downloadInvoiceWithoutPrice($id)
+    public function downloadInvoiceWithoutPrice(Request $request, $id)
     {
         $order = Order::findOrFail($id);
         $this->assertCanViewInvoice($order);
 
-        return PdfHelper::GenerateOrderInvoiceWithoutPrice($order, false, 'download');
+        return PdfHelper::GenerateOrderInvoiceWithoutPrice($order, false, 'download', $this->lang($request));
     }
 
-    public function downloadDeliveryOrder($id)
+    public function downloadDeliveryOrder(Request $request, $id)
     {
         $order = Order::findOrFail($id);
         $this->assertCanViewDeliveryOrder($order);
 
-        return PdfHelper::GenerateDeliveryOrder($order, false, 'download');
+        return PdfHelper::GenerateDeliveryOrder($order, false, 'download', $this->lang($request));
     }
 
     private function assertCanViewInvoice(Order $order): void

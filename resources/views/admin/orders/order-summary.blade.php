@@ -20,10 +20,12 @@
                             <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">{{ __('orders.documents') }}</button>
                             <ul class="dropdown-menu">
                                 @if ($order->canShowInvoice())
-                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.invoice', $order->id) }}">{{ __('orders.view_invoice') }}</a></li>
+                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'cn']) }}#toolbar=0" data-url="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'cn']) }}">{{ __('orders.view_invoice') }} (中文)</a></li>
+                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'en']) }}#toolbar=0" data-url="{{ route('admin.order.invoice', ['id' => $order->id, 'lang' => 'en']) }}">{{ __('orders.view_invoice') }} (English)</a></li>
                                 @endif
                                 @if ($order->canAdminShowDeliveryOrder())
-                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">{{ __('orders.view_do') }}</a></li>
+                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'cn']) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'cn']) }}">{{ __('orders.view_do') }} (中文)</a></li>
+                                    <li><a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'en']) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', ['id' => $order->id, 'lang' => 'en']) }}">{{ __('orders.view_do') }} (English)</a></li>
                                 @endif
                             </ul>
                         </div>

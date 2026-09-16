@@ -6,6 +6,7 @@ use App\Order;
 use App\OrderProduct;
 use App\Product;
 use App\Services\AutoCountApiService;
+use App\Uom;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -35,11 +36,14 @@ class AutoCountItemCodeSyncTest extends TestCase
         ]);
     }
 
-    private function makeProduct(string $sku): Product
+    private function makeProduct(string $sku, string $uomName = 'KG'): Product
     {
+        $uom = Uom::forceCreate(['uom_name' => $uomName]);
+
         return Product::forceCreate([
             'name' => 'Prawn ' . rand(1000, 9999),
             'sku' => $sku,
+            'uom_id' => $uom->id,
             'price' => 10.00,
             'status' => Product::$status['active'],
             'sell_in' => Product::SELL_IN_QTY,
@@ -82,25 +86,26 @@ class AutoCountItemCodeSyncTest extends TestCase
     }
 
     /** @test */
-    public function every_line_syncs_without_an_item_code_but_keeps_its_description_and_value(): void
+    public function every_line_carries_its_product_sku_and_uom(): void
     {
+        // AutoCount rejects a blank (ItemCode, UOM) pair with "ItemCode and UOM
+        // ... does not exist in its master file", so each line carries its own
+        // product's SKU (the AutoCount item code) and that product's UOM, which
+        // are maintained to match AutoCount's item master.
         $customer = $this->makeCustomer();
         $order = $this->makeEligibleOrder($customer);
-        $product = $this->makeProduct('M0009');
+        $product = $this->makeProduct('M0009', 'KG');
         $this->addLine($order, $product, 'Non-stock Item', 2);
 
         $payload = app(AutoCountApiService::class)->nextPendingOrder();
         $line = collect($payload['detail'])->firstWhere('Description', 'Non-stock Item');
 
-        // No item code is sent, so AutoCount does not abort on a missing code.
-        $this->assertSame('', $line['Item']);
+        // The (ItemCode, UOM) pair is the product's SKU and its UOM name.
+        $this->assertSame('M0009', $line['Item']);
+        $this->assertSame('KG', $line['UOM']);
 
-        // A description-only line (blank Item) must also carry a blank UOM,
-        // otherwise AutoCount validates the (ItemCode, UOM) pair against its
-        // item master and rejects with "ItemCode and UOM ... does not exist".
-        $this->assertSame('', $line['UOM']);
-
-        // The name and value must still post so the invoice total stays correct.
+        // The product name still posts as the description and the value stays
+        // correct so the invoice total is unaffected.
         $this->assertSame('Non-stock Item', $line['Description']);
         $this->assertSame('10.00', $line['UnitPrice']);
         $this->assertEquals(20.0, $line['SubTotal']);

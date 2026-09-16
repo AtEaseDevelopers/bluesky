@@ -259,6 +259,18 @@ class Order extends Model
         'pos' => 'pos',
     ];
 
+    // AutoCount invoice sync states an order can hold, in workflow order. Used to
+    // populate the admin order listing's "Invoice Sync Status" filter.
+    public static $autocount_sync_statuses = [
+        'pending' => 'pending',
+        'pending_sync' => 'pending_sync',
+        'do_created' => 'do_created',
+        'synced' => 'synced',
+        'paid_synced' => 'paid_synced',
+        'sync_error' => 'sync_error',
+        'skipped' => 'skipped',
+    ];
+
     public function isPosOrder(): bool
     {
         return $this->order_type === self::$order_types['pos'];

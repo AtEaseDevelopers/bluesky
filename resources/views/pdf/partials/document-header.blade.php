@@ -1,8 +1,9 @@
 @php
+    $locale = $locale ?? 'zh_CN';
     $company = $company ?? config('portal.company');
     $addressLines = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $company['address'] ?? '')));
 
-    $metaNumberLabel = $number_label ?? '发票编号';
+    $metaNumberLabel = $number_label ?? __('pdf.meta.invoice_no', [], $locale);
     $metaNumber = $number_value ?? '';
     $metaDate = $date ?? '';
     $metaTime = $time ?? '';
@@ -15,7 +16,7 @@
 <table style="width: 100%; border-collapse: collapse; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif;">
     <tr>
         <td style="text-align: center; padding-bottom: 14px;">
-            <span style="font-size: 24px; font-weight: 700; letter-spacing: 6px;">{{ $doc_title ?? '发票' }}</span>
+            <span style="font-size: 24px; font-weight: 700; letter-spacing: 6px;">{{ $doc_title ?? __('pdf.doc.invoice_title', [], $locale) }}</span>
         </td>
     </tr>
 </table>
@@ -47,35 +48,35 @@
                     <td style="font-size: 12px; font-weight: 700;">{{ $metaNumber }}</td>
                 </tr>
                 <tr>
-                    <td style="font-size: 12px; padding: 1px 0;">日期</td>
+                    <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.date', [], $locale) }}</td>
                     <td style="font-size: 12px;">:</td>
                     <td style="font-size: 12px;">{{ $metaDate }}</td>
                 </tr>
                 @if ($metaTime !== '' && $metaTime !== null)
                     <tr>
-                        <td style="font-size: 12px; padding: 1px 0;">时间</td>
+                        <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.time', [], $locale) }}</td>
                         <td style="font-size: 12px;">:</td>
                         <td style="font-size: 12px;">{{ $metaTime }}</td>
                     </tr>
                 @endif
                 <tr>
-                    <td style="font-size: 12px; padding: 1px 0;">付款条件</td>
+                    <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.payment_term', [], $locale) }}</td>
                     <td style="font-size: 12px;">:</td>
                     <td style="font-size: 12px;">{{ $metaTerm }}</td>
                 </tr>
                 <tr>
-                    <td style="font-size: 12px; padding: 1px 0;">货币</td>
+                    <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.currency', [], $locale) }}</td>
                     <td style="font-size: 12px;">:</td>
                     <td style="font-size: 12px;">{{ $metaCurrency }}</td>
                 </tr>
                 <tr>
-                    <td style="font-size: 12px; padding: 1px 0;">客户代码</td>
+                    <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.customer_code', [], $locale) }}</td>
                     <td style="font-size: 12px;">:</td>
                     <td style="font-size: 12px;">{{ $metaCustomerCode }}</td>
                 </tr>
                 @if (!empty($metaFulfillment))
                     <tr>
-                        <td style="font-size: 12px; padding: 1px 0;">送货方式</td>
+                        <td style="font-size: 12px; padding: 1px 0;">{{ __('pdf.meta.fulfillment', [], $locale) }}</td>
                         <td style="font-size: 12px;">:</td>
                         <td style="font-size: 12px;">{{ $metaFulfillment }}</td>
                     </tr>
