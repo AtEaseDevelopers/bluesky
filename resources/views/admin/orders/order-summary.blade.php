@@ -131,9 +131,17 @@
                                 </div>
                             </div>
 
-                            <p><strong>{{ __('orders.shipping_address_label') }}</strong><br>{!! nl2br(e(strip_tags($order->shipping_address))) !!}</p>
-
                             @php $canEditItems = $admin->canModule('orders', 'edit'); $summaryColspan = $canEditItems ? 5 : 4; @endphp
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <p class="mb-0"><strong>{{ __('orders.shipping_address_label') }}</strong><br>{!! nl2br(e(strip_tags($order->shipping_address))) !!}</p>
+                                @if ($canEditItems)
+                                    <button type="button" class="btn btn-outline-primary btn-sm flex-shrink-0" data-bs-toggle="modal" data-bs-target="#editShippingAddressModal"
+                                        title="{{ __('orders.edit_shipping_address') }}">
+                                        <i class="fa fa-pen"></i> {{ __('ui.edit') }}
+                                    </button>
+                                @endif
+                            </div>
+
                             <div class="table-responsive mt-4">
                                 <table class="table table-bordered">
                                     <thead>
@@ -775,6 +783,31 @@
     @endif
 
     @if ($admin->canModule('orders', 'edit'))
+        <div class="modal fade" id="editShippingAddressModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" id="shipping-address-form" action="{{ route('admin.orders.shipping-address', $order->id) }}">
+                        @csrf
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{ __('orders.edit_shipping_address') }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="mb-1" for="shipping-address-input">{{ __('orders.shipping_address') }}</label>
+                                <textarea name="shipping_address" id="shipping-address-input" class="form-control" rows="4" maxlength="255"
+                                    placeholder="{{ __('orders.shipping_address_placeholder') }}">{{ old('shipping_address', $order->shipping_address) }}</textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('ui.cancel') }}</button>
+                            <button type="submit" class="btn btn-primary">{{ __('ui.save') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         @include('admin.includes.add_products_modal')
     @endif
 

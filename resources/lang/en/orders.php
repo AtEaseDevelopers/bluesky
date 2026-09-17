@@ -98,6 +98,8 @@ return [
     'customer_required' => 'Please select a customer before creating the order.',
     'billing_address' => 'Billing Address',
     'shipping_address' => 'Shipping Address',
+    'edit_shipping_address' => 'Edit Shipping Address',
+    'shipping_address_updated' => 'Shipping address updated successfully.',
     'payment_method' => 'Payment Method',
     'invalid_payment_method' => 'The selected payment method is not allowed for this customer.',
     'payment_method_required' => 'Please select a payment method before creating the order.',

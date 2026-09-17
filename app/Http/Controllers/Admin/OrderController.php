@@ -385,6 +385,31 @@ class OrderController extends Controller
             ->with('success', __('orders.weight_fee_updated'));
     }
 
+    /**
+     * Inline shipping-address edit from the order summary page. Requires the
+     * orders.edit permission; updates the free-text shipping address in place.
+     */
+    public function updateShippingAddress(Request $request, Order $order)
+    {
+        $admin = Auth::guard('web_admin')->user();
+        if (!$admin || !$admin->canModule('orders', 'edit')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'shipping_address' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $value = trim((string) ($validated['shipping_address'] ?? ''));
+
+        $order->update([
+            'shipping_address' => $value === '' ? null : $value,
+        ]);
+
+        return redirect(route('admin.orders.summary', $order->id))
+            ->with('success', __('orders.shipping_address_updated'));
+    }
+
     public function change_order_delivery(Request $request)
     {
         $data = $request->validate([

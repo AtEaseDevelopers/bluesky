@@ -93,6 +93,8 @@ return [
     'customer_required' => '创建订单前请选择客户。',
     'billing_address' => '账单地址',
     'shipping_address' => '送货地址',
+    'edit_shipping_address' => '编辑送货地址',
+    'shipping_address_updated' => '送货地址已更新。',
     'payment_method' => '付款方式',
     'invalid_payment_method' => '所选付款方式不适用于此客户。',
     'payment_method_required' => '创建订单前请选择付款方式。',
