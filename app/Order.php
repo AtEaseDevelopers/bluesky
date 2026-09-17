@@ -495,6 +495,23 @@ class Order extends Model
         return $label !== $key ? $label : ucfirst($this->fulfillment_type ?? 'delivery');
     }
 
+    /** Driver name for delivery; pickup / Lalamove labels for other fulfillment types (PDF meta). */
+    public function pdfFulfillmentDisplayLabel(): string
+    {
+        if ($this->isPickup() || $this->isCourier()) {
+            return $this->fulfillmentTypeLabel();
+        }
+
+        if ($this->isDelivery()) {
+            $driver = $this->relationLoaded('driver') ? $this->driver : $this->driver()->first();
+            if ($driver && trim((string) $driver->name) !== '') {
+                return trim($driver->name);
+            }
+        }
+
+        return $this->fulfillmentTypeLabel();
+    }
+
     public function contactMethodLabel(): string
     {
         $method = $this->contact_method ?? self::$contact_methods['whatsapp'];

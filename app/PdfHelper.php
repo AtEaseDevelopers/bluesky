@@ -136,6 +136,7 @@ class PdfHelper extends Model
     private static function invoiceViewData(Order $order, array $data = []): array
     {
         self::resolveCustomer($order);
+        $order->loadMissing('driver');
         $customer = $order->pdfCustomer();
 
         return array_merge([
@@ -143,7 +144,7 @@ class PdfHelper extends Model
             'customer_phone' => $order->walk_in_phone ?: ($order->attn_contact ?: ($customer->attn_contact ?? '')),
             'payment_term' => $order->preferredPaymentMethodLabel() ?: '-',
             'customer_code' => $customer->sql_customer_code ?? '-',
-            'fulfillment' => $order->fulfillmentTypeLabel(),
+            'fulfillment' => $order->pdfFulfillmentDisplayLabel(),
             'currency' => 'MYR',
         ], $data);
     }
@@ -194,6 +195,7 @@ class PdfHelper extends Model
         self::resolveCustomer($order);
         app(OrderService::class)->assignDoNumber($order);
         $order->refresh();
+        $order->loadMissing('driver');
         $customer = $order->pdfCustomer();
 
         return array_merge([
@@ -202,7 +204,7 @@ class PdfHelper extends Model
             'do_no' => $order->do_no,
             'payment_term' => $order->preferredPaymentMethodLabel() ?: '-',
             'customer_code' => $customer->sql_customer_code ?? '-',
-            'fulfillment' => $order->fulfillmentTypeLabel(),
+            'fulfillment' => $order->pdfFulfillmentDisplayLabel(),
             'currency' => 'MYR',
         ], $data);
     }
