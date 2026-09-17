@@ -15,5 +15,6 @@ class DatabaseSeeder extends Seeder
         $this->call(DriverCustomerVerifySeeder::class);
         $this->call(OrderStatusDemoSeeder::class);
         $this->call(Driver1RouteDemoSeeder::class);
+        $this->call(MultiPagePdfOrderSeeder::class);
     }
 }

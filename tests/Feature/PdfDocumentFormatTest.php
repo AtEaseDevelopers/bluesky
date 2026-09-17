@@ -173,12 +173,10 @@ class PdfDocumentFormatTest extends TestCase
         $this->assertStringContainsString('发票编号', $html);
         $this->assertStringContainsString('IV-2609-00735', $html);
         $this->assertStringContainsString('付款条件', $html);
-        $this->assertStringContainsString('货币', $html);
-        $this->assertStringContainsString('MYR', $html);
-        $this->assertStringContainsString('客户代码', $html);
-        $this->assertStringContainsString('3000-T527', $html);
+        $this->assertStringContainsString('11/09/2026 18:35:59', $html);
+        $this->assertStringNotContainsString('货币', $html);
+        $this->assertStringNotContainsString('客户代码', $html);
 
-        // Fulfillment row (under 客户代码)
         $this->assertStringContainsString('送货方式', $html);
         $this->assertStringContainsString($order->fulfillmentTypeLabel(), $html);
 
@@ -230,9 +228,31 @@ class PdfDocumentFormatTest extends TestCase
         $this->assertStringContainsString('DO-2609-00735', $html);
         $this->assertStringContainsString('产品编号', $html);
         $this->assertStringContainsString('SZZ029', $html);
-        // Fulfillment row (under 客户代码)
         $this->assertStringContainsString('送货方式', $html);
         $this->assertStringContainsString($order->fulfillmentTypeLabel(), $html);
+    }
+
+    /** @test */
+    public function delivery_order_shows_assigned_driver_name_for_delivery(): void
+    {
+        $order = $this->seedOrder();
+        $driver = \App\Driver::forceCreate([
+            'name' => 'Driver Ahmad',
+            'username' => 'driverahmad',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+        $order->update(['driver_id' => $driver->id]);
+        $order->refresh();
+
+        $data = $this->invoiceData($order);
+        $data['do_no'] = 'DO-2609-00999';
+        $data['show_prices'] = true;
+        $data['fulfillment'] = $order->pdfFulfillmentDisplayLabel();
+
+        $html = view('pdf.delivery-order', $data)->render();
+
+        $this->assertStringContainsString('Driver Ahmad', $html);
     }
 
     /** @test */
@@ -290,17 +310,18 @@ class PdfDocumentFormatTest extends TestCase
     }
 
     /** @test */
-    public function invoice_paginates_at_eight_items_per_page(): void
+    public function invoice_paginates_at_ten_items_per_page(): void
     {
         $order = $this->seedOrderWithLines(20);
         $html = view('pdf.invoice', $this->invoiceData($order))->render();
 
-        // 20 items -> 3 pages (8 + 8 + 4) -> 2 page breaks between them.
-        $this->assertSame(2, substr_count($html, 'page-break-after: always'));
+        // 20 items -> 2 pages (10 + 10) -> 1 page break between them.
+        $this->assertSame(1, substr_count($html, 'page-break-after: always'));
 
         // Document header + item-table column header repeat once per page.
-        $this->assertSame(3, substr_count($html, \App\PdfHelper::bilingual('pdf.meta.invoice_no')));
-        $this->assertSame(3, substr_count($html, \App\PdfHelper::bilingual('pdf.items.sku')));
+        $this->assertSame(2, substr_count($html, \App\PdfHelper::bilingual('pdf.meta.invoice_no')));
+        $this->assertSame(2, substr_count($html, \App\PdfHelper::bilingual('pdf.items.sku')));
+        $this->assertSame(2, substr_count($html, \App\PdfHelper::bilingual('pdf.addr.billing')));
 
         // Pure pagination: every line still rendered, numbered continuously.
         for ($i = 1; $i <= 20; $i++) {
@@ -313,9 +334,9 @@ class PdfDocumentFormatTest extends TestCase
     }
 
     /** @test */
-    public function invoice_with_exactly_eight_items_stays_on_one_page(): void
+    public function invoice_with_exactly_ten_items_stays_on_one_page(): void
     {
-        $order = $this->seedOrderWithLines(8);
+        $order = $this->seedOrderWithLines(10);
         $html = view('pdf.invoice', $this->invoiceData($order))->render();
 
         $this->assertSame(0, substr_count($html, 'page-break-after: always'));
@@ -323,9 +344,9 @@ class PdfDocumentFormatTest extends TestCase
     }
 
     /** @test */
-    public function invoice_with_nine_items_breaks_to_two_pages(): void
+    public function invoice_with_eleven_items_breaks_to_two_pages(): void
     {
-        $order = $this->seedOrderWithLines(9);
+        $order = $this->seedOrderWithLines(11);
         $html = view('pdf.invoice', $this->invoiceData($order))->render();
 
         $this->assertSame(1, substr_count($html, 'page-break-after: always'));
@@ -342,9 +363,25 @@ class PdfDocumentFormatTest extends TestCase
 
         $html = view('pdf.delivery-order2', $data)->render();
 
-        $this->assertSame(2, substr_count($html, 'page-break-after: always'));
+        $this->assertSame(1, substr_count($html, 'page-break-after: always'));
         // Signature acknowledgement renders once, on the final page.
         $this->assertSame(1, substr_count($html, \App\PdfHelper::bilingual('pdf.do2.sign_authorised')));
+    }
+
+    /** @test */
+    public function delivery_order_repeats_header_and_addresses_on_continuation_pages(): void
+    {
+        $order = $this->seedOrderWithLines(11);
+        $data = $this->invoiceData($order);
+        $data['do_no'] = 'DO-MULTIPAGE';
+        $data['show_prices'] = true;
+
+        $html = view('pdf.delivery-order', $data)->render();
+
+        $this->assertSame(1, substr_count($html, 'page-break-after: always'));
+        $this->assertSame(2, substr_count($html, \App\PdfHelper::bilingual('pdf.doc.do_title')));
+        $this->assertSame(2, substr_count($html, \App\PdfHelper::bilingual('pdf.addr.billing')));
+        $this->assertSame(1, substr_count($html, \App\PdfHelper::bilingual('pdf.totals.total_amount')));
     }
 
     /** @test */

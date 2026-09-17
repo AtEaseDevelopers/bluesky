@@ -111,7 +111,6 @@
                                     <th>{{ __('ui.reports.item_name') }}</th>
                                     <th>{{ __('ui.reports.sku') }}</th>
                                     <th>{{ __('ui.reports.quantity') }}</th>
-                                    <th>{{ __('ui.reports.unit_price') }}</th>
                                     <th>{{ __('ui.reports.total_price') }}</th>
                                     <th>{{ __('ui.reports.payment_method') }}</th>
                                     <th>{{ __('ui.reports.area') }}</th>
@@ -124,14 +123,12 @@
                                 @php
                                     $total_sales_count = 0;
                                     $total_quantity_sold = 0;
-                                    $total_sales = 0;
                                     $col_no = 1;
                                     $pre_order_id = null;
                                 @endphp
                                 @forelse ($orders as $key => $order)
                                     @php
                                         $total_quantity_sold += $order->quantity;
-                                        $total_sales += $order->price;
                                     @endphp
                                     <tr>
                                         <td>
@@ -160,7 +157,6 @@
                                         <td>{{ \App\OrderProduct::displayName($order) }}</td>
                                         <td>{{ $order->sku }}</td>
                                         <td>{{ $order->quantity }}</td>
-                                        <td>RM {{ number_format($order->unit_price, 2) }}</td>
                                         <td>RM {{ number_format($order->price, 2) }}</td>
                                         <td>{{ $reportService->recordedPaymentLabel($order->recorded_payment_methods) }}</td>
                                         <td>{{ $order->area }}</td>
@@ -185,7 +181,7 @@
                                     @endphp
                                 @empty
                                     <tr>
-                                        <td colspan="14">{{ __('ui.no_records') }}</td>
+                                        <td colspan="13">{{ __('ui.no_records') }}</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -194,9 +190,9 @@
                                     <td colspan="2">{{ __('ui.reports.total_sales_count') }}</td>
                                     <td colspan="2">{{ $total_sales_count }}</td>
                                     <td colspan="2">{{ __('ui.reports.total_quantity_sold') }}</td>
-                                    <td colspan="2">{{ $total_quantity_sold }}</td>
+                                    <td colspan="1">{{ $total_quantity_sold }}</td>
                                     <td colspan="2">{{ __('ui.reports.total_sales') }}</td>
-                                    <td colspan="4">RM {{ number_format($total_sales, 2) }}</td>
+                                    <td colspan="4">RM {{ number_format($salesSummary['total_sales'], 2) }}</td>
                                 </tr>
                             </tfoot>
                         </table>
