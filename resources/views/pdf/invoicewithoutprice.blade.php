@@ -15,6 +15,5 @@
         'show_price_columns' => false,
         'footer_mode' => 'weight',
     ])
-    @include('pdf.partials.bank-details')
 </body>
 </html>

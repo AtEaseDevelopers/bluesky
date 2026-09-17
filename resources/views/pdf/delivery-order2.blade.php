@@ -32,6 +32,5 @@
             <td style="font-size: 12px; text-align: center; border-top: solid 1px black; padding: 5px 0 0 0;">{{ \App\PdfHelper::bilingual('pdf.do2.sign_customer') }}</td>
         </tr>
     </table>
-    @include('pdf.partials.bank-details')
 </body>
 </html>

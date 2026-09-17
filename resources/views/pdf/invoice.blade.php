@@ -16,6 +16,5 @@
         'has_price_permission' => $user->invoice_price_permission,
         'footer_mode' => 'full',
     ])
-    @include('pdf.partials.bank-details')
 </body>
 </html>

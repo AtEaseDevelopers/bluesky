@@ -19,6 +19,5 @@
         'has_price_permission' => true,
         'footer_mode' => $doShowPrices ? 'full' : 'weight',
     ])
-    @include('pdf.partials.bank-details')
 </body>
 </html>

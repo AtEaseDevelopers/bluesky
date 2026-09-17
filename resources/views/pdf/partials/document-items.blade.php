@@ -84,6 +84,7 @@
         <td style="width: 55%; vertical-align: top;">
             <span style="font-size: 12px; font-weight: 700;">{{ \App\PdfHelper::bilingual('pdf.totals.remark') }} :</span><br>
             <span style="font-size: 12px;">{{ $remarkNote }}</span>
+            @include('pdf.partials.bank-details')
         </td>
         <td style="width: 45%; vertical-align: top;">
             <table style="width: 100%; border-collapse: collapse;">
@@ -118,6 +119,30 @@
                         <td style="font-size: 14px; font-weight: 700; text-align: left; padding: 8px 0 4px 0; border-top: 1px solid #000;">{{ \App\PdfHelper::bilingual('pdf.totals.total_amount') }} :</td>
                         <td style="font-size: 14px; font-weight: 700; text-align: right; padding: 8px 0 4px 0; border-top: 1px solid #000;">{{ $money($grandTotal) }}</td>
                     </tr>
+                    @if (isset($payments) && $payments->count())
+                        @php
+                            $paidTotal = (float) $payments->sum('amount');
+                        @endphp
+                        <tr>
+                            <td colspan="2" style="font-size: 12px; font-weight: 700; padding: 10px 0 2px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.payments_received') }}</td>
+                        </tr>
+                        @foreach ($payments as $payment)
+                            <tr>
+                                <td style="font-size: 12px; text-align: left; padding: 2px 0;">{{ $payment_method_labels[$payment->payment_method] ?? $payment->payment_method }} :</td>
+                                <td style="font-size: 12px; text-align: right; padding: 2px 0;">{{ $money($payment->amount) }}</td>
+                            </tr>
+                        @endforeach
+                        <tr>
+                            <td style="font-size: 12px; font-weight: 700; text-align: left; padding: 4px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.total_paid') }} :</td>
+                            <td style="font-size: 12px; font-weight: 700; text-align: right; padding: 4px 0;">{{ $money($paidTotal) }}</td>
+                        </tr>
+                        @if ($paidTotal < $grandTotal)
+                            <tr>
+                                <td style="font-size: 12px; font-weight: 700; text-align: left; padding: 4px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.balance_due') }} :</td>
+                                <td style="font-size: 12px; font-weight: 700; text-align: right; padding: 4px 0;">{{ $money($grandTotal - $paidTotal) }}</td>
+                            </tr>
+                        @endif
+                    @endif
                 @else
                     <tr>
                         <td style="font-size: 14px; font-weight: 700; text-align: left; padding: 8px 0 4px 0; border-top: 1px solid #000;">{{ \App\PdfHelper::bilingual('pdf.totals.total_weight') }} :</td>
@@ -128,36 +153,3 @@
         </td>
     </tr>
 </table>
-@if ($footerMode === 'full' && isset($payments) && $payments->count())
-    @php
-        $paidTotal = (float) $payments->sum('amount');
-    @endphp
-    <table style="width: 100%; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif; border-collapse: collapse; margin: 12px 0 0 0;">
-        <tr>
-            <td style="width: 55%;"></td>
-            <td style="width: 45%;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td colspan="2" style="font-size: 12px; font-weight: 700; padding: 6px 0 2px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.payments_received') }}</td>
-                    </tr>
-                    @foreach ($payments as $payment)
-                        <tr>
-                            <td style="font-size: 12px; text-align: left; padding: 2px 0;">{{ $payment_method_labels[$payment->payment_method] ?? $payment->payment_method }} :</td>
-                            <td style="font-size: 12px; text-align: right; padding: 2px 0;">{{ $money($payment->amount) }}</td>
-                        </tr>
-                    @endforeach
-                    <tr>
-                        <td style="font-size: 12px; font-weight: 700; text-align: left; padding: 4px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.total_paid') }} :</td>
-                        <td style="font-size: 12px; font-weight: 700; text-align: right; padding: 4px 0;">{{ $money($paidTotal) }}</td>
-                    </tr>
-                    @if ($paidTotal < $grandTotal)
-                        <tr>
-                            <td style="font-size: 12px; font-weight: 700; text-align: left; padding: 4px 0;">{{ \App\PdfHelper::bilingual('pdf.totals.balance_due') }} :</td>
-                            <td style="font-size: 12px; font-weight: 700; text-align: right; padding: 4px 0;">{{ $money($grandTotal - $paidTotal) }}</td>
-                        </tr>
-                    @endif
-                </table>
-            </td>
-        </tr>
-    </table>
-@endif
