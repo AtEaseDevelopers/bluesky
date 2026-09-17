@@ -415,6 +415,14 @@ class Order extends Model
 
     public function canSyncToAutoCount(): bool
     {
+        // Credit customers: the invoice is pushed to AutoCount once the goods are
+        // delivered. The balance is carried on the credit account and settled
+        // later, so payment need not be complete at sync time.
+        if ($this->isCreditCustomer()) {
+            return $this->isFulfilled();
+        }
+
+        // Cash / COD customers: only once the order is completed and fully paid.
         return $this->isCompleted()
             && $this->payment_status === self::$payment_status['paid'];
     }

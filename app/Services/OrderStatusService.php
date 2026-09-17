@@ -125,6 +125,16 @@ class OrderStatusService
             }
         }
 
+        // Credit orders push to AutoCount the moment they are delivered — the
+        // invoice is carried on the credit account and settled later. Cash orders
+        // are not eligible until completed, so canSyncToAutoCount() short-circuits.
+        // syncIfEligible() generates the invoice number when it queues the sync.
+        if ($newStatus === Order::$status['delivered']
+            && config('autocount.auto_sync_enabled')
+            && $order->fresh()->canSyncToAutoCount()) {
+            app(AutoCountSyncService::class)->syncIfEligible($order->fresh(), $adminId);
+        }
+
         if ($newStatus === Order::$status['cancelled']) {
             app(CreditService::class)->reverseForOrder($order->fresh(), $adminId);
             PdfHelper::GenerateOrderInvoice($order);

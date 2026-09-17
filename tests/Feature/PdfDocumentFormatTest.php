@@ -276,6 +276,77 @@ class PdfDocumentFormatTest extends TestCase
         $this->assertStringContainsString('John Tan', $html);
     }
 
+    /** Seed an order carrying an arbitrary number of distinct line items. */
+    private function seedOrderWithLines(int $count): Order
+    {
+        $customer = $this->makeCustomer();
+        $order = $this->makeOrder($customer);
+        for ($i = 1; $i <= $count; $i++) {
+            $sku = 'SKU' . str_pad((string) $i, 3, '0', STR_PAD_LEFT);
+            $this->addLine($order, $this->makeProduct($sku, 'PRODUCT ' . $i, 10.00), 1, 10.00);
+        }
+
+        return $order;
+    }
+
+    /** @test */
+    public function invoice_paginates_at_eight_items_per_page(): void
+    {
+        $order = $this->seedOrderWithLines(20);
+        $html = view('pdf.invoice', $this->invoiceData($order))->render();
+
+        // 20 items -> 3 pages (8 + 8 + 4) -> 2 page breaks between them.
+        $this->assertSame(2, substr_count($html, 'page-break-after: always'));
+
+        // Document header + item-table column header repeat once per page.
+        $this->assertSame(3, substr_count($html, \App\PdfHelper::bilingual('pdf.meta.invoice_no')));
+        $this->assertSame(3, substr_count($html, \App\PdfHelper::bilingual('pdf.items.sku')));
+
+        // Pure pagination: every line still rendered, numbered continuously.
+        for ($i = 1; $i <= 20; $i++) {
+            $this->assertStringContainsString('SKU' . str_pad((string) $i, 3, '0', STR_PAD_LEFT), $html);
+        }
+        $this->assertStringContainsString('>20<', $html); // last row number
+
+        // Totals block lives on the last page only.
+        $this->assertSame(1, substr_count($html, \App\PdfHelper::bilingual('pdf.totals.total_amount')));
+    }
+
+    /** @test */
+    public function invoice_with_exactly_eight_items_stays_on_one_page(): void
+    {
+        $order = $this->seedOrderWithLines(8);
+        $html = view('pdf.invoice', $this->invoiceData($order))->render();
+
+        $this->assertSame(0, substr_count($html, 'page-break-after: always'));
+        $this->assertSame(1, substr_count($html, \App\PdfHelper::bilingual('pdf.items.sku')));
+    }
+
+    /** @test */
+    public function invoice_with_nine_items_breaks_to_two_pages(): void
+    {
+        $order = $this->seedOrderWithLines(9);
+        $html = view('pdf.invoice', $this->invoiceData($order))->render();
+
+        $this->assertSame(1, substr_count($html, 'page-break-after: always'));
+        $this->assertSame(2, substr_count($html, \App\PdfHelper::bilingual('pdf.items.sku')));
+    }
+
+    /** @test */
+    public function delivery_order2_paginates_but_keeps_single_signature_block(): void
+    {
+        $order = $this->seedOrderWithLines(20);
+        $data = $this->invoiceData($order);
+        $data['do_no'] = 'DO-PAGINATE';
+        $data['show_prices'] = true;
+
+        $html = view('pdf.delivery-order2', $data)->render();
+
+        $this->assertSame(2, substr_count($html, 'page-break-after: always'));
+        // Signature acknowledgement renders once, on the final page.
+        $this->assertSame(1, substr_count($html, \App\PdfHelper::bilingual('pdf.do2.sign_authorised')));
+    }
+
     /** @test */
     public function delivery_order2_renders_chinese_format_with_signature_block(): void
     {

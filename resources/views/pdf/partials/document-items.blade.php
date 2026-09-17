@@ -4,6 +4,19 @@
     $footerMode = $footer_mode ?? ($showCols ? 'full' : 'weight');
     $remarkNote = $remark_note ?? \App\PdfHelper::bilingual('pdf.totals.remark_note');
 
+    // Header details repeated on every page (company/meta + billing/shipping boxes).
+    $headerData = [
+        'doc_title' => $doc_title ?? \App\PdfHelper::bilingual('pdf.doc.invoice_title'),
+        'number_label' => $number_label ?? \App\PdfHelper::bilingual('pdf.meta.invoice_no'),
+        'number_value' => $number_value ?? '',
+    ];
+
+    // At most 8 line items per page; each chunk renders as its own page and the
+    // totals block only appears after the final chunk.
+    $perPage = 8;
+    $chunks = collect($order_items)->chunk($perPage)->values();
+    $lastChunkIndex = $chunks->count() - 1;
+
     $total_weight = 0;
     $lineSubtotal = 0;
     if ($showCols && $hasPerm) {
@@ -19,45 +32,52 @@
     $currency = $currency ?? 'MYR';
     $money = fn ($v) => $currency . ' ' . number_format((float) $v, 2);
 @endphp
-<table style="width: 100%; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif; border-collapse: collapse; margin: 16px 0 0 0;">
-    <tr>
-        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '6%' : '7%' }};">{{ \App\PdfHelper::bilingual('pdf.items.no') }}</td>
-        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '13%' : '16%' }};">{{ \App\PdfHelper::bilingual('pdf.items.sku') }}</td>
-        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '31%' : '45%' }};">{{ \App\PdfHelper::bilingual('pdf.items.description') }}</td>
-        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '10%' : '14%' }}; text-align: center;">{{ \App\PdfHelper::bilingual('pdf.items.qty') }}</td>
-        <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '12%' : '18%' }}; text-align: center;">{{ \App\PdfHelper::bilingual('pdf.items.weight') }}</td>
-        @if ($showCols)
-            <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: 14%; text-align: right;">{{ \App\PdfHelper::bilingual('pdf.items.unit_price') }}</td>
-            <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: 14%; text-align: right;">{{ \App\PdfHelper::bilingual('pdf.items.subtotal') }}</td>
-        @endif
-    </tr>
-    @foreach ($order_items as $key => $prod)
+@foreach ($chunks as $chunkIndex => $chunk)
+    @include('pdf.partials.document-header', $headerData)
+    @include('pdf.partials.address-boxes')
+    <table style="width: 100%; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif; border-collapse: collapse; margin: 16px 0 0 0;">
         <tr>
-            <td style="font-size: 12px; text-align: left; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $key + 1 }}</td>
-            <td style="font-size: 12px; text-align: left; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $prod->sku ?? '' }}</td>
-            <td style="font-size: 12px; text-align: left; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">
-                {{ $prod->name }}
-                @if (!empty($prod->remark))
-                    <br><span style="font-size: 11px; color: #666666;">{{ $prod->remark }}</span>
-                @endif
-            </td>
-            <td style="font-size: 12px; text-align: center; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $prod->show_qty == true ? ($prod->quantity ?? 0) : '' }}</td>
-            <td style="font-size: 12px; text-align: center; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $prod->show_weight == true ? (\App\OrderProduct::displayWeight($prod) ?? '') : '' }}</td>
+            <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '6%' : '7%' }};">{{ \App\PdfHelper::bilingual('pdf.items.no') }}</td>
+            <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '13%' : '16%' }};">{{ \App\PdfHelper::bilingual('pdf.items.sku') }}</td>
+            <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '31%' : '45%' }};">{{ \App\PdfHelper::bilingual('pdf.items.description') }}</td>
+            <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '10%' : '14%' }}; text-align: center;">{{ \App\PdfHelper::bilingual('pdf.items.qty') }}</td>
+            <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: {{ $showCols ? '12%' : '18%' }}; text-align: center;">{{ \App\PdfHelper::bilingual('pdf.items.weight') }}</td>
             @if ($showCols)
-                <td style="font-size: 12px; text-align: right; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $hasPerm ? number_format((float) $prod->unit_price, 2) : '-' }}</td>
-                <td style="font-size: 12px; text-align: right; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $hasPerm ? number_format((float) $prod->price, 2) : '-' }}</td>
+                <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: 14%; text-align: right;">{{ \App\PdfHelper::bilingual('pdf.items.unit_price') }}</td>
+                <td style="font-size: 12px; background-color: #e6e6e6; font-weight: 700; padding: 6px 6px; width: 14%; text-align: right;">{{ \App\PdfHelper::bilingual('pdf.items.subtotal') }}</td>
             @endif
         </tr>
-        @php
-            if ($prod->show_weight == true) {
-                $lineWeight = \App\OrderProduct::reportWeightValue($prod);
-                if ($lineWeight !== null) {
-                    $total_weight = ($total_weight ?? 0) + $lineWeight;
+        @foreach ($chunk as $key => $prod)
+            <tr>
+                <td style="font-size: 12px; text-align: left; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $chunkIndex * $perPage + $loop->index + 1 }}</td>
+                <td style="font-size: 12px; text-align: left; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $prod->sku ?? '' }}</td>
+                <td style="font-size: 12px; text-align: left; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">
+                    {{ $prod->name }}
+                    @if (!empty($prod->remark))
+                        <br><span style="font-size: 11px; color: #666666;">{{ $prod->remark }}</span>
+                    @endif
+                </td>
+                <td style="font-size: 12px; text-align: center; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $prod->show_qty == true ? ($prod->quantity ?? 0) : '' }}</td>
+                <td style="font-size: 12px; text-align: center; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $prod->show_weight == true ? (\App\OrderProduct::displayWeight($prod) ?? '') : '' }}</td>
+                @if ($showCols)
+                    <td style="font-size: 12px; text-align: right; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $hasPerm ? number_format((float) $prod->unit_price, 2) : '-' }}</td>
+                    <td style="font-size: 12px; text-align: right; padding: 6px 6px; border-bottom: 1px solid #d5d5d5; vertical-align: top;">{{ $hasPerm ? number_format((float) $prod->price, 2) : '-' }}</td>
+                @endif
+            </tr>
+            @php
+                if ($prod->show_weight == true) {
+                    $lineWeight = \App\OrderProduct::reportWeightValue($prod);
+                    if ($lineWeight !== null) {
+                        $total_weight = ($total_weight ?? 0) + $lineWeight;
+                    }
                 }
-            }
-        @endphp
-    @endforeach
-</table>
+            @endphp
+        @endforeach
+    </table>
+    @if ($chunkIndex !== $lastChunkIndex)
+        <div style="page-break-after: always;"></div>
+    @endif
+@endforeach
 <!-- Totals -->
 <table style="width: 100%; font-family: 'Noto Sans SC', 'Noto Sans TC', 'DejaVu Sans', sans-serif; border-collapse: collapse; margin: 20px 0 0 0;">
     <tr>

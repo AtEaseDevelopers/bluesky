@@ -64,12 +64,21 @@ class AutoCountSyncService
      */
     public function syncIfEligible(Order $order, ?int $adminId = null): AutoCountSyncLog
     {
-        if ($order->payment_status !== Order::$payment_status['paid']) {
-            return $this->log($order, 'skipped', 'Invoice not paid — sync not allowed.', null, $adminId);
-        }
+        if ($order->isCreditCustomer()) {
+            // Credit: the invoice syncs once delivered; the balance is carried on
+            // the credit account and settled later on the paid-sync endpoint.
+            if (!$order->isFulfilled()) {
+                return $this->log($order, 'skipped', 'Credit order must be delivered before AutoCount sync.', null, $adminId);
+            }
+        } else {
+            // Cash / COD: syncs only once completed and fully paid.
+            if ($order->payment_status !== Order::$payment_status['paid']) {
+                return $this->log($order, 'skipped', 'Invoice not paid — sync not allowed.', null, $adminId);
+            }
 
-        if (!$order->isCompleted()) {
-            return $this->log($order, 'skipped', 'Order must be completed before AutoCount sync.', null, $adminId);
+            if (!$order->isCompleted()) {
+                return $this->log($order, 'skipped', 'Cash order must be completed before AutoCount sync.', null, $adminId);
+            }
         }
 
         if (!$order->invoice_number) {

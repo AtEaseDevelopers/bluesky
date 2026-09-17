@@ -903,6 +903,13 @@ class AutoCountApiService
             $order = $order->fresh();
         }
 
+        // The plugin stamps the AutoCount Delivery Order with this do_no ("DO-YYYYMM-####"),
+        // paired to the invoice number, so make sure it exists before syncing.
+        if (!$order->do_no) {
+            app(OrderService::class)->assignDoNumber($order->fresh());
+            $order = $order->fresh();
+        }
+
         $customer = $order->customer;
         $debtorCode = $this->resolveOrderDebtorCode($order, $customer);
         $syncCustomer = $this->buildSyncCustomerPayload($order, $customer, $debtorCode);
@@ -949,6 +956,7 @@ class AutoCountApiService
             'order' => [
                 'id' => $order->id,
                 'invoice_number' => $order->invoice_number,
+                'do_no' => $order->do_no,
                 'order_type' => $order->order_type,
                 'api_invoice_id' => $order->api_invoice_id,
                 'api_do_id' => $order->api_do_id,

@@ -8,13 +8,10 @@
     @include('pdf.partials.font-styles')
 </head>
 <body>
-    @include('pdf.partials.document-header', [
+    @include('pdf.partials.document-items', [
         'doc_title' => \App\PdfHelper::bilingual('pdf.doc.invoice_title'),
         'number_label' => \App\PdfHelper::bilingual('pdf.meta.invoice_no'),
         'number_value' => $invoice_number,
-    ])
-    @include('pdf.partials.address-boxes')
-    @include('pdf.partials.document-items', [
         'show_price_columns' => true,
         'has_price_permission' => $user->invoice_price_permission,
         'footer_mode' => 'full',
