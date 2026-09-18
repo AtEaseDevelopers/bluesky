@@ -400,27 +400,6 @@
                             <!--</div>-->
 
                         <!--</div>-->
-                        <!--<h5 class="card-title">Payment Method</h5>-->
-                        <!--<hr>-->
-                        <!--<div class="row">-->
-                        <!--    <div class="col-md-12">-->
-                        <!--        <div class="mb-4">-->
-                        <!--            <label class="mb-2" for="payment_method">Payment Method<span class="text-danger">*</span></label>-->
-                        <!--            <select id="payment_method" class="form-select @error('payment_method') is-invalid @enderror" name="payment_method[]" required multiple>-->
-                        <!--                @foreach ($payment_method_options as $payment_method)-->
-                        <!--                    <option value="{{ $payment_method }}" {{ in_array($payment_method, old('payment_method', []) ?: $customer->payment_method) ? 'selected' : '' }}>-->
-                        <!--                        {{ __('user.payment_method.' . $payment_method) }}-->
-                        <!--                    </option>-->
-                        <!--                @endforeach-->
-                        <!--            </select>-->
-                        <!--            @error('payment_method')-->
-                        <!--                <span class="text-danger" role="alert">-->
-                        <!--                    <strong>{{ $message }}</strong>-->
-                        <!--                </span>-->
-                        <!--            @enderror-->
-                        <!--        </div>-->
-                        <!--    </div>-->
-                        <!--</div>-->
                     </div>
                 </div>
             </div>

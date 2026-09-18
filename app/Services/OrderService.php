@@ -588,13 +588,65 @@ class OrderService
                 );
             }
 
-            $amountToOrder = min($amount, $balanceDue);
-            $overpayment = $order->allowsOverpayment()
-                ? max(0, round($amount - $balanceDue, 2))
-                : 0;
-
             if (!$order->allowsOverpayment() && $amount > $balanceDue + 0.009) {
                 throw new \InvalidArgumentException('Payment amount exceeds balance due.');
+            }
+
+            $amountToOrder = min($amount, $balanceDue);
+            $leftover = round($amount - $amountToOrder, 2);
+
+            // Money received for a credit customer's order settles that order's
+            // outstanding credit-term balance on the ledger before any remainder
+            // is treated as available credit. A credit-term charge itself is not
+            // a settlement, so it is excluded here.
+            $creditSettled = 0.0;
+            if (
+                $leftover > 0.009
+                && $order->isCreditCustomer()
+                && $payment->payment_method !== 'credit-term'
+            ) {
+                $creditSettled = min($leftover, $order->creditOutstandingAmount());
+                if ($creditSettled > 0.009) {
+                    app(CreditService::class)->settleOrderCredit(
+                        $order->fresh(),
+                        $adminId,
+                        $payment->notes,
+                        $creditSettled,
+                        $payment->payment_method,
+                        $payment->payment_proof
+                    );
+                    $leftover = round($leftover - $creditSettled, 2);
+                } else {
+                    $creditSettled = 0.0;
+                }
+            }
+
+            $overpayment = $order->allowsOverpayment() ? max(0, $leftover) : 0;
+
+            // A payment applied entirely as a credit-term settlement is recorded
+            // on the customer credit ledger (with its proof), mirroring an
+            // admin-recorded settlement. Keeping it as a confirmed order payment
+            // too would double count against paid_amount and show a RM 0.00 row,
+            // so the redundant proof record is removed instead.
+            if ($creditSettled > 0.009 && $amountToOrder <= 0.009) {
+                if ($overpayment > 0 && $order->user_id) {
+                    $customer = $order->customer;
+                    if ($customer) {
+                        app(CreditService::class)->recordOverpayment(
+                            $customer,
+                            $overpayment,
+                            $order,
+                            $adminId,
+                            null,
+                            $payment->notes
+                        );
+                    }
+                }
+
+                $payment->delete();
+                $this->refreshPaymentStatus($order->fresh());
+
+                return $payment;
             }
 
             $payment->update([

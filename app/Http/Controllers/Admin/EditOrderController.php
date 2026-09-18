@@ -11,9 +11,12 @@ use App\Order;
 use App\OrderProduct;
 use App\OrderProductOption;
 use App\Product;
+use App\Services\CreditService;
+use App\Services\OrderService;
 use App\System;
 use App\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -28,6 +31,11 @@ class EditOrderController extends Controller
     public function showForm($id)
     {
         $order = Order::find(decrypt($id));
+
+        if (!$order->canAdminEditOrder()) {
+            return redirect(route('admin.orders.summary', $order->id))
+                ->with('error', __('orders.cannot_edit'));
+        }
         // payment_method
         $payment_method_options = User::$payment_method;
         foreach ($payment_method_options as $key => $value) {
@@ -70,6 +78,8 @@ class EditOrderController extends Controller
                 'payment_method_options' => $payment_method_options? : [],
                 'shipping_state_options' => System::$country_state['MY'],
                 'customer' => $order->customer,
+                'customers_list' => User::all(),
+                'walk_in_payment_method_keys' => User::walkInOrderPaymentMethodKeys(),
                 'order' => $order,
                 'products' => $order_products->toArray(),
                 'areas' => Area::optionsForSelect(),
@@ -85,11 +95,30 @@ class EditOrderController extends Controller
             return redirect()->back()->withInput()->withErrors($data['field_err']);
         }
 
-        $user = User::find($order->user_id);
+        // Remember who the order belonged to so a customer change can move its
+        // credit ledger impact from the old customer to the new one.
+        $previousUserId = $order->user_id;
 
-        $allowedPaymentMethods = $user
-            ? User::adminOrderPaymentMethodKeys($user)
-            : User::walkInOrderPaymentMethodKeys();
+        // The order's type is fixed once created — editing only reassigns the
+        // customer within that type. A walk-in order stays walk-in (rename /
+        // reuse a past entry); a registered order picks another account.
+        $isWalkIn = $order->isWalkInOrder();
+
+        if ($isWalkIn) {
+            $user = null;
+        } else {
+            $customerId = $request->input('customer_id') ?: $request->input('customer');
+            $user = User::find($customerId);
+            if (!$user) {
+                return redirect()->back()->withInput()->withErrors([
+                    'customer_id' => __('orders.customer_required'),
+                ]);
+            }
+        }
+
+        $allowedPaymentMethods = $isWalkIn
+            ? User::walkInOrderPaymentMethodKeys()
+            : User::adminOrderPaymentMethodKeys($user);
 
         if ($request->filled('payment_method') && !in_array($request->input('payment_method'), $allowedPaymentMethods, true)) {
             return redirect()->back()->withInput()->withErrors([
@@ -100,6 +129,10 @@ class EditOrderController extends Controller
         $total = 0;
         $order->update(
             [
+            // order_type is intentionally left unchanged — the type is locked.
+            "user_id" => $isWalkIn ? null : $user->id,
+            "walk_in_name" => $isWalkIn ? $request->input('walk_in_name') : null,
+            "walk_in_phone" => $isWalkIn ? $request->input('walk_in_phone') : null,
             "total_price" => $total,
             "attn_name" => $data['attn_name'],
             "attn_contact" => $data['attn_contact'],
@@ -144,7 +177,7 @@ class EditOrderController extends Controller
             ]
         );
 
-        foreach ($data['product_id'] as $key => $product_id) {
+        foreach (($data['product_id'] ?? []) as $key => $product_id) {
             $product = Product::find($product_id);
 
             if (in_array($product->sell_in, [Product::SELL_IN_WEIGHT, Product::SELL_IN_QTY_BILL_WEIGHT], true)) {
@@ -170,7 +203,7 @@ class EditOrderController extends Controller
                 "product_weight" => $line['product_weight'],
                 "unit_price" => $unit_price,
                 "price" => $price,
-                "remark" => $data['remark'][$key],
+                "remark" => $data['remark'][$key] ?? '',
                 "status" => OrderProduct::$status['active'],
                 ]
             );
@@ -196,8 +229,38 @@ class EditOrderController extends Controller
             ]
         )->save();
 
+        $this->syncCreditForReassignment($order->fresh(), $previousUserId);
+
         return redirect(route('admin.orders.summary', $order->id))->with('success', __('orders.edited_success'));
 
+    }
+
+    /**
+     * When an order is reassigned to a different customer, move its credit
+     * ledger impact: restore the previous customer and transfer the credit-term
+     * charge to the newly assigned customer, then re-apply available credit /
+     * a payment due date to that customer.
+     */
+    private function syncCreditForReassignment(Order $order, ?int $previousUserId): void
+    {
+        if ((int) $previousUserId === (int) $order->user_id) {
+            return; // Customer unchanged — nothing to move.
+        }
+
+        $adminId = Auth::guard('web_admin')->id();
+        $creditService = app(CreditService::class);
+
+        $previousCustomer = $previousUserId ? User::find($previousUserId) : null;
+        $newCustomer = $order->user_id ? User::find($order->user_id) : null;
+
+        $creditService->reassignOrderCredit($order, $previousCustomer, $newCustomer, $adminId);
+
+        if ($newCustomer) {
+            if ($order->fresh()->shouldAutoApplyCredit()) {
+                $creditService->applyAvailableCredit($order->fresh());
+            }
+            app(OrderService::class)->applyDefaultPaymentDueDate($order->fresh());
+        }
     }
 
     public function getOrderData(Request $request, Order $order)
@@ -211,21 +274,68 @@ class EditOrderController extends Controller
         );
     }
 
+    /**
+     * Distinct walk-in customers seen on past walk-in orders (name + phone), so
+     * the admin can reuse an existing walk-in record instead of retyping it.
+     */
+    public function searchWalkIns(Request $request)
+    {
+        $term = trim((string) $request->input('q', ''));
+
+        $query = Order::query()
+            ->where('order_type', Order::$order_types['walk_in'])
+            ->whereNotNull('walk_in_name')
+            ->where('walk_in_name', '!=', '');
+
+        if ($term !== '') {
+            $pattern = Helper::likePattern($term);
+            $query->where(function ($q) use ($pattern) {
+                $q->where('walk_in_name', 'like', $pattern)
+                    ->orWhere('walk_in_phone', 'like', $pattern);
+            });
+        }
+
+        $results = $query->orderByDesc('id')
+            ->get(['walk_in_name', 'walk_in_phone'])
+            ->unique(fn ($order) => mb_strtolower(trim($order->walk_in_name)) . '|' . trim((string) $order->walk_in_phone))
+            ->take(20)
+            ->map(fn ($order) => [
+                'name' => $order->walk_in_name,
+                'phone' => $order->walk_in_phone ?? '',
+            ])
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'results' => $results,
+        ]);
+    }
+
     public function validateEditOrder(Request $request, Order $order)
     {
-        if(in_array($order->status, [Order::$status['delivered']]) && $order->isFullyPaid()) {
+        if (!$order->canAdminEditOrder()) {
             return [
                 'error' => "Order cannot be edited.",
                 'field_err' => [],
             ];
         }
 
+        $isWalkIn = $order->isWalkInOrder();
+
         $rules = [
-            "customer_id" => ['required'],
+            // The select2 dropdown is disabled at submit (product step), so the
+            // JS-synced hidden customer_id is what actually posts.
+            "customer_id" => [$isWalkIn ? 'nullable' : 'required'],
+            "customer" => ['nullable'],
+            "walk_in_name" => [$isWalkIn ? 'required' : 'nullable', 'string', 'max:100'],
+            "walk_in_phone" => ['nullable', 'string', 'max:30'],
             "attn_name" => array_merge(Order::$attribute_rules['attn_name'], []),
             "attn_contact" => array_merge(Order::$attribute_rules['attn_contact'], []),
-            // "payment_method" => array_merge(Order::$attribute_rules['payment_method'], []),
-            "billing_address" => array_merge(Order::$attribute_rules['billing_address'], []),
+            "payment_method" => ['nullable', 'string', 'max:30'],
+            // A walk-in counter sale needs no billing address; a registered order does.
+            "billing_address" => $isWalkIn
+                ? ['nullable', 'string', 'max:200']
+                : array_merge(Order::$attribute_rules['billing_address'], []),
             // "billing_postcode" => array_merge(Order::$attribute_rules['billing_postcode'], []),
             // "billing_state" => array_merge(Order::$attribute_rules['billing_state'], []),
             "shipping_address" => array_merge(Order::$attribute_rules['shipping_address'], []),

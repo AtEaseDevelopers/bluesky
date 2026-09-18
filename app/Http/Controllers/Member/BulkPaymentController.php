@@ -31,7 +31,7 @@ class BulkPaymentController extends Controller
         return view('member.bulk-payments', [
             'user' => $user,
             'orders' => $orders,
-            'paymentMethods' => OrderPayment::$credit_customer_methods,
+            'paymentMethods' => OrderPayment::customerSettlementMethods(),
         ]);
     }
 
@@ -45,7 +45,7 @@ class BulkPaymentController extends Controller
         $data = $request->validate([
             'order_ids' => 'required|array|min:1',
             'order_ids.*' => 'integer|exists:orders,id',
-            'payment_method' => 'required|in:' . implode(',', array_keys(OrderPayment::$credit_customer_methods)),
+            'payment_method' => 'required|in:' . implode(',', array_keys(OrderPayment::customerSettlementMethods())),
             'amount' => 'required|numeric|min:0.01',
             'payment_proof' => OrderPayment::proofRules(true),
             'notes' => 'nullable|string|max:500',

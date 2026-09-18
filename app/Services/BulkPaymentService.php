@@ -22,7 +22,7 @@ class BulkPaymentService
             ->orderBy('created_at')
             ->get()
             ->filter(function (Order $order) {
-                return $order->balanceDue() > 0;
+                return $order->outstandingForCustomer() > 0;
             })
             ->values();
     }
@@ -39,7 +39,7 @@ class BulkPaymentService
             ->orderBy('created_at')
             ->get()
             ->filter(function (Order $order) {
-                return $order->balanceDue() > 0;
+                return $order->outstandingForCustomer() > 0;
             })
             ->values();
 
@@ -48,7 +48,7 @@ class BulkPaymentService
         }
 
         $selectedBalance = $orders->sum(function (Order $order) {
-            return $order->balanceDue();
+            return $order->outstandingForCustomer();
         });
 
         if ($amount <= 0) {
@@ -77,7 +77,7 @@ class BulkPaymentService
                     break;
                 }
 
-                $balance = round($order->balanceDue(), 2);
+                $balance = round($order->outstandingForCustomer(), 2);
                 $allocated = min($balance, $remaining);
                 if ($allocated <= 0) {
                     continue;

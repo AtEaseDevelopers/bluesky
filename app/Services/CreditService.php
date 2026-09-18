@@ -242,6 +242,88 @@ class CreditService
         });
     }
 
+    /**
+     * Move a reassigned order's credit charge from the previous customer to the
+     * newly assigned one. The "buy now, pay later" (credit-term) charge is NOT
+     * voided — it is transferred: the old customer's ledger is restored and the
+     * new credit customer is charged the same amount, keeping the credit-term
+     * payment intact. Auto-applied customer credit (which was the old customer's
+     * own money) is always returned to them. When the new customer is not a
+     * credit account there is nobody to carry a credit-term charge, so it is
+     * voided as a fallback.
+     *
+     * Repeatable across successive reassignments (reverses only what remains).
+     */
+    public function reassignOrderCredit(Order $order, ?User $oldCustomer, ?User $newCustomer, ?int $adminId = null): void
+    {
+        DB::transaction(function () use ($order, $oldCustomer, $newCustomer, $adminId) {
+            $newIsCredit = $newCustomer && $newCustomer->isCreditCustomer();
+
+            // Snapshot the credit-term charge (and its payment) before touching
+            // anything, so it can be reassigned to the new customer.
+            $creditTermPayment = OrderPayment::where('order_id', $order->id)
+                ->where('status', OrderPayment::STATUS_CONFIRMED)
+                ->where('payment_method', 'credit-term')
+                ->first();
+            $creditTermCharge = $order->creditTermChargedAmount();
+
+            // Auto-applied credit was the old customer's own balance — always
+            // return it by voiding those payments.
+            OrderPayment::where('order_id', $order->id)
+                ->where('status', OrderPayment::STATUS_CONFIRMED)
+                ->where('payment_method', 'customer-credit')
+                ->update([
+                    'status' => OrderPayment::STATUS_REJECTED,
+                    'notes' => 'Voided — order #' . $order->id . ' reassigned; applied credit returned.',
+                ]);
+
+            // No credit customer to carry a credit-term charge → void it.
+            if (!$newIsCredit) {
+                OrderPayment::where('order_id', $order->id)
+                    ->where('status', OrderPayment::STATUS_CONFIRMED)
+                    ->where('payment_method', 'credit-term')
+                    ->update([
+                        'status' => OrderPayment::STATUS_REJECTED,
+                        'notes' => 'Voided — order #' . $order->id . ' reassigned to a non-credit customer.',
+                    ]);
+            }
+
+            // Restore the old customer's balance for whatever charge remains.
+            if ($oldCustomer && $oldCustomer->isCreditCustomer()) {
+                $net = (float) CustomerCreditLog::where('order_id', $order->id)
+                    ->where('user_id', $oldCustomer->id)
+                    ->whereIn('type', ['applied_to_order', 'credit_term', 'credit_reversal'])
+                    ->sum('amount');
+
+                if (abs($net) >= 0.009) {
+                    $this->adjustBalance(
+                        $oldCustomer,
+                        -round($net, 2),
+                        'credit_reversal',
+                        $order->id,
+                        null,
+                        $adminId,
+                        null,
+                        'Credit reversed — order #' . $order->id . ' reassigned to another customer.'
+                    );
+                }
+            }
+
+            // Assign the credit-term charge to the new credit customer.
+            if ($newIsCredit && $creditTermCharge > 0.009) {
+                $this->recordCreditTermCharge(
+                    $newCustomer,
+                    $creditTermCharge,
+                    $order,
+                    $creditTermPayment?->id,
+                    $adminId,
+                    null,
+                    'Credit term charge assigned — order #' . $order->id . ' reassigned.'
+                );
+            }
+        });
+    }
+
     public function manualAdjust(User $user, float $amount, string $notes, int $adminId): CustomerCreditLog
     {
         if ($amount == 0) {

@@ -26,12 +26,12 @@
                                     @forelse ($orders as $order)
                                         <tr>
                                             <td>
-                                                <input type="checkbox" class="order-checkbox" name="order_ids[]" value="{{ $order->id }}" data-balance="{{ number_format($order->balanceDue(), 2, '.', '') }}">
+                                                <input type="checkbox" class="order-checkbox" name="order_ids[]" value="{{ $order->id }}" data-balance="{{ number_format($order->outstandingForCustomer(), 2, '.', '') }}">
                                             </td>
                                             <td>#{{ $order->id }}</td>
                                             <td>{{ $order->created_at->format('d M Y') }}</td>
                                             <td>{{ $order->invoice_number ?: '-' }}</td>
-                                            <td class="text-end">{{ number_format($order->balanceDue(), 2) }}</td>
+                                            <td class="text-end">{{ number_format($order->outstandingForCustomer(), 2) }}</td>
                                         </tr>
                                     @empty
                                         <tr>

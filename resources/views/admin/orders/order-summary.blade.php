@@ -12,6 +12,11 @@
                     <a href="{{ route('admin.orders') }}" class="btn btn-secondary">
                         <i class="fa fa-chevron-circle-left"></i> {{ __('ui.back') }}
                     </a>
+                    @if ($order->canAdminEditOrder() && $admin->canModule('orders', 'edit'))
+                        <a href="{{ route('admin.orders.edit', encrypt($order->id)) }}" class="btn btn-outline-primary">
+                            <i class="fa fa-pen"></i> {{ __('orders.edit') }}
+                        </a>
+                    @endif
                     @if ($order->canAdminAdjustPricing() && $admin->canModule('orders', 'edit'))
                         <a href="{{ route('admin.orders.review', $order->id) }}" class="btn btn-primary">{{ __('orders.adjust_order') }}</a>
                     @endif

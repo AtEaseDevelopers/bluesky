@@ -235,6 +235,7 @@ Route::namespace('Admin')->middleware(['admin_bootstrap'])->prefix('admin')->gro
                 Route::get('/order/edit/{order}', 'EditOrderController@showForm')->name('orders.edit');
                 Route::post('/order/edit/{order}', 'EditOrderController@editOrder')->name('orders.update');
                 Route::get('/order/get-order-info/{order}', 'EditOrderController@getOrderData')->name('orders.get-order-info');
+                Route::get('/order/walk-in-search', 'EditOrderController@searchWalkIns')->name('orders.walk-in-search');
                 Route::post('/order/update-status/{order}', 'UpdateOrderStatusController@index');
                 Route::post('/order/batch-update-status', 'UpdateOrderStatusController@batchUpdate');
                 Route::get('/order/batch-download-files', 'OrderController@downloadInvoiceDoAsZip');

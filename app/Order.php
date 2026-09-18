@@ -847,6 +847,17 @@ class Order extends Model
         return max(0, (float) $this->total_price - (float) $this->paid_amount);
     }
 
+    /**
+     * Total amount the customer still owes on this order for self-service
+     * payment. Combines the uncovered order balance with any credit-term charge
+     * still unsettled on the ledger — the latter reads as balanceDue()==0 even
+     * though the money has not been received, so it must be counted here.
+     */
+    public function outstandingForCustomer(): float
+    {
+        return round($this->balanceDue() + $this->creditOutstandingAmount(), 2);
+    }
+
     /** Ensure delivery orders have a DO number before drivers or PDFs reference them. */
     public function ensureDoNumber(): self
     {
@@ -961,6 +972,24 @@ class Order extends Model
             self::$status['in_route'],
             self::$status['delivered'],
         ], true);
+    }
+
+    /**
+     * Whether the admin order-edit form (reassign customer, edit
+     * addresses/products) may be opened for this order. A cancelled order, or a
+     * delivered order that is already fully paid, is closed to edits.
+     */
+    public function canAdminEditOrder(): bool
+    {
+        if ($this->status === self::$status['cancelled']) {
+            return false;
+        }
+
+        if (in_array($this->status, [self::$status['delivered']], true) && $this->isFullyPaid()) {
+            return false;
+        }
+
+        return true;
     }
 
     public static function canDriverAdjustQuantities(string $status): bool

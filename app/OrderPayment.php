@@ -103,6 +103,16 @@ class OrderPayment extends Model
         return array_diff_key(self::$credit_admin_methods, ['credit-term' => null]);
     }
 
+    /**
+     * Real-money methods a credit customer can pick when submitting their own
+     * settlement (e.g. bulk payment). 'credit-term' is excluded — that is the
+     * owing side, not a way to pay a credit balance down.
+     */
+    public static function customerSettlementMethods(): array
+    {
+        return array_diff_key(self::$credit_customer_methods, ['credit-term' => null]);
+    }
+
     public static function codDeliveryPreferenceKeys(): array
     {
         return array_keys(self::$cod_delivery_preference_methods);
