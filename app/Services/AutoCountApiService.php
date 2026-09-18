@@ -106,48 +106,14 @@ class AutoCountApiService
 
     public function nextPaidOrder(): ?array
     {
-        // A credit order parks at 'synced' until the plugin confirms its invoice
-        // was knocked off in AutoCount, and an unpaid invoice never writes back —
-        // so a stuck order stays 'synced' + api_invoice_id set indefinitely. As
-        // with the pending queue, a plain orderBy('id')->first() would hand the
-        // same unpaid head to every poll and starve every other credit order of
-        // its own payment write-back. Rotate through the synced-credit set so a
-        // stuck order costs one poll per cycle rather than monopolising the queue.
-        $paid = fn () => $this->baseOrderQuery()
-            ->where('autocount_sync_status', 'synced')
-            ->whereNotNull('api_invoice_id')
-            ->whereHas('customer', function ($q) {
-                $q->where('customer_type', 'credit');
-            });
-
-        $cursorKey = $this->paidCursorKey();
-        $lastId = (int) Cache::get($cursorKey, 0);
-
-        $order = $paid()->where('id', '>', $lastId)->orderBy('id')->first()
-            ?? $paid()->orderBy('id')->first();
-
-        if ($order) {
-            Cache::put($cursorKey, $order->id, now()->addHours(6));
-
-            $this->trace('info', 'Handing credit order to AutoCount for payment sync', [
-                'order_id' => $order->id,
-                'invoice_number' => $order->invoice_number,
-                'api_invoice_id' => $order->api_invoice_id,
-            ]);
-        }
-
-        return $order ? $this->toSyncPayload($order, 'paid') : null;
-    }
-
-    /**
-     * Cache key for the paid-queue rotation cursor, scoped per branch so a
-     * multi-branch deployment does not share one cursor across companies.
-     */
-    protected function paidCursorKey(): string
-    {
-        $branch = (string) config('autocount.branch_email', '');
-
-        return 'autocount:paid_cursor:' . ($branch !== '' ? $branch : 'default');
+        // Credit orders terminate at 'synced'. Once the Invoice is created in
+        // AutoCount the balance is carried on the customer's credit account and
+        // settled on terms; that settlement is not tracked back into the OMS, so
+        // there is nothing left to poll. Re-offering a synced credit order here
+        // only spun forever — the plugin never writes a knock-off back, so the
+        // order looped on every poll (prod: order #27 served 544 times). Leave
+        // credit orders at 'synced' and hand the plugin nothing.
+        return null;
     }
 
     public function applyDocumentUpdate(array $payload): void
@@ -205,8 +171,9 @@ class AutoCountApiService
                 return;
             }
 
-            // An Invoice carries an outstanding AR balance; the credit payment
-            // knock-off is confirmed later via the paid-sync endpoint.
+            // An Invoice carries an outstanding AR balance settled on credit
+            // terms. 'synced' is the terminal state for a credit order — the
+            // knock-off lives in AutoCount and is not tracked back into the OMS.
             $order->api_invoice_id = $number;
             $order->autocount_sync_status = 'synced';
             $order->autocount_synced_at = now();
