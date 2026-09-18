@@ -38,8 +38,12 @@ class OrderService
     public function refreshPaymentStatus(Order $order): Order
     {
         $total = (float) $order->total_price;
+        // Credit-settlement rows settle the ledger, not the order balance — the
+        // order was already covered by its credit-term charge — so they are
+        // excluded here to avoid double counting the same money.
         $paid = (float) OrderPayment::where('order_id', $order->id)
             ->where('status', OrderPayment::STATUS_CONFIRMED)
+            ->where('settles_credit', false)
             ->sum('amount');
 
         $hasPendingProof = OrderPayment::where('order_id', $order->id)
@@ -624,10 +628,12 @@ class OrderService
             $overpayment = $order->allowsOverpayment() ? max(0, $leftover) : 0;
 
             // A payment applied entirely as a credit-term settlement is recorded
-            // on the customer credit ledger (with its proof), mirroring an
-            // admin-recorded settlement. Keeping it as a confirmed order payment
-            // too would double count against paid_amount and show a RM 0.00 row,
-            // so the redundant proof record is removed instead.
+            // on the customer credit ledger (with its proof). Confirming it is an
+            // admin approval of the customer's payment, so the record is kept on
+            // the order as a confirmed row (its proof stays reachable) and flagged
+            // as a credit settlement — refreshPaymentStatus and paymentBreakdown
+            // exclude settlement rows, so it is never double counted into the
+            // order's paid_amount.
             if ($creditSettled > 0.009 && $amountToOrder <= 0.009) {
                 if ($overpayment > 0 && $order->user_id) {
                     $customer = $order->customer;
@@ -643,10 +649,14 @@ class OrderService
                     }
                 }
 
-                $payment->delete();
+                $payment->update([
+                    'status' => OrderPayment::STATUS_CONFIRMED,
+                    'settles_credit' => true,
+                    'recorded_by' => $adminId,
+                ]);
                 $this->refreshPaymentStatus($order->fresh());
 
-                return $payment;
+                return $payment->fresh();
             }
 
             $payment->update([

@@ -209,20 +209,25 @@ class MemberBulkPaymentPageTest extends TestCase
         // Customer no longer owes on the credit account.
         $this->assertEqualsWithDelta(0.0, (float) $customer->fresh()->credit_balance, 0.001);
 
-        // The settlement is recorded on the credit ledger with the real amount
-        // (not left as a confusing RM 0.00 confirmed order payment).
+        // The settlement is recorded on the credit ledger with the real amount.
         $this->assertEqualsWithDelta(30.0, (float) CustomerCreditLog::where('order_id', $orderA->id)
             ->where('type', 'credit_settlement')->sum('amount'), 0.001);
         $this->assertEqualsWithDelta(20.0, (float) CustomerCreditLog::where('order_id', $orderB->id)
             ->where('type', 'credit_settlement')->sum('amount'), 0.001);
 
-        // No zero-amount confirmed payment rows linger on the orders.
-        $this->assertSame(0, OrderPayment::whereIn('order_id', [$orderA->id, $orderB->id])
+        // Confirming approves the customer's payment, so the approved payment row
+        // stays visible on each order — confirmed, with its real amount, flagged
+        // as a credit settlement so it is excluded from paid_amount.
+        $kept = OrderPayment::whereIn('order_id', [$orderA->id, $orderB->id])
             ->where('status', OrderPayment::STATUS_CONFIRMED)
-            ->where('payment_method', '!=', 'credit-term')
-            ->count());
+            ->where('payment_method', 'bank-transfer')
+            ->get();
+        $this->assertCount(2, $kept);
+        $this->assertTrue($kept->every(fn ($p) => (bool) $p->settles_credit));
+        $this->assertEqualsWithDelta(50.0, (float) $kept->sum('amount'), 0.001);
 
-        // paid_amount matches the order totals exactly (no double counting).
+        // paid_amount matches the order totals exactly (settlement rows excluded,
+        // so no double counting).
         $this->assertEqualsWithDelta(30.0, (float) $orderA->fresh()->paid_amount, 0.001);
         $this->assertEqualsWithDelta(20.0, (float) $orderB->fresh()->paid_amount, 0.001);
     }

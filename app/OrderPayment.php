@@ -15,12 +15,17 @@ class OrderPayment extends Model
         'payment_method',
         'amount',
         'status',
+        'settles_credit',
         'payment_proof',
         'recorded_by',
         'recorded_by_driver',
         'submitted_by_user_id',
         'bulk_payment_id',
         'notes',
+    ];
+
+    protected $casts = [
+        'settles_credit' => 'boolean',
     ];
 
     public static $payment_methods = [

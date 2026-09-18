@@ -120,7 +120,11 @@ class OrderController extends Controller
             $order_products[$key]->options = OrderProduct::getOption($value->order_product_id);
         }
 
-        $payments = $order->payments()->with('submitter')->orderByDesc('created_at')->get();
+        // Match the admin order summary's ordering (newest first by id) so the
+        // customer sees the same, stable payment-history sequence — created_at
+        // can tie when rows are recorded together and a confirmed row keeps its
+        // original submission time.
+        $payments = $order->payments()->with('submitter')->orderByDesc('id')->get();
 
         return view('member.order-summary', [
             'order' => $order,

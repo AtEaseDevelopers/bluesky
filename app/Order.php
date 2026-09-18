@@ -568,6 +568,7 @@ class Order extends Model
         if ($this->relationLoaded('payments')) {
             return $this->payments
                 ->where('status', OrderPayment::STATUS_CONFIRMED)
+                ->where('settles_credit', false)
                 ->groupBy('payment_method')
                 ->map(fn ($group) => (float) $group->sum('amount'))
                 ->all();
@@ -575,6 +576,7 @@ class Order extends Model
 
         return $this->payments()
             ->where('status', OrderPayment::STATUS_CONFIRMED)
+            ->where('settles_credit', false)
             ->selectRaw('payment_method, SUM(amount) as total_amount')
             ->groupBy('payment_method')
             ->pluck('total_amount', 'payment_method')
