@@ -99,10 +99,10 @@ class EditOrderController extends Controller
         // credit ledger impact from the old customer to the new one.
         $previousUserId = $order->user_id;
 
-        // The order's type is fixed once created — editing only reassigns the
-        // customer within that type. A walk-in order stays walk-in (rename /
-        // reuse a past entry); a registered order picks another account.
-        $isWalkIn = $order->isWalkInOrder();
+        // The admin picks the type first, then the customer. Crossing is allowed:
+        // a registered order can become a walk-in and a walk-in can be assigned to
+        // a registered account.
+        $isWalkIn = $request->boolean('is_walk_in');
 
         if ($isWalkIn) {
             $user = null;
@@ -129,7 +129,7 @@ class EditOrderController extends Controller
         $total = 0;
         $order->update(
             [
-            // order_type is intentionally left unchanged — the type is locked.
+            "order_type" => $isWalkIn ? Order::$order_types['walk_in'] : Order::$order_types['registered'],
             "user_id" => $isWalkIn ? null : $user->id,
             "walk_in_name" => $isWalkIn ? $request->input('walk_in_name') : null,
             "walk_in_phone" => $isWalkIn ? $request->input('walk_in_phone') : null,
@@ -320,7 +320,7 @@ class EditOrderController extends Controller
             ];
         }
 
-        $isWalkIn = $order->isWalkInOrder();
+        $isWalkIn = $request->boolean('is_walk_in');
 
         $rules = [
             // The select2 dropdown is disabled at submit (product step), so the

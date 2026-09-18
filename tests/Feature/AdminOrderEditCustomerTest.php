@@ -129,7 +129,7 @@ class AdminOrderEditCustomerTest extends TestCase
     }
 
     /** @test */
-    public function registered_order_edit_lists_customers_and_hides_the_walk_in_option(): void
+    public function registered_order_edit_lists_customers_and_offers_the_walk_in_option(): void
     {
         $customer = $this->makeCustomer('Acme Seafood');
         $other = $this->makeCustomer('Beta Foods');
@@ -140,9 +140,9 @@ class AdminOrderEditCustomerTest extends TestCase
             ->assertOk()
             ->assertSee($customer->name)
             ->assertSee($other->name)
-            // The order type is locked, so no walk-in switch is offered.
-            ->assertDontSee(__('orders.walk_in_customer'))
-            ->assertDontSee('id="walk_in_name"', false);
+            // Crossing is allowed, so the walk-in switch is offered.
+            ->assertSee('id="is_walk_in"', false)
+            ->assertSee(__('orders.walk_in_customer'));
     }
 
     /** @test */
@@ -380,17 +380,42 @@ class AdminOrderEditCustomerTest extends TestCase
     }
 
     /** @test */
-    public function registered_order_type_is_locked_even_if_a_walk_in_flag_is_posted(): void
+    public function admin_can_convert_a_registered_order_to_a_walk_in(): void
     {
         $customer = $this->makeCustomer('Acme Seafood');
-        $target = $this->makeCustomer('Rui Han');
         $order = $this->makeRegisteredOrder($customer);
 
         $this->actingAs($this->admin(), 'web_admin')
             ->post($this->updateUrl($order), [
-                'is_walk_in' => 1, // must be ignored — type is fixed
-                'walk_in_name' => 'Hacky Walk-in',
+                'is_walk_in' => 1,
+                'walk_in_name' => 'Cash Buyer',
+                'walk_in_phone' => '0198887777',
+                'attn_name' => 'Cash Buyer',
+                'attn_contact' => '0198887777',
+                'payment_method' => 'cod',
+                'billing_address' => '',
+                'shipping_address' => '',
+            ])
+            ->assertRedirect(route('admin.orders.summary', $order->id));
+
+        $order->refresh();
+        $this->assertNull($order->user_id);
+        $this->assertSame(Order::$order_types['walk_in'], $order->order_type);
+        $this->assertSame('Cash Buyer', $order->walk_in_name);
+        $this->assertSame('0198887777', $order->walk_in_phone);
+    }
+
+    /** @test */
+    public function admin_can_assign_a_walk_in_order_to_a_registered_customer(): void
+    {
+        $target = $this->makeCustomer('Acme Seafood');
+        $order = $this->makeWalkInOrder('Cash Buyer', '0198887777');
+
+        $this->actingAs($this->admin(), 'web_admin')
+            ->post($this->updateUrl($order), [
+                'is_walk_in' => 0,
                 'customer_id' => $target->id,
+                'customer' => $target->id,
                 'attn_name' => 'PIC',
                 'attn_contact' => '0100000000',
                 'payment_method' => 'cod',
@@ -400,9 +425,10 @@ class AdminOrderEditCustomerTest extends TestCase
             ->assertRedirect(route('admin.orders.summary', $order->id));
 
         $order->refresh();
-        $this->assertSame(Order::$order_types['registered'], $order->order_type);
         $this->assertSame($target->id, $order->user_id);
+        $this->assertSame(Order::$order_types['registered'], $order->order_type);
         $this->assertNull($order->walk_in_name);
+        $this->assertNull($order->walk_in_phone);
     }
 
     /** @test */
@@ -412,6 +438,7 @@ class AdminOrderEditCustomerTest extends TestCase
 
         $this->actingAs($this->admin(), 'web_admin')
             ->post($this->updateUrl($order), [
+                'is_walk_in' => 1,
                 'walk_in_name' => 'New Name',
                 'walk_in_phone' => '0122223333',
                 'attn_name' => 'New Name',
@@ -430,12 +457,13 @@ class AdminOrderEditCustomerTest extends TestCase
     }
 
     /** @test */
-    public function editing_a_walk_in_order_requires_a_name(): void
+    public function converting_to_a_walk_in_requires_a_name(): void
     {
         $order = $this->makeWalkInOrder('Old Name', '0111111111');
 
         $this->actingAs($this->admin(), 'web_admin')
             ->post($this->updateUrl($order), [
+                'is_walk_in' => 1,
                 'walk_in_name' => '',
                 'payment_method' => 'cod',
             ])
@@ -443,6 +471,37 @@ class AdminOrderEditCustomerTest extends TestCase
 
         $order->refresh();
         $this->assertSame('Old Name', $order->walk_in_name);
+    }
+
+    /** @test */
+    public function converting_a_credit_order_to_walk_in_voids_the_charge_and_restores_the_customer(): void
+    {
+        $customer = $this->makeCreditCustomer();
+        $order = $this->makeRegisteredOrder($customer);
+        app(OrderService::class)->recordPayment($order->fresh(), 'credit-term', 30.00, null, null, null);
+        $this->assertEqualsWithDelta(-30.00, (float) $customer->fresh()->credit_balance, 0.001);
+
+        $this->actingAs($this->admin(), 'web_admin')
+            ->post($this->updateUrl($order), [
+                'is_walk_in' => 1,
+                'walk_in_name' => 'Cash Buyer',
+                'walk_in_phone' => '0198887777',
+                'attn_name' => 'Cash Buyer',
+                'attn_contact' => '0198887777',
+                'payment_method' => 'cod',
+                'billing_address' => '',
+                'shipping_address' => '',
+            ])
+            ->assertRedirect(route('admin.orders.summary', $order->id));
+
+        $order->refresh();
+        $this->assertNull($order->user_id);
+        // No credit account carries the order, so the charge is reversed + voided.
+        $this->assertEqualsWithDelta(0.00, (float) $customer->fresh()->credit_balance, 0.001);
+        $this->assertSame(0, OrderPayment::where('order_id', $order->id)
+            ->where('payment_method', 'credit-term')
+            ->where('status', OrderPayment::STATUS_CONFIRMED)
+            ->count());
     }
 
     /** @test */
