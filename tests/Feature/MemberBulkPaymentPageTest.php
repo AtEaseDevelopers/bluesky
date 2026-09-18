@@ -38,6 +38,7 @@ class MemberBulkPaymentPageTest extends TestCase
             'password' => Hash::make('password'),
             'category' => 'credit',
             'customer_type' => 'credit',
+            'invoice_visibility' => true,
             'credit_balance' => 0,
             'status' => 'active',
             'registration_completed_at' => now(),
@@ -110,6 +111,40 @@ class MemberBulkPaymentPageTest extends TestCase
         // option in the bulk payment method dropdown.
         $response->assertSee('Bank Transfer');
         $response->assertDontSee('>Credit Term<', false);
+    }
+
+    /** @test */
+    public function invoice_number_is_a_link_that_opens_the_pdf_in_a_new_tab(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCreditCustomer();
+        $order = $this->makeOrder($customer, ['invoice_number' => 'INV-2001']);
+        $this->chargeToCredit($order, $admin);
+
+        $response = $this->actingAs($customer, 'web')->get('/bulk-payments');
+
+        $response->assertStatus(200);
+        $invoiceUrl = url('/') . '/' . Order::$path . '/' . $order->id . '/invoice-' . $order->id . '.pdf';
+        $response->assertSee('href="' . $invoiceUrl . '"', false);
+        $response->assertSee('target="_blank"', false);
+        $response->assertSee('INV-2001');
+    }
+
+    /** @test */
+    public function invoice_number_stays_plain_text_when_invoice_is_hidden_from_customer(): void
+    {
+        $admin = $this->makeAdmin();
+        $customer = $this->makeCreditCustomer();
+        $customer->forceFill(['invoice_visibility' => false])->save();
+        $order = $this->makeOrder($customer, ['invoice_number' => 'INV-2002']);
+        $this->chargeToCredit($order, $admin);
+
+        $response = $this->actingAs($customer, 'web')->get('/bulk-payments');
+
+        $response->assertStatus(200);
+        $response->assertSee('INV-2002');
+        $invoiceUrl = url('/') . '/' . Order::$path . '/' . $order->id . '/invoice-' . $order->id . '.pdf';
+        $response->assertDontSee('href="' . $invoiceUrl . '"', false);
     }
 
     /** @test */

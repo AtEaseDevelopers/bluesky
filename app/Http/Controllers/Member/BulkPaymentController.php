@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Member;
 
 use App\Http\Controllers\Controller;
+use App\Order;
 use App\OrderPayment;
 use App\Services\BulkPaymentService;
 use Illuminate\Http\Request;
@@ -27,6 +28,10 @@ class BulkPaymentController extends Controller
         }
 
         $orders = app(BulkPaymentService::class)->openOrdersFor($user);
+
+        foreach ($orders as $order) {
+            $order->invoice_url = url('/') . '/' . Order::$path . '/' . $order->id . '/invoice-' . $order->id . '.pdf';
+        }
 
         return view('member.bulk-payments', [
             'user' => $user,

@@ -30,7 +30,13 @@
                                             </td>
                                             <td>#{{ $order->id }}</td>
                                             <td>{{ $order->created_at->format('d M Y') }}</td>
-                                            <td>{{ $order->invoice_number ?: '-' }}</td>
+                                            <td>
+                                                @if ($order->invoice_number && $order->canShowInvoiceToCustomer($user))
+                                                    <a href="{{ $order->invoice_url }}" target="_blank" rel="noopener">{{ $order->invoice_number }}</a>
+                                                @else
+                                                    {{ $order->invoice_number ?: '-' }}
+                                                @endif
+                                            </td>
                                             <td class="text-end">{{ number_format($order->outstandingForCustomer(), 2) }}</td>
                                         </tr>
                                     @empty

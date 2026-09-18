@@ -890,10 +890,31 @@ class AutoCountApiService
 
     protected function baseOrderQuery()
     {
+        // Mirror Order::canSyncToAutoCount() exactly. This MUST stay in lock-step
+        // with the queuing gate in AutoCountSyncService::syncIfEligible(): the
+        // service marks a credit order pending_sync the moment it is delivered,
+        // so if this poll query still demanded paid+completed the order would be
+        // queued but never handed to the plugin and would sit in pending_sync
+        // forever.
         return Order::query()
             ->with(['customer', 'orderProducts'])
-            ->where('payment_status', Order::$payment_status['paid'])
-            ->where('status', Order::$status['completed']);
+            ->where(function ($query) {
+                // Credit customers: eligible once delivered (or completed); the
+                // balance is carried on the credit account and settled later, so
+                // payment need not be complete at sync time.
+                $query->where(function ($creditQuery) {
+                    $creditQuery->forCreditCustomers()
+                        ->whereIn('status', [
+                            Order::$status['delivered'],
+                            Order::$status['completed'],
+                        ]);
+                })
+                // Cash / COD / walk-in: only once completed and fully paid.
+                ->orWhere(function ($cashQuery) {
+                    $cashQuery->where('status', Order::$status['completed'])
+                        ->where('payment_status', Order::$payment_status['paid']);
+                });
+            });
     }
 
     protected function toSyncPayload(Order $order, string $type): array
