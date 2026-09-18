@@ -54,6 +54,36 @@ class CustomerLifecycleService
     }
 
     /**
+     * Delete every selected customer that has no orders, skipping any that do.
+     *
+     * @param  array<int|string>  $customerIds
+     * @return array{deleted: int, skipped: int, skipped_names: array<string>}
+     */
+    public function bulkDelete(array $customerIds): array
+    {
+        $customers = User::query()->whereIn('id', $customerIds)->get();
+
+        $deleted = 0;
+        $skippedNames = [];
+
+        foreach ($customers as $customer) {
+            if (!$this->canDelete($customer)) {
+                $skippedNames[] = $customer->name;
+                continue;
+            }
+
+            $this->delete($customer);
+            $deleted++;
+        }
+
+        return [
+            'deleted' => $deleted,
+            'skipped' => count($skippedNames),
+            'skipped_names' => $skippedNames,
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function buildStatusUpdates(User $customer, string $adminStatus): array

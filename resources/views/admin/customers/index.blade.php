@@ -78,6 +78,9 @@
                     <button type="button" id="syncAutoCountBtn" class="btn btn-outline-secondary">
                         {{ __('customers.sync_autocount') }}
                     </button>
+                    <button type="button" id="bulkDeleteBtn" class="btn btn-outline-danger">
+                        <i class="fa fa-trash me-2" aria-hidden="true"></i>{{ __('customers.bulk_delete') }}
+                    </button>
                 @endif
                 <button type="button" id="copyGuestLink" class="btn btn-primary" data-link="{{ route('public.guest.index') }}">
                     {{ __('customers.copy_guest_link') }}
@@ -273,6 +276,29 @@
         @csrf
     </form>
 
+    <form id="bulkDeleteForm" action="{{ route('admin.customers.bulk-delete') }}" method="POST" class="d-none">
+        @csrf
+    </form>
+
+    <div class="modal" id="bulkDeleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ __('customers.bulk_delete') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('ui.close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ __('customers.bulk_delete_confirm') }}</p>
+                    <p class="mb-0 fw-semibold" id="bulkDeleteCount"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('ui.close') }}</button>
+                    <button type="button" class="btn btn-danger" id="bulkDeleteConfirmBtn">{{ __('ui.delete') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="deleteCustomerModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -324,6 +350,7 @@
         $(document).ready(function() {
             const customersJs = {
                 select_customer: @json(__('customers.js.select_customer')),
+                bulk_delete_selected: @json(__('customers.js.bulk_delete_selected')),
             };
 
             $("#customer_checkall").on('change', function() {
@@ -345,6 +372,59 @@
                 form.find('input[name="customer_ids[]"]').remove();
 
                 selectedCustomers.forEach(function(customerId) {
+                    form.append($('<input>', {
+                        type: 'hidden',
+                        name: 'customer_ids[]',
+                        value: customerId,
+                    }));
+                });
+
+                form.submit();
+            });
+
+            const bulkDeleteModal = document.getElementById('bulkDeleteModal')
+                ? new bootstrap.Modal(document.getElementById('bulkDeleteModal'))
+                : null;
+
+            function getSelectedCustomerIds() {
+                const ids = [];
+                $("input[name='selected_customers[]']:checked").each(function() {
+                    ids.push($(this).val());
+                });
+                return ids;
+            }
+
+            $("#bulkDeleteBtn").on('click', function() {
+                const selected = getSelectedCustomerIds();
+
+                if (selected.length === 0) {
+                    alert(customersJs.select_customer);
+                    return;
+                }
+
+                $("#bulkDeleteCount").text(
+                    customersJs.bulk_delete_selected.replace(':count', selected.length)
+                );
+                if (bulkDeleteModal) {
+                    bulkDeleteModal.show();
+                }
+            });
+
+            $("#bulkDeleteConfirmBtn").on('click', function() {
+                const selected = getSelectedCustomerIds();
+
+                if (selected.length === 0) {
+                    if (bulkDeleteModal) {
+                        bulkDeleteModal.hide();
+                    }
+                    alert(customersJs.select_customer);
+                    return;
+                }
+
+                const form = $("#bulkDeleteForm");
+                form.find('input[name="customer_ids[]"]').remove();
+
+                selected.forEach(function(customerId) {
                     form.append($('<input>', {
                         type: 'hidden',
                         name: 'customer_ids[]',

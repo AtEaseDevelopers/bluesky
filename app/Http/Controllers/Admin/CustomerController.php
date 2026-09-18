@@ -202,6 +202,32 @@ class CustomerController extends Controller
         return back()->with('success', $message);
     }
 
+    public function bulkDelete(Request $request, CustomerLifecycleService $lifecycleService)
+    {
+        $request->validate([
+            'customer_ids' => 'required|array|min:1',
+            'customer_ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $result = $lifecycleService->bulkDelete($request->input('customer_ids', []));
+
+        if ($result['deleted'] === 0) {
+            $message = $result['skipped'] > 0
+                ? __('customers.bulk_delete_none_blocked', ['count' => $result['skipped']])
+                : __('customers.bulk_delete_none');
+
+            return back()->with('error', $message);
+        }
+
+        $message = __('customers.bulk_delete_success', ['count' => $result['deleted']]);
+
+        if ($result['skipped'] > 0) {
+            $message .= ' ' . __('customers.bulk_delete_skipped', ['count' => $result['skipped']]);
+        }
+
+        return back()->with('success', $message);
+    }
+
     public function deleteCustomerProduct(Request $request)
     {
         ProductVisibility::where('id', $request['id'])->delete();
