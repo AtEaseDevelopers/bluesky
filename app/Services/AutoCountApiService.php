@@ -106,16 +106,29 @@ class AutoCountApiService
 
     public function nextPaidOrder(): ?array
     {
-        $order = $this->baseOrderQuery()
+        // A credit order parks at 'synced' until the plugin confirms its invoice
+        // was knocked off in AutoCount, and an unpaid invoice never writes back —
+        // so a stuck order stays 'synced' + api_invoice_id set indefinitely. As
+        // with the pending queue, a plain orderBy('id')->first() would hand the
+        // same unpaid head to every poll and starve every other credit order of
+        // its own payment write-back. Rotate through the synced-credit set so a
+        // stuck order costs one poll per cycle rather than monopolising the queue.
+        $paid = fn () => $this->baseOrderQuery()
             ->where('autocount_sync_status', 'synced')
             ->whereNotNull('api_invoice_id')
             ->whereHas('customer', function ($q) {
                 $q->where('customer_type', 'credit');
-            })
-            ->orderBy('id')
-            ->first();
+            });
+
+        $cursorKey = $this->paidCursorKey();
+        $lastId = (int) Cache::get($cursorKey, 0);
+
+        $order = $paid()->where('id', '>', $lastId)->orderBy('id')->first()
+            ?? $paid()->orderBy('id')->first();
 
         if ($order) {
+            Cache::put($cursorKey, $order->id, now()->addHours(6));
+
             $this->trace('info', 'Handing credit order to AutoCount for payment sync', [
                 'order_id' => $order->id,
                 'invoice_number' => $order->invoice_number,
@@ -124,6 +137,17 @@ class AutoCountApiService
         }
 
         return $order ? $this->toSyncPayload($order, 'paid') : null;
+    }
+
+    /**
+     * Cache key for the paid-queue rotation cursor, scoped per branch so a
+     * multi-branch deployment does not share one cursor across companies.
+     */
+    protected function paidCursorKey(): string
+    {
+        $branch = (string) config('autocount.branch_email', '');
+
+        return 'autocount:paid_cursor:' . ($branch !== '' ? $branch : 'default');
     }
 
     public function applyDocumentUpdate(array $payload): void
