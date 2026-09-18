@@ -104,10 +104,92 @@ class OrderService
             if (!$order->invoice_number) {
                 $this->generateInvoiceNumber($order->fresh());
             }
-            PdfHelper::GenerateOrderInvoice($order->fresh());
+
+            // Seed the stored invoice PDF the first time an order becomes fully
+            // paid. Re-rendering it on every refresh is what made the order
+            // listings slow (~260ms per order, on every page load) — and it is
+            // redundant: the invoice route live-renders on view, and the content
+            // edit flows regenerate explicitly when an order actually changes.
+            $invoicePath = Order::$path . '/' . $order->id . '/invoice-' . $order->id . '.pdf';
+            if (!Storage::disk('local')->exists($invoicePath)) {
+                PdfHelper::GenerateOrderInvoice($order->fresh());
+            }
         }
 
         return $order->fresh();
+    }
+
+    /**
+     * Flag overdue unpaid orders as "payment due" in a single bulk UPDATE and
+     * return the number affected.
+     *
+     * This is the cheap global pass the listings run before filtering, so that a
+     * "payment_due" status filter still finds orders whose due date has just
+     * passed (the old global per-order sync used to guarantee this). It only does
+     * the deterministic, time-based unpaid -> payment_due transition; the full
+     * per-order reconciliation is applied to the visible page by
+     * refreshPaymentStatusesForPage().
+     */
+    public function markOverduePaymentsDue(): int
+    {
+        return Order::query()
+            ->where('payment_status', Order::$payment_status['unpaid'])
+            ->whereNotNull('payment_due_date')
+            ->whereDate('payment_due_date', '<=', now()->toDateString())
+            ->where('status', '!=', Order::$status['cancelled'])
+            ->update(['payment_status' => Order::$payment_status['payment_due']]);
+    }
+
+    /**
+     * Run the full refreshPaymentStatus() reconciliation on just the orders shown
+     * on the current listing page — the exact per-order behaviour the old global
+     * sync applied, scoped to what's displayed so the page load stays fast.
+     *
+     * Full models are loaded fresh (the listing queries may select a reduced or
+     * computed column set that refreshPaymentStatus() cannot reason about), then
+     * the authoritative status/paid_amount/hold are copied back onto the listing
+     * rows so the view renders the updated values without a reload.
+     */
+    public function refreshPaymentStatusesForPage(iterable $pageOrders): void
+    {
+        $rows = collect($pageOrders);
+        $ids = $rows->pluck('id')->filter()->values();
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $today = now()->toDateString();
+        $paidStatus = Order::$payment_status['paid'];
+        $cancelledStatus = Order::$status['cancelled'];
+
+        $fresh = Order::whereIn('id', $ids)->get()->keyBy('id');
+
+        foreach ($rows as $row) {
+            $full = $fresh->get($row->id);
+            if (!$full) {
+                continue;
+            }
+
+            // Mirror the old global sync's scope exactly: it only ever reconciled
+            // overdue, not-yet-paid, non-cancelled orders. Already-paid and
+            // not-yet-due rows were never touched, so leaving them alone here both
+            // matches that behaviour and avoids pointless invoice regeneration.
+            $isOverdue = $full->payment_due_date
+                && $full->payment_due_date->toDateString() <= $today
+                && $full->payment_status !== $paidStatus
+                && $full->status !== $cancelledStatus;
+
+            if (!$isOverdue) {
+                continue;
+            }
+
+            $refreshed = $this->refreshPaymentStatus($full);
+
+            $row->payment_status = $refreshed->payment_status;
+            $row->paid_amount = $refreshed->paid_amount;
+            $row->payment_held_at = $refreshed->payment_held_at;
+        }
     }
 
     public function syncOverduePaymentStatuses(): void

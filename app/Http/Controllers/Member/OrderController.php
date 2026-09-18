@@ -25,7 +25,7 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        app(OrderService::class)->syncOverduePaymentStatuses();
+        app(OrderService::class)->markOverduePaymentsDue();
 
         $user = Auth::guard('web')->user();
 
@@ -60,6 +60,9 @@ class OrderController extends Controller
         $orders->orderBy('created_at', $orderby);
 
         $orders = $orders->paginate(15);
+
+        // Full per-order payment reconciliation, scoped to the visible page.
+        app(OrderService::class)->refreshPaymentStatusesForPage($orders->getCollection());
 
         foreach ($orders as $key => $value) {
             $orders[$key]->invoice_url = url('/') . '/' . Order::$path . '/' . $value->id . '/invoice-' . $value->id . '.pdf';

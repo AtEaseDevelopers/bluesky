@@ -37,7 +37,7 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        app(OrderService::class)->syncOverduePaymentStatuses();
+        app(OrderService::class)->markOverduePaymentsDue();
 
         $orders = Order::select(
             "*",
@@ -150,6 +150,9 @@ class OrderController extends Controller
         } 
 
         $orders = $orders->orderBy('id', 'desc')->with('customer', 'payments')->paginate(15);
+
+        // Full per-order payment reconciliation, scoped to the visible page.
+        app(OrderService::class)->refreshPaymentStatusesForPage($orders->getCollection());
 
         $orderIds = $orders->pluck('id');
         $orderProductsByOrder = collect();
