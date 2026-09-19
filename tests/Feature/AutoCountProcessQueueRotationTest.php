@@ -11,17 +11,18 @@ use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 /**
- * Head-of-line regression: the pending queue hands the plugin one order per
- * poll. A Sales Order is drafted then parked on AutoCount's human approval gate
- * for hours/days, and that draft never writes back to the server — so a stuck
- * order stays 'pending_sync' + api_do_id NULL, indistinguishable from a brand
- * new order. With a plain orderBy('id')->first() the oldest stuck order is
- * returned on EVERY poll, starving every newer web order of its own SO.
+ * Head-of-line regression: the process queue hands the plugin one order per
+ * poll. An order now syncs straight to an Invoice / Cash Sale, but a document
+ * can still be parked on AutoCount's approval gate, be a zero-total dead end, or
+ * error before it reports back — in every case it stays 'pending_sync' with
+ * api_invoice_id NULL, indistinguishable from a brand new order. With a plain
+ * orderBy('id')->first() the oldest stuck order is returned on EVERY poll,
+ * starving every newer web order.
  *
- * nextPendingOrder() must therefore rotate through the pending set so no single
+ * nextProcessOrder() must therefore rotate through the eligible set so no single
  * order can monopolise the head.
  */
-class AutoCountPendingQueueRotationTest extends TestCase
+class AutoCountProcessQueueRotationTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -55,9 +56,8 @@ class AutoCountPendingQueueRotationTest extends TestCase
     }
 
     /**
-     * A pending order that has not yet had its Delivery Order created: this is
-     * the state a drafted-but-unapproved Sales Order sits in from the server's
-     * point of view (still pending_sync, api_do_id NULL).
+     * A queued order that has not yet had its Invoice / Cash Sale written back:
+     * still pending_sync, api_invoice_id NULL.
      */
     private function makePendingOrder(User $customer): Order
     {
@@ -75,7 +75,7 @@ class AutoCountPendingQueueRotationTest extends TestCase
             'payment_method' => 'cash',
             'payment_status' => Order::$payment_status['paid'],
             'autocount_sync_status' => 'pending_sync',
-            'api_do_id' => null,
+            'api_invoice_id' => null,
             'invoice_number' => 'INV-' . rand(10000, 99999),
             'billing_address' => '1 Market St',
             'billing_postcode' => '50000',
@@ -86,18 +86,18 @@ class AutoCountPendingQueueRotationTest extends TestCase
     /**
      * @test
      */
-    public function pending_queue_does_not_starve_newer_orders_behind_a_stuck_head(): void
+    public function process_queue_does_not_starve_newer_orders_behind_a_stuck_head(): void
     {
         $customer = $this->makeCustomer();
-        $stuck = $this->makePendingOrder($customer);   // lower id — SO drafted, awaiting approval
+        $stuck = $this->makePendingOrder($customer);   // lower id — parked on approval / erroring
         $fresh = $this->makePendingOrder($customer);   // higher id — brand new web order
 
         $service = app(AutoCountApiService::class);
 
-        $first = $service->nextPendingOrder();
-        $second = $service->nextPendingOrder();
+        $first = $service->nextProcessOrder();
+        $second = $service->nextProcessOrder();
 
-        $this->assertSame($stuck->id, $first['order']['id'], 'First poll should serve the oldest pending order.');
+        $this->assertSame($stuck->id, $first['order']['id'], 'First poll should serve the oldest eligible order.');
         $this->assertSame(
             $fresh->id,
             $second['order']['id'],
@@ -108,7 +108,7 @@ class AutoCountPendingQueueRotationTest extends TestCase
     /**
      * @test
      */
-    public function pending_cursor_wraps_back_to_the_oldest_order(): void
+    public function process_cursor_wraps_back_to_the_oldest_order(): void
     {
         $customer = $this->makeCustomer();
         $a = $this->makePendingOrder($customer);
@@ -116,28 +116,28 @@ class AutoCountPendingQueueRotationTest extends TestCase
 
         $service = app(AutoCountApiService::class);
 
-        $this->assertSame($a->id, $service->nextPendingOrder()['order']['id']);
-        $this->assertSame($b->id, $service->nextPendingOrder()['order']['id']);
+        $this->assertSame($a->id, $service->nextProcessOrder()['order']['id']);
+        $this->assertSame($b->id, $service->nextProcessOrder()['order']['id']);
         $this->assertSame(
             $a->id,
-            $service->nextPendingOrder()['order']['id'],
-            'After the last pending order the cursor must wrap around to the oldest.'
+            $service->nextProcessOrder()['order']['id'],
+            'After the last eligible order the cursor must wrap around to the oldest.'
         );
     }
 
     /**
      * @test
      */
-    public function a_single_pending_order_is_served_on_every_poll(): void
+    public function a_single_eligible_order_is_served_on_every_poll(): void
     {
         $customer = $this->makeCustomer();
         $only = $this->makePendingOrder($customer);
 
         $service = app(AutoCountApiService::class);
 
-        // A lone order (e.g. still awaiting SO approval) must keep being offered
-        // so its DO is eventually created — rotation must not skip it.
-        $this->assertSame($only->id, $service->nextPendingOrder()['order']['id']);
-        $this->assertSame($only->id, $service->nextPendingOrder()['order']['id']);
+        // A lone order (e.g. still awaiting Invoice approval) must keep being
+        // offered so it eventually completes — rotation must not skip it.
+        $this->assertSame($only->id, $service->nextProcessOrder()['order']['id']);
+        $this->assertSame($only->id, $service->nextProcessOrder()['order']['id']);
     }
 }

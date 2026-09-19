@@ -97,7 +97,7 @@ class AutoCountItemCodeSyncTest extends TestCase
         $product = $this->makeProduct('M0009', 'KG');
         $this->addLine($order, $product, 'Non-stock Item', 2);
 
-        $payload = app(AutoCountApiService::class)->nextPendingOrder();
+        $payload = app(AutoCountApiService::class)->nextProcessOrder();
         $line = collect($payload['detail'])->firstWhere('Description', 'Non-stock Item');
 
         // The (ItemCode, UOM) pair is the product's SKU and its UOM name.
@@ -121,10 +121,10 @@ class AutoCountItemCodeSyncTest extends TestCase
         $product = $this->makeProduct('M0010');
         $this->addLine($order, $product, 'Located Item', 3);
 
-        $payload = app(AutoCountApiService::class)->nextPendingOrder();
+        $payload = app(AutoCountApiService::class)->nextProcessOrder();
         $line = collect($payload['detail'])->firstWhere('Description', 'Located Item');
 
-        // AutoCount rejects the DO when a line has no location, so it must be set.
+        // AutoCount rejects the document when a line has no location, so it must be set.
         $this->assertSame('Penang', $line['Location']);
         $this->assertNotSame('', $line['Location']);
     }

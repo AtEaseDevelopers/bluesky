@@ -291,11 +291,6 @@
                                                             <a class="dropdown-item view-pdf" href="{{ route('admin.order.invoice', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.invoice', $order->id) }}">{{ __('orders.view_invoice') }}</a>
                                                         </li>
                                                     @endif
-                                                    @if ($order->canAdminShowDeliveryOrder())
-                                                        <li>
-                                                            <a class="dropdown-item view-pdf" href="{{ route('admin.order.delivery-order', $order->id) }}#toolbar=0" data-url="{{ route('admin.order.delivery-order', $order->id) }}">{{ __('orders.view_do') }}</a>
-                                                        </li>
-                                                    @endif
                                                     @if ($admin->canModule('orders', 'edit'))
                                                         @if ($order->canEditFulfillment())
                                                         <li>

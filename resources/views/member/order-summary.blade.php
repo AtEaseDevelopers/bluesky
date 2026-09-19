@@ -19,11 +19,6 @@
                             <i class="fa fa-eye"></i> {{ __('order.file.invoice') }}
                         </span>
                     @endif
-                    @if ($order->canShowDeliveryOrder())
-                        <a href="{{ $delivery_order_url }}#toolbar=0" data-url="{{ $delivery_order_download_url }}" class="btn btn-primary mb-1 view-pdf">
-                            <i class="fa fa-car"></i> {{ __('order.file.delivery-order') }}
-                        </a>
-                    @endif
                 </div>
             </div>
 

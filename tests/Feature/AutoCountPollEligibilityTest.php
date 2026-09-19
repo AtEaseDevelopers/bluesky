@@ -86,7 +86,7 @@ class AutoCountPollEligibilityTest extends TestCase
             Order::$payment_status['unpaid']
         );
 
-        $payload = app(AutoCountApiService::class)->nextPendingOrder();
+        $payload = app(AutoCountApiService::class)->nextProcessOrder();
 
         $this->assertNotNull(
             $payload,
@@ -108,7 +108,7 @@ class AutoCountPollEligibilityTest extends TestCase
         );
 
         $this->assertNull(
-            app(AutoCountApiService::class)->nextPendingOrder(),
+            app(AutoCountApiService::class)->nextProcessOrder(),
             'A COD order still needs completed + paid before it may sync.'
         );
     }
@@ -125,7 +125,7 @@ class AutoCountPollEligibilityTest extends TestCase
             Order::$payment_status['paid']
         );
 
-        $payload = app(AutoCountApiService::class)->nextPendingOrder();
+        $payload = app(AutoCountApiService::class)->nextProcessOrder();
 
         $this->assertNotNull($payload);
         $this->assertSame($order->id, $payload['order']['id']);

@@ -260,11 +260,14 @@ class Order extends Model
     ];
 
     // AutoCount invoice sync states an order can hold, in workflow order. Used to
-    // populate the admin order listing's "Invoice Sync Status" filter.
+    // populate the admin order listing's "Invoice Sync Status" filter. An order
+    // now syncs straight to an Invoice (credit → 'synced') or Cash Sale
+    // (COD → 'paid_synced'); the retired SO+DO pipeline's 'do_created' step is no
+    // longer a workflow state, so it is not offered as a filter option (its label
+    // is kept for any legacy order still parked in that state).
     public static $autocount_sync_statuses = [
         'pending' => 'pending',
         'pending_sync' => 'pending_sync',
-        'do_created' => 'do_created',
         'synced' => 'synced',
         'paid_synced' => 'paid_synced',
         'sync_error' => 'sync_error',

@@ -42,61 +42,55 @@ class AutoCountApiService
 
     public function nextPendingOrder(): ?array
     {
-        // A drafted Sales Order parks on AutoCount's human approval gate for as
-        // long as it takes, and the draft never writes back — so a stuck order
-        // stays pending_sync + api_do_id NULL, looking identical to a brand new
-        // one. A plain orderBy('id')->first() would hand the same stuck head to
-        // every poll and starve newer orders of their own SO. Rotate through the
-        // pending set instead: each poll advances past the last-served id and
-        // wraps at the end, so a stuck order costs one poll per cycle rather
-        // than monopolising the queue, and every order still gets its turn.
-        $pending = fn () => $this->baseOrderQuery()
-            ->where('autocount_sync_status', 'pending_sync')
-            ->whereNull('api_do_id');
-
-        $cursorKey = $this->pendingCursorKey();
-        $lastId = (int) Cache::get($cursorKey, 0);
-
-        $order = $pending()->where('id', '>', $lastId)->orderBy('id')->first()
-            ?? $pending()->orderBy('id')->first();
-
-        if ($order) {
-            Cache::put($cursorKey, $order->id, now()->addHours(6));
-
-            $this->trace('info', 'Handing pending order to AutoCount (create SO+DO)', [
-                'order_id' => $order->id,
-                'invoice_number' => $order->invoice_number,
-            ]);
-        }
-
-        return $order ? $this->toSyncPayload($order, 'pending') : null;
+        // The Sales Order + Delivery Order stage has been removed: an order now
+        // syncs straight to an Invoice (credit) or Cash Sale (COD) on the
+        // /process queue. Nothing is served here, but the endpoint is kept so an
+        // older plugin build still polling /pending simply receives nothing
+        // rather than erroring.
+        return null;
     }
 
     /**
-     * Cache key for the pending-queue rotation cursor, scoped per branch so a
+     * Cache key for the process-queue rotation cursor, scoped per branch so a
      * multi-branch deployment does not share one cursor across companies.
      */
-    protected function pendingCursorKey(): string
+    protected function processCursorKey(): string
     {
         $branch = (string) config('autocount.branch_email', '');
 
-        return 'autocount:pending_cursor:' . ($branch !== '' ? $branch : 'default');
+        return 'autocount:process_cursor:' . ($branch !== '' ? $branch : 'default');
     }
 
     public function nextProcessOrder(): ?array
     {
-        $order = $this->baseOrderQuery()
+        // Orders sync directly to an Invoice / Cash Sale — there is no DO to wait
+        // for, so an order is eligible the moment it is queued (pending_sync) and
+        // stays so until its invoice document is written back (api_invoice_id
+        // still NULL). 'do_created' is kept so any order left mid-flight by the
+        // retired SO+DO pipeline still completes.
+        //
+        // Rotate through the eligible set rather than always serving the lowest
+        // id: a document parked on AutoCount's approval gate, a zero-total order,
+        // or one that errors before it reports back would otherwise sit at the
+        // head and starve every newer order. Each poll advances past the
+        // last-served id and wraps at the end, so a stuck order costs one poll
+        // per cycle rather than monopolising the queue.
+        $eligible = fn () => $this->baseOrderQuery()
             ->whereIn('autocount_sync_status', ['pending_sync', 'do_created'])
-            ->whereNotNull('api_do_id')
-            ->whereNull('api_invoice_id')
-            ->orderBy('id')
-            ->first();
+            ->whereNull('api_invoice_id');
+
+        $cursorKey = $this->processCursorKey();
+        $lastId = (int) Cache::get($cursorKey, 0);
+
+        $order = $eligible()->where('id', '>', $lastId)->orderBy('id')->first()
+            ?? $eligible()->orderBy('id')->first();
 
         if ($order) {
+            Cache::put($cursorKey, $order->id, now()->addHours(6));
+
             $this->trace('info', 'Handing order to AutoCount (create invoice/cash sale)', [
                 'order_id' => $order->id,
                 'invoice_number' => $order->invoice_number,
-                'api_do_id' => $order->api_do_id,
                 'payment_method' => $this->mapPaymentMethod($order),
             ]);
         }
@@ -138,20 +132,7 @@ class AutoCountApiService
             'number' => $number,
         ]);
 
-        if ($type === 'DO') {
-            // AutoCount's DO running-number restarts at 000001 after a book
-            // reset, so a fresh sync can be handed a DO number another order
-            // already owns. Overwriting it would point two orders at the same
-            // DO and break the later cash-sale transfer, so reject the clash.
-            if ($this->documentNumberOwnedByAnotherOrder('api_do_id', $number, $order->id)) {
-                $this->flagDocumentCollision($order, 'DO', $number);
-
-                return;
-            }
-
-            $order->api_do_id = $number;
-            $order->autocount_sync_status = 'do_created';
-        } elseif ($type === 'CS') {
+        if ($type === 'CS') {
             if ($this->documentNumberOwnedByAnotherOrder('api_invoice_id', $number, $order->id)) {
                 $this->flagDocumentCollision($order, 'CS', $number);
 
@@ -912,13 +893,6 @@ class AutoCountApiService
     {
         if (!$order->invoice_number) {
             app(OrderService::class)->generateInvoiceNumber($order->fresh());
-            $order = $order->fresh();
-        }
-
-        // The plugin stamps the AutoCount Delivery Order with this do_no ("DO-YYYYMM-####"),
-        // paired to the invoice number, so make sure it exists before syncing.
-        if (!$order->do_no) {
-            app(OrderService::class)->assignDoNumber($order->fresh());
             $order = $order->fresh();
         }
 

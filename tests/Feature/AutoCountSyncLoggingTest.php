@@ -59,7 +59,7 @@ class AutoCountSyncLoggingTest extends TestCase
     }
 
     /** @test */
-    public function handing_out_a_pending_order_writes_a_trace_log(): void
+    public function handing_out_a_process_order_writes_a_trace_log(): void
     {
         $order = $this->makeOrder($this->makeCustomer());
 
@@ -68,7 +68,7 @@ class AutoCountSyncLoggingTest extends TestCase
         Log::shouldReceive('warning')->zeroOrMoreTimes();
         Log::shouldReceive('error')->zeroOrMoreTimes();
 
-        app(AutoCountApiService::class)->nextPendingOrder();
+        app(AutoCountApiService::class)->nextProcessOrder();
     }
 
     /** @test */
