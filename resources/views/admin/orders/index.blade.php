@@ -398,17 +398,11 @@
                                             </span>
                                             @if (in_array($syncStatusKey, ['synced', 'synced_successfully', 'paid_synced'], true))
                                                 @php
-                                                    $syncedDoNo = $order->api_do_id ?: $order->do_no;
                                                     $syncedInvNo = $order->api_invoice_id ?: $order->invoice_number;
                                                 @endphp
-                                                @if ($syncedDoNo || $syncedInvNo)
+                                                @if ($syncedInvNo)
                                                     <div class="small text-muted mt-1">
-                                                        @if ($syncedDoNo)
-                                                            <div>{{ __('orders.do_no') }}: {{ $syncedDoNo }}</div>
-                                                        @endif
-                                                        @if ($syncedInvNo)
-                                                            <div>{{ __('orders.invoice_no') }}: {{ $syncedInvNo }}</div>
-                                                        @endif
+                                                        <div>{{ __('orders.invoice_no') }}: {{ $syncedInvNo }}</div>
                                                     </div>
                                                 @endif
                                             @endif
