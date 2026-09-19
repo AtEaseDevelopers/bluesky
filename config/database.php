@@ -52,6 +52,10 @@ return [
             'username' => env('DB_USERNAME', 'forge'),
             'password' => env('DB_PASSWORD', ''),
             'unix_socket' => env('DB_SOCKET', ''),
+            // Pin the session time zone to match app.timezone (Asia/Kuala_Lumpur)
+            // so TIMESTAMP columns round-trip identically on every environment,
+            // instead of silently inheriting the DB server's SYSTEM tz.
+            'timezone' => env('DB_TIMEZONE', '+08:00'),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',
