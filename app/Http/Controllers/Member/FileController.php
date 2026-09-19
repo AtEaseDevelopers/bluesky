@@ -86,6 +86,14 @@ class FileController extends Controller
             $headers['Content-Disposition'] = 'attachment; filename="' . $filename . '"';
         }
 
+        // Order documents (invoice/DO) live at a fixed URL and are regenerated
+        // from live data on every request. Without no-store the browser/PDF
+        // viewer keeps serving the cached copy by its unchanging URL and shows
+        // stale prices/totals even though the server returned fresh bytes.
+        $headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0';
+        $headers['Pragma'] = 'no-cache';
+        $headers['Expires'] = '0';
+
         return response($file, 200, $headers);
     }
 

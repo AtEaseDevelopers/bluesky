@@ -45,14 +45,30 @@ class PdfHelper extends Model
         $pdf = self::configurePdf(PDF::loadView($view, $data));
         $pdf->setPaper('a4', 'portrait');
 
-        Storage::disk('local')->put(Order::$path . '/' . $order->id . '/' . $filename, $pdf->output());
+        $output = $pdf->output();
+        Storage::disk('local')->put(Order::$path . '/' . $order->id . '/' . $filename, $output);
+
+        // The invoice/DO URL never changes and the document is re-rendered from
+        // live data each view, so forbid caching or an edited order still shows
+        // the previously cached PDF (see FileController::fileResponse).
+        $noCache = [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ];
 
         if ($returnPdf === 'stream') {
-            return $pdf->stream($filename);
+            return response($output, 200, array_merge([
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            ], $noCache));
         }
 
         if ($returnPdf === 'download') {
-            return $pdf->download($filename);
+            return response($output, 200, array_merge([
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ], $noCache));
         }
 
         return Order::$path . '/' . $order->id . '/' . $filename;
