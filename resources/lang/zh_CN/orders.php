@@ -357,7 +357,6 @@ return [
         'estimated_badge' => '预估 — 待最终确认',
         'awaiting_review' => '此订单待您审核。请确认最终金额后，配送方可进行。',
         'review_now' => '立即审核',
-        'invoice_after_paid' => '订单付清后可查看',
         'order_date_colon' => '下单日期：',
         'payment_due_colon' => '付款到期：',
         'attn_colon' => '联系人：',

@@ -14,10 +14,6 @@
                         <a href="{{ $invoice_url }}" class="btn btn-primary view-pdf mb-1">
                             <i class="fa fa-eye"></i> {{ __('order.file.invoice') }}
                         </a>
-                    @elseif ($customer->invoice_visibility && !$order->isFullyPaid() && $order->status !== \App\Order::$status['cancelled'])
-                        <span class="btn btn-outline-secondary mb-1 disabled" title="{{ __('orders.member.invoice_after_paid') }}">
-                            <i class="fa fa-eye"></i> {{ __('order.file.invoice') }}
-                        </span>
                     @endif
                 </div>
             </div>

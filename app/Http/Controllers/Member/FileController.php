@@ -130,7 +130,7 @@ class FileController extends Controller
         }
 
         if ($isInvoice && !$order->canShowInvoiceToCustomer($user)) {
-            abort(403, 'Invoice is available after the order is fully paid.');
+            abort(403, 'Invoice is not available for this account.');
         }
 
         if ($isDeliveryOrder && (!$order->canShowDeliveryOrder() || !$user)) {

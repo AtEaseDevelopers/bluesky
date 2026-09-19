@@ -362,7 +362,6 @@ return [
         'estimated_badge' => 'Estimated — pending final review',
         'awaiting_review' => 'This order is awaiting your review. Please confirm the final amounts before delivery proceeds.',
         'review_now' => 'Review now',
-        'invoice_after_paid' => 'Available after the order is fully paid',
         'order_date_colon' => 'Order Date:',
         'payment_due_colon' => 'Payment Due:',
         'attn_colon' => 'Attn:',

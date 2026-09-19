@@ -99,6 +99,23 @@ class Order extends Model
         static::saving(function (self $order) {
             $order->flattenTotalDecimal();
         });
+
+        // The delivery-order stage is gone, so the invoice is a live document
+        // from the moment the order exists. Mint its real INV-YYYYMM-#####
+        // number at creation (unless the caller already supplied one) so the
+        // customer and admin see the same finalised number straight away.
+        static::created(function (self $order) {
+            if ($order->invoice_number) {
+                return;
+            }
+
+            $withNumber = app(OrderService::class)->generateInvoiceNumber($order);
+
+            if ($withNumber && $withNumber->invoice_number) {
+                $order->setAttribute('invoice_number', $withNumber->invoice_number);
+                $order->syncOriginalAttribute('invoice_number');
+            }
+        });
     }
 
     /**
@@ -899,16 +916,16 @@ class Order extends Model
 
     public function canShowInvoice(): bool
     {
-        return $this->paymentCollected();
+        // Invoice is a live document from the moment the order exists — no
+        // longer gated behind a collected payment now that the DO stage is gone.
+        return true;
     }
 
     public function canShowInvoiceToCustomer(?User $user): bool
     {
-        if (!$user || !$user->invoice_visibility) {
-            return false;
-        }
-
-        return $this->isFullyPaid();
+        // Always available once the order exists; only the per-customer
+        // invoice_visibility toggle can still hide it.
+        return (bool) ($user && $user->invoice_visibility);
     }
 
     public function canShowDeliveryOrder(): bool
